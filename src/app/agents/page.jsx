@@ -1,4 +1,4 @@
-import Agents from "@/components/agents/Agents.jsx";
+import Agents from "@/components/agents/agents";
 export default function page() {
   return <Agents />;
 }

@@ -1,17 +1,8 @@
-import Functions from '@/components/functions'
-import FunctionsSidebar from '@/components/functions/FunctionsSidebar';
+import TeamDashboard from '@/components/teams';
+import React from 'react';
 
-import React from 'react'
+const Page = () => {
+  return <TeamDashboard />;
+};
 
-const page = () => {
-  return (
-    <div className='flex '>
-      <FunctionsSidebar />
-      <div className='p-4 w-full'>
-      <Functions />
-      </div>
-    </div>
-  )
-}
-
-export default page
+export default Page;

@@ -1,4 +1,4 @@
-import FunctionHeader from "@/components/functions/function/FunctionHeader";
+import FunctionHeader from "@/components/project/FunctionHeader";
 
 export default function Layout({
   children,

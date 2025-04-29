@@ -3,7 +3,7 @@ import {
     authRefreshToken,
     cookieExpirationDays,
   } from '@/constants/config-constant';
-  import { USER_URL } from '@/constants/api-constant';
+  import { USER_AUTH_URL } from '@/constants/endpoints-constant';
   import { CookieUtils } from '@/lib/helpers/index';
   import axios, {
     AxiosError,
@@ -44,7 +44,7 @@ import {
             .split('; ')
             .find((row) => row.startsWith(authRefreshToken))
             ?.split('=')[1];
-          const response = await http.post(USER_URL.postGetAccessToken, {
+          const response = await http.post(USER_AUTH_URL.postGetAccessToken, {
             refreshToken,
           });
           CookieUtils.setCookie(
