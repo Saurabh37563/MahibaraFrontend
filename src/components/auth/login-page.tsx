@@ -8,7 +8,9 @@ import { HiExclamationCircle } from "react-icons/hi";
 import Link from "next/link";
 import { Router } from "next/router";
 import { useRouter } from "next/navigation";
+import { signIn, signOut, useSession } from "next-auth/react"
 
+const callbackUrl = 'http://localhost:3000/functions'
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z
@@ -17,6 +19,7 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
+  
   const {
     register,
     handleSubmit,
@@ -28,6 +31,8 @@ const LoginPage = () => {
       password: "",
     },
   });
+  const { data: session } = useSession();
+  console.log("Session Data : ", session)
 
   const router = useRouter()
   const onSubmit = async (data:any) => { //TODO : use types
@@ -36,9 +41,6 @@ const LoginPage = () => {
     await new Promise((resolve) => router.push('/agents'));
   };
 
-  const handleZohoSSO = () => {
-    console.log("Logging in with Zoho SSO");
-  };
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -153,7 +155,7 @@ const LoginPage = () => {
 
             <button
               type="button"
-              onClick={handleZohoSSO}
+              onClick={() => signIn("zitadel", { callbackUrl: "/functions" })}
               className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               <SiZoho className="mr-2 h-4 w-4 text-blue-600" />

@@ -22,7 +22,7 @@ const DesktopSidebar = () => {
   } = useTeamContext();
 
   return (
-    <div className="w-64 h-full p-4 border-r border-gray-200 overflow-y-auto">
+    <div className="w-64 h-[calc(100vh-var(--header-height))] p-4 border-r border-gray-200 overflow-y-auto">
       <div className="space-y-4">
         <div>
           {isLoadingOrgs ? (

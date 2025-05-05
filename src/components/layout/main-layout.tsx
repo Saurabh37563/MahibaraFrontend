@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Header from "./header";
 import { QueryProvider } from "@/providers/QueryProvider";
-
+import { SessionProvider } from "next-auth/react";
 const HEADER_VISIBLE_ROUTES = ["/dashboard", "/agents", "/functions"];
 
 export default function MainPageLayout({ children }: { children: React.ReactNode }) {
@@ -12,7 +12,8 @@ export default function MainPageLayout({ children }: { children: React.ReactNode
   const shouldShowHeader = HEADER_VISIBLE_ROUTES.includes(pathname);
 
   return (
-    <div className="flex flex-col mx-auto">
+    <SessionProvider>
+      <div className="flex flex-col mx-auto">
       {shouldShowHeader && <Header />}
       <main>
         <QueryProvider>
@@ -20,5 +21,6 @@ export default function MainPageLayout({ children }: { children: React.ReactNode
         </QueryProvider>
       </main>
     </div>
+    </SessionProvider>
   );
 }
