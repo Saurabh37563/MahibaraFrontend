@@ -5,6 +5,9 @@ import "./globals.css";
 import MainPageLayout from "@/components/layout/main-layout";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/sonner";
+import { SessionProvider } from "next-auth/react";
+import { TeamContextProvider } from '@/contexts/team-context';
+import { SidebarProvider } from "@/components/ui/sidebar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -31,12 +34,20 @@ export default function RootLayout({
       <head />
       <body className="font-sans antialiased ">
         
-          <AuthProvider>
+          <SessionProvider>
+            <AuthProvider>
             <Toaster/>
+            <SidebarProvider>
+            <TeamContextProvider>
+                  
             <MainPageLayout>
               {children}
-              </MainPageLayout>
+            </MainPageLayout>
+             
+              </TeamContextProvider>
+               </SidebarProvider>
           </AuthProvider>
+          </SessionProvider>
       </body>
     </html>
   );

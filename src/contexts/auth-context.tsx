@@ -1,33 +1,112 @@
 'use client'
-import { AuthContextProps, User } from "@/types/auth-types";
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, UserSchema } from '@/types/user-types';
+import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
 
+type AuthContextType = {
+  user: User | null;
+  token: string | null;
+  loading: boolean;
+  error: string | null;
+  logout: () => void;
+};
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Get NextAuth session
+  const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
+    // First try to get user info from NextAuth session
+    if (sessionStatus === 'authenticated' && session) {
+      // Extract token from session
+      const sessionToken = session.accessToken as string;
+      
+      if (sessionToken) {
+        setToken(sessionToken);
+        
+        // Create a user object from session data
+        try {
+          // Build user object from session data
+          const sessionUser = {
+            id: session.user?.id || 'unknown',
+            name: session.user?.name,
+            email: session.user?.email || 'unknown@example.com',
+            image: session.user?.image,
+            // Additional fields with default values
+            organizationId: null,
+            organizationName: null,
+            userType: 'USER', // Default value
+            createdAt: null,
+            updatedAt: null
+          };
+          
+          // Validate with Zod schema
+          const validatedUser = UserSchema.parse(sessionUser);
+          setUser(validatedUser);
+          
+          // Optionally store in localStorage as backup
+          localStorage.setItem('auth_token', sessionToken);
+          localStorage.setItem('user', JSON.stringify(validatedUser));
+        } catch (e) {
+          console.error('Failed to validate session user data:', e);
+          setError('Invalid session user data');
+        }
+      }
+    } else if (sessionStatus === 'unauthenticated') {
+      // Fallback to localStorage if no session is available
+      const storedToken = localStorage.getItem('auth_token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedToken && storedUser) {
+        try {
+          const parsedUser = UserSchema.parse(JSON.parse(storedUser));
+          setUser(parsedUser);
+          setToken(storedToken);
+        } catch (e) {
+          setError('Invalid user data stored');
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user');
+        }
+      }
     }
-  }, [token]);
+    
+    // Set loading to false once we've checked both session and localStorage
+    if (sessionStatus !== 'loading') {
+      setLoading(false);
+    }
+  }, [session, sessionStatus]);
+
+  const logout = async () => {
+    // Clear localStorage
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    
+    // Reset state
+    setUser(null);
+    setToken(null);
+    
+    // Use NextAuth signOut
+    await nextAuthSignOut();
+  };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, token, setToken }}>
+    <AuthContext.Provider value={{ user, token, loading, error, logout }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
-
-export { AuthContext };

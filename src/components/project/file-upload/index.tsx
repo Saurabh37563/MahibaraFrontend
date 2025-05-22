@@ -71,7 +71,7 @@ export function FileUploadMapping() {
     try {
       // Filter out any mappings that don't have both file and sheet selected
       const validMappings = data.mappings.filter((mapping) => mapping.fileId && mapping.sheetName)
-
+ 
       // In a real app, this would be an API call
       // await fetch('/api/submit-mappings', {
       //   method: 'POST',

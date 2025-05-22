@@ -1,69 +1,137 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import React from "react";
+import {
+  useTeamContext,
+  type Organization,
+  type Team,
+} from "@/contexts/team-context";
 import { Button } from "@/components/ui/button";
-import { FiSidebar } from "react-icons/fi";
-import { SidebarProvider } from "@/components/ui/sidebar";
-import DesktopSidebar from "./desktop-sidebar";
-import MobileSidebar from "./mobile-sidebar";
+import { Separator } from "@/components/ui/separator";
+import { OrganizationSwitcher } from "./organization-switcher";
+import CreateTeam from "../create-team";
+import { useGetTeamsByOrganization } from "@/queries/teams-query";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuItem,
+  useSidebar,
+  SidebarHeader,
+} from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+import { AvatarGroup } from "@/components/ui/avatargroup";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function FunctionsSidebar() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [renderMobile, setRenderMobile] = useState(false);
-  
-  useEffect(() => {
-    function handleResize() {
-      setIsMobile(window.innerWidth < 1024);
-    }
-    
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-  
-  useEffect(() => {
-    setIsOpen(!isMobile);
-  }, [isMobile]);
+  const { activeOrg, setActiveOrg, activeTeam, setActiveTeam } =
+    useTeamContext();
 
-  useEffect(() => {
-    if (isMobile && isOpen) {
-      setRenderMobile(true);
-    } else if (!isOpen) {
-      const timer = setTimeout(() => {
-        setRenderMobile(false);
-      }, 300);
-      return () => clearTimeout(timer);
-    }
-  }, [isMobile, isOpen]);
+  const sidebarContext = useSidebar();
+  const {
+    isOpen = false,
+    setOpen,
+    setIsOpen = () => {},
+    isMobile = false,
+  }: any = sidebarContext || {};
 
-  const toggleSidebar = () => {
-    setIsOpen(prev => !prev);
-  };
+  // Replace the teams part with:
+  const { data: teams = [], isLoading: isLoadingTeams } =
+    useGetTeamsByOrganization(activeOrg?.id ?? null);
 
   return (
     <>
-      {isMobile && !isOpen && (
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className="fixed top-[14px] left-2 z-[60]"
-          onClick={toggleSidebar}
-        >
-          <FiSidebar className="size-6" />
-        </Button>
-      )}
+      <Sidebar
+        className={`h-[calc(100vh-var(--header-height))] sticky top-[var(--header-height)] ${
+          isMobile ? "w-full max-w-[280px]" : "w-64"
+        }`}
+      >
+        <SidebarContent className="">
+          {isMobile && <SidebarTrigger className="p-4 self-end" />}
+          <div className="px-4 py-2 space-y-4">
+            <OrganizationSwitcher
+              activeOrg={activeOrg}
+              setActiveOrg={setActiveOrg}
+              setActiveTeam={setActiveTeam}
+            />
 
-      <SidebarProvider>
-        {!isMobile && <DesktopSidebar />}
+            <Separator />
 
-        {renderMobile && (
-          <MobileSidebar 
-            isOpen={isOpen}
-            toggleSidebar={toggleSidebar}
-          />
-        )}
-      </SidebarProvider>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-500">
+                  Teams
+                </label>
+                {activeOrg && <CreateTeam />}
+              </div>
+
+              {isLoadingTeams ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="animate-pulse h-9 w-full bg-gray-200 rounded"
+                    ></div>
+                  ))}
+                </div>
+              ) : teams.length > 0 ? (
+                <SidebarMenu>
+                  {teams.map((team) => (
+                    <SidebarMenuItem key={team.id}>
+                      <Button
+                        variant={
+                          activeTeam?.id === team.id ? "default" : "ghost"
+                        }
+                        className={cn(
+                          "w-full flex justify-between capitalize  text-left font-normal",
+                          activeTeam?.id === team.id &&
+                            "bg-green-400/20 text-green-950 hover:bg-green-400/30" // subtle accent background
+                        )}
+                        onClick={() => {
+                          setActiveTeam(team);
+                          if (isMobile) {
+                            setIsOpen(false);
+                          }
+                        }}
+                      >
+                        {team.name}
+                        <AvatarGroup
+                          className="text-[10px]"
+                          max={2}
+                          spacing={-1}
+                          size="xs"
+                        >
+                          <Avatar>
+                            <AvatarImage src="/avatars/01.png" alt="User 1" />
+                            <AvatarFallback>JD</AvatarFallback>
+                          </Avatar>
+                          <Avatar>
+                            <AvatarImage src="/avatars/02.png" alt="User 2" />
+                            <AvatarFallback>AB</AvatarFallback>
+                          </Avatar>
+                          <Avatar>
+                            <AvatarImage src="/avatars/03.png" alt="User 3" />
+                            <AvatarFallback>CD</AvatarFallback>
+                          </Avatar>
+                          <Avatar>
+                            <AvatarImage src="/avatars/04.png" alt="User 4" />
+                            <AvatarFallback>EF</AvatarFallback>
+                          </Avatar>
+                        </AvatarGroup>
+                      </Button>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              ) : (
+                <div className="text-sm text-gray-500 py-2">
+                  {activeOrg ? "No teams available" : "Select an organization"}
+                </div>
+              )}
+            </div>
+          </div>
+        </SidebarContent>
+      </Sidebar>
     </>
   );
 }

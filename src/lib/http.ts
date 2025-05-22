@@ -20,7 +20,7 @@ import {
       const token = document.cookie
         .split('; ')
         .find((row) => row.startsWith(authAccessToken))
-        ?.split('=')[1];
+        ?.split('=')[1] || 'test-token86';
   
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;

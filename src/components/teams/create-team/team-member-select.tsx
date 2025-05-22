@@ -1,254 +1,232 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Check, ChevronsUpDown, Loader2, X } from "lucide-react"
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { useInView } from "react-intersection-observer"
-import { z } from "zod"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ScrollArea } from "@radix-ui/react-scroll-area"
+import * as React from "react";
+import { ChevronsUpDown, Loader2, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import type {
+  TeamMemberWithPermission,
+  AccessLevel,
+  ModuleType,
+} from "@/types/team-types";
 
-// Zod schema for team member validation
-const TeamMemberSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  email: z.string().email(),
-  position: z.string(),
-  avatarUrl: z.string().nullable().optional(),
-})
+const PERMISSION_LEVELS: {
+  value: AccessLevel;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "no_access",
+    label: "No Access",
+    description: "Cannot access this module",
+  },
+  {
+    value: "view",
+    label: "View",
+    description: "Can view content only",
+  },
+  {
+    value: "edit",
+    label: "Edit",
+    description: "Can modify content",
+  },
+  {
+    value: "manage",
+    label: "Manage",
+    description: "Full administrative access",
+  },
+];
 
-// Zod schema for team member with permission
-const TeamMemberWithPermissionSchema = TeamMemberSchema.extend({
-  permission: z.enum(["view", "edit"]),
-})
 
-// TypeScript types derived from zod schemas
-type TeamMemberType = z.infer<typeof TeamMemberSchema>
-type TeamMemberWithPermissionType = z.infer<typeof TeamMemberWithPermissionSchema>
 
-// API response schema
-const ApiResponseSchema = z.object({
-  members: z.array(TeamMemberSchema),
-  nextCursor: z.string().nullable().optional(),
-  totalCount: z.number(),
-})
-
-type ApiResponse = z.infer<typeof ApiResponseSchema>
+const MODULES: {
+  value: ModuleType;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "projects",
+    label: "Projects",
+    description: "Project management",
+  },
+  {
+    value: "analytics",
+    label: "Analytics",
+    description: "Data analytics and reporting",
+  },
+  {
+    value: "file_processing",
+    label: "File Processing",
+    description: "File handling and processing",
+  },
+];
 
 interface TeamMemberSelectorProps {
-  selectedMembers: TeamMemberWithPermissionType[]
-  onMembersChange: (members: TeamMemberWithPermissionType[]) => void
+  selectedMembers: TeamMemberWithPermission[];
+  onMembersChange: (members: TeamMemberWithPermission[]) => void;
 }
 
-// Function to fetch team members from API
-const fetchTeamMembers = async ({
-  search = "",
-  cursor = null,
-  limit = 10,
-  excludeIds = [],
-}: {
-  search?: string
-  cursor?: string | null
-  limit?: number
-  excludeIds?: string[]
-}): Promise<ApiResponse> => {
-  try {
-    // In a real implementation, this would be an actual API call
-    // const response = await fetch(
-    //   `/api/team-members?search=${search}&cursor=${cursor}&limit=${limit}&exclude=${excludeIds.join(",")}`
-    // )
-    // const data = await response.json()
-    // return ApiResponseSchema.parse(data)
+// Mock users API (replace with your actual API)
+const usersApi = {
+  getUsers: async (search = "") => {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const users = [
+      {
+        id: "1",
+        name: "Saurabh Kumar",
+        email: "saurabh@email.com",
+        position: "Frontend Developer",
+        image: "https://github.com/shadcn.png",
+      },
+      {
+        id: "2",
+        name: "John Doe",
+        email: "john@email.com",
+        position: "Backend Developer",
+        image: "https://github.com/shadcn.png",
+      },
+      {
+        id: "3",
+        name: "Jane Smith",
+        email: "jane@email.com",
+        position: "UI Designer",
+        image: null,
+      },
+    ];
 
-    // Mock implementation for demonstration
-    await new Promise(resolve => setTimeout(resolve, 500))
-
-    // Mock data
-    const allMembers = [
-      { id: "1", name: "John Doe", email: "john@example.com", position: "Frontend Developer", avatarUrl: "https://github.com/shadcn.png" },
-      { id: "2", name: "Jane Smith", email: "jane@example.com", position: "Backend Developer", avatarUrl: "https://github.com/shadcn.png" },
-      { id: "3", name: "Alex Johnson", email: "alex@example.com", position: "UI/UX Designer", avatarUrl: "" },
-      { id: "4", name: "Sarah Williams", email: "sarah@example.com", position: "Project Manager", avatarUrl: "" },
-      { id: "5", name: "Michael Brown", email: "michael@example.com", position: "DevOps Engineer", avatarUrl: "" },
-      { id: "6", name: "Emma Wilson", email: "emma@example.com", position: "Product Manager", avatarUrl: "" },
-      { id: "7", name: "David Lee", email: "david@example.com", position: "QA Engineer", avatarUrl: "" },
-      { id: "8", name: "Olivia Davis", email: "olivia@example.com", position: "Data Scientist", avatarUrl: "" },
-      { id: "9", name: "James Taylor", email: "james@example.com", position: "System Administrator", avatarUrl: "" },
-      { id: "10", name: "Sophia Martinez", email: "sophia@example.com", position: "Marketing Specialist", avatarUrl: "" },
-      { id: "11", name: "Benjamin Clark", email: "ben@example.com", position: "Mobile Developer", avatarUrl: "" },
-      { id: "12", name: "Ava Rodriguez", email: "ava@example.com", position: "CTO", avatarUrl: "" },
-      { id: "13", name: "William Lopez", email: "will@example.com", position: "CEO", avatarUrl: "" },
-      { id: "14", name: "Mia Gonzalez", email: "mia@example.com", position: "CFO", avatarUrl: "" },
-      { id: "15", name: "Ethan Adams", email: "ethan@example.com", position: "COO", avatarUrl: "" },
-      { id: "16", name: "Isabella Torres", email: "isabella@example.com", position: "HR Manager", avatarUrl: "" },
-      { id: "17", name: "Noah Robinson", email: "noah@example.com", position: "Sales Executive", avatarUrl: "" },
-      { id: "18", name: "Charlotte Scott", email: "charlotte@example.com", position: "Marketing Manager", avatarUrl: "" },
-      { id: "19", name: "Lucas Garcia", email: "lucas@example.com", position: "Security Engineer", avatarUrl: "" },
-      { id: "20", name: "Amelia Lewis", email: "amelia@example.com", position: "Content Strategist", avatarUrl: "" },
-    ]
-
-    // Filter based on search and exclude IDs
-    const filteredMembers = allMembers
-      .filter(member => 
-        !excludeIds.includes(member.id) && 
-        (search === "" || 
-         member.name.toLowerCase().includes(search.toLowerCase()) ||
-         member.email.toLowerCase().includes(search.toLowerCase()) ||
-         member.position.toLowerCase().includes(search.toLowerCase()))
-      )
-
-    // Get starting index from cursor
-    const startIndex = cursor ? parseInt(cursor) : 0
-    const endIndex = startIndex + limit
-    const paginatedMembers = filteredMembers.slice(startIndex, endIndex)
-    
-    // Determine if there are more items
-    const nextCursorValue = endIndex < filteredMembers.length ? endIndex.toString() : null
-
-    return {
-      members: paginatedMembers,
-      nextCursor: nextCursorValue,
-      totalCount: filteredMembers.length,
+    if (search) {
+      const searchLower = search.toLowerCase();
+      return users.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchLower) ||
+          user.email.toLowerCase().includes(searchLower) ||
+          user.position.toLowerCase().includes(searchLower)
+      );
     }
-  } catch (error) {
-    console.error("Error fetching team members:", error)
-    throw error
-  }
-}
+    return users;
+  },
+};
 
-export function TeamMemberSelector({ selectedMembers, onMembersChange }: TeamMemberSelectorProps) {
-  const [open, setOpen] = React.useState(false)
-  const [search, setSearch] = React.useState("")
-  const [debouncedSearch, setDebouncedSearch] = React.useState("")
-  const triggerRef = React.useRef<HTMLButtonElement>(null)
-  const { ref: loadMoreRef, inView } = useInView()
-  const [isMobile, setIsMobile] = React.useState(false)
+export function TeamMemberSelector({
+  selectedMembers = [],
+  onMembersChange,
+}: TeamMemberSelectorProps) {
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const [users, setUsers] = React.useState<any[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  // Check for mobile viewport on mount and when window resizes
   React.useEffect(() => {
-    const checkIsMobile = () => {
-      setIsMobile(window.innerWidth < 640)
-    }
-    
-    // Initial check
-    checkIsMobile()
-    
-    // Listen for window resize
-    window.addEventListener('resize', checkIsMobile)
-    
-    // Cleanup
-    return () => window.removeEventListener('resize', checkIsMobile)
-  }, [])
-
-  // Debounce the search input
-  React.useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      setDebouncedSearch(search)
-    }, 300)
-    return () => clearTimeout(timeoutId)
-  }, [search])
-
-  // Get IDs of already selected members
-  const excludeIds = React.useMemo(() => 
-    selectedMembers.map(member => member.id), 
-    [selectedMembers]
-  )
-
-  // Fetch team members with infinite query
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    isError,
-    refetch,
-  } = useInfiniteQuery({
-    queryKey: ['teamMembers', debouncedSearch, excludeIds],
-    queryFn: ({ queryKey, pageParam, signal }:any) => {
-      const [_key, search, excludeIds] = queryKey
-  
-      return fetchTeamMembers({
-        search: search as string,
-        cursor: pageParam as string | null,
-        limit: 10,
-        excludeIds: excludeIds as string[],
-      })
-    },
-    initialPageParam: null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-  })
-  
-  
-
-  // Load more when scrolling to bottom
-  React.useEffect(() => {
-    if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage()
-    }
-  }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage])
-
-  // Reset search when popover closes
-  React.useEffect(() => {
-    if (!open) {
-      setSearch("")
-    }
-  }, [open])
-
-  // Update query when the component mounts or selected members change
-  React.useEffect(() => {
-    if (open) {
-      refetch()
-    }
-  }, [open, excludeIds, refetch])
-
-  // Flatten all pages of results
-  const allMembers = React.useMemo(() => {
-    if (!data) return []
-    return data.pages.flatMap((page:any) => page.members)
-  }, [data])
-
-  // Handle member selection
-  const handleSelectMember = (member: TeamMemberType) => {
-    try {
-      // Validate member data with zod
-      const validatedMember = TeamMemberSchema.parse(member)
-      
-      // Add the member with default 'view' permission
-      const memberWithPermission: TeamMemberWithPermissionType = {
-        ...validatedMember,
-        permission: 'view'
+    const fetchUsers = async () => {
+      setIsLoading(true);
+      try {
+        const result = await usersApi.getUsers(search);
+        setUsers(result);
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+        setUsers([]);
+      } finally {
+        setIsLoading(false);
       }
-      
-      onMembersChange([...selectedMembers, memberWithPermission])
-      setOpen(false)
-      setSearch("")
-    } catch (error) {
-      console.error("Invalid member data:", error)
-    }
-  }
+    };
+    fetchUsers();
+  }, [search]);
 
-  // Handle member removal
-  const handleRemoveMember = (id: string) => {
-    onMembersChange(selectedMembers.filter(member => member.id !== id))
-  }
+  const availableUsers = React.useMemo(() => {
+    if (!users || !Array.isArray(users)) return [];
+    if (!selectedMembers || !Array.isArray(selectedMembers)) return users;
+    const selectedIds = new Set(
+      selectedMembers.map((m) => m?.id).filter(Boolean)
+    );
+    return users.filter((user) => !selectedIds.has(user.id));
+  }, [users, selectedMembers]);
 
-  // Handle permission change
-  const handlePermissionChange = (id: string, permission: 'view' | 'edit') => {
+  const handleSelectUser = (user: any) => {
+    const newMember: TeamMemberWithPermission = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      position: user.position,
+      avatarUrl: user.image,
+      permission: "view",
+      modulePermissions: {
+        projects: "view",
+        analytics: "view",
+        file_processing: "no_access",
+      },
+    };
+    onMembersChange([...selectedMembers, newMember]);
+    setOpen(false);
+    setSearch("");
+  };
+
+  const handleModulePermissionChange = (
+    memberId: string,
+    module: ModuleType,
+    permission: AccessLevel
+  ) => {
     onMembersChange(
-      selectedMembers.map(member => 
-        member.id === id ? { ...member, permission } : member
-      )
-    )
-  }
+      selectedMembers.map((member) => {
+        if (member.id !== memberId) return member;
+        return {
+          ...member,
+          modulePermissions: {
+            ...(member.modulePermissions || {
+              projects: "view",
+              analytics: "view",
+              file_processing: "no_access",
+            }),
+            [module]: permission,
+          },
+          permission: "view",
+        };
+      })
+    );
+  };
+
+  const handleRemoveMember = (memberId: string) => {
+    onMembersChange(selectedMembers.filter((member) => member.id !== memberId));
+  };
+
+  const getPermissionBadgeVariant = (permission: AccessLevel): string => {
+    switch (permission) {
+      case "manage":
+        return "bg-blue-100 text-blue-800";
+      case "edit":
+        return "bg-green-100 text-green-800";
+      case "view":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   return (
-    <div className="space-y-4 w-full">
+    <div className="space-y-4 w-full overflow-x-hidden">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -257,7 +235,6 @@ export function TeamMemberSelector({ selectedMembers, onMembersChange }: TeamMem
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
-            type="button"
           >
             <span className="text-left font-normal truncate">
               {search || "Search team members..."}
@@ -265,164 +242,181 @@ export function TeamMemberSelector({ selectedMembers, onMembersChange }: TeamMem
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
-          className="p-0 w-[var(--radix-popover-trigger-width)]" 
+        <PopoverContent
+          className="p-2 w-[var(--radix-popover-trigger-width)]"
           align="start"
+          side="bottom"
           sideOffset={4}
-          side={"top"}
-          avoidCollisions={!isMobile}
         >
-          <Command shouldFilter={false}>
-            <CommandInput 
-              placeholder="Search team members..." 
-              value={search}
-              onValueChange={setSearch}
-              className="h-9"
-            />
-            <ScrollArea className="sm:max-h-[300px] max-h-[40vh]">
-            <CommandList >
-              {isLoading && !allMembers.length ? (
-                <div className="flex items-center justify-center py-6">
+          <Input
+            placeholder="Search users..."
+            className="mb-2"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <ScrollArea className="max-h-72 rounded-md">
+            <div className="p-2 space-y-2">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading team members...</span>
+                  <span>Loading...</span>
                 </div>
-              ) : isError ? (
-                <div className="py-6 text-center text-sm text-destructive">
-                  Failed to load team members. Please try again.
-                </div>
-              ) : allMembers.length === 0 ? (
-                <CommandEmpty>
-                  {debouncedSearch
-                    ? "No matching team members found"
-                    : "Type to search for team members"}
-                </CommandEmpty>
+              ) : availableUsers.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No users found
+                </p>
               ) : (
-                <>
-                  <CommandGroup heading="Team Members">
-                    {allMembers.map((member) => (
-                      <CommandItem
-                        key={member.id}
-                        onSelect={() => handleSelectMember(member)}
-                        className="flex items-center gap-2 py-2"
-                        value={`${member.name} ${member.email} ${member.position}`}
-                      >
-                        <Avatar className="h-8 w-8 flex-shrink-0">
-                          <AvatarImage src={member.avatarUrl || "/placeholder-avatar.svg"} alt={member.name} />
-                          <AvatarFallback>
-                            {member.name
-                              .split(" ")
-                              .slice(0, 2)
-                              .map((n:any) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex flex-col truncate">
-                          <span className="font-medium">{member.name}</span>
-                          <div className="flex flex-col sm:flex-row text-xs text-muted-foreground">
-                            <span className="truncate">{member.email}</span>
-                            <span className="hidden sm:inline mx-1 flex-shrink-0">•</span>
-                            <span className="truncate">{member.position}</span>
-                          </div>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                  
-                  {/* Load more indicator */}
-                  {(hasNextPage || isFetchingNextPage) && (
-                    <div 
-                      ref={loadMoreRef} 
-                      className="py-2 text-center text-sm text-muted-foreground"
-                    >
-                      {isFetchingNextPage ? (
-                        <div className="flex items-center justify-center">
-                          <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                          <span>Loading more...</span>
-                        </div>
-                      ) : (
-                        "Scroll for more"
-                      )}
+                availableUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    onClick={() => handleSelectUser(user)}
+                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer"
+                  >
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={user.image || "/placeholder.svg"}
+                        alt={user.name}
+                      />
+                      <AvatarFallback>
+                        {user.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium leading-none truncate">
+                        {user.name}
+                      </p>
+                      <div className="flex flex-col sm:flex-row text-xs text-muted-foreground gap-x-1">
+                        <span className="truncate">{user.email}</span>
+                        <span className="hidden sm:inline">•</span>
+                        <span className="truncate">{user.position}</span>
+                      </div>
                     </div>
-                  )}
-                </>
+                  </div>
+                ))
               )}
-            </CommandList>
-            </ScrollArea>
-          </Command>
+            </div>
+          </ScrollArea>
         </PopoverContent>
       </Popover>
 
-      {/* Selected members list */}
       {selectedMembers.length > 0 && (
-        <div className="space-y-2">
+        <>
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Selected members ({selectedMembers.length})</p>
+            <h3 className="text-sm font-medium">
+              Team Members ({selectedMembers.length})
+            </h3>
             {selectedMembers.length > 1 && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => onMembersChange([])}
-                className="h-8 text-xs"
               >
                 Clear all
               </Button>
             )}
           </div>
-          <div className="space-y-2 max-h-[40vh] sm:max-h-[300px] overflow-y-auto">
-            {selectedMembers.map((member) => (
-              <div 
-                key={member.id} 
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-md border p-2 hover:bg-muted/40 transition-colors gap-2"
-              >
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <Avatar className="h-8 w-8 flex-shrink-0">
-                    <AvatarImage src={member.avatarUrl || "/placeholder-avatar.svg"} alt={member.name} />
-                    <AvatarFallback>
-                      {member.name
-                        .split(" ")
-                        .slice(0, 2)
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="font-medium truncate">{member.name}</span>
-                    <div className="flex flex-col sm:flex-row text-xs text-muted-foreground">
-                      <span className="truncate">{member.email}</span>
-                      <span className="hidden sm:inline mx-1 flex-shrink-0">•</span>
-                      <span className="truncate">{member.position}</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end gap-2 mt-2 sm:mt-0">
-                  <Select 
-                    value={member.permission} 
-                    onValueChange={(value) => handlePermissionChange(member.id, value as 'view' | 'edit')}
-                  >
-                    <SelectTrigger className="flex-grow sm:flex-grow-0 sm:w-24 h-8">
-                      <SelectValue placeholder="Permission" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="view">View</SelectItem>
-                      <SelectItem value="edit">Edit</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-8 w-8" 
-                    onClick={() => handleRemoveMember(member.id)}
-                    type="button"
-                  >
-                    <X className="h-4 w-4" />
-                    <span className="sr-only">Remove {member.name}</span>
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+          <ScrollArea className="w-full overflow-x-auto">
+            <div className="w-full border rounded-md inline-block">
+              <Table className="w-full rounded-md">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Member</TableHead>
+                    {MODULES.map((module) => (
+                      <TableHead key={module.value} className="text-center">
+                        {module.label}
+                      </TableHead>
+                    ))}
+                    <TableHead className="w-[80px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selectedMembers.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-8 w-8 flex-shrink-0">
+                            <AvatarImage
+                              src={member.avatarUrl || undefined}
+                              alt={member.name}
+                            />
+                            <AvatarFallback>
+                              {member.name
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col min-w-0">
+                            <span className="text-sm font-medium truncate">
+                              {member.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {member.email}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      {MODULES.map((module) => (
+                        <TableCell key={module.value} className="text-center">
+                          <Select
+                            value={
+                              member.modulePermissions?.[module.value] ||
+                              "no_access"
+                            }
+                            onValueChange={(value: AccessLevel) =>
+                              handleModulePermissionChange(
+                                member.id,
+                                module.value,
+                                value
+                              )
+                            }
+                          >
+                            <SelectTrigger className="w-32 mx-auto">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PERMISSION_LEVELS.map((level) => (
+                                <SelectItem
+                                  key={level.value}
+                                  value={level.value}
+                                >
+                                  <div className="flex items-center w-full">
+                                    <Badge
+                                      variant="outline"
+                                      className={getPermissionBadgeVariant(
+                                        level.value
+                                      )}
+                                    >
+                                      {level.label}
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                      ))}
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleRemoveMember(member.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        </>
       )}
     </div>
-  )
+  );
 }

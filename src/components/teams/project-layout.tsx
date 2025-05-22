@@ -1,24 +1,28 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useTeamContext } from '../../contexts/team-context';
-import FilterDropdown from './filters-dropdown';
-import { ProjectList } from './project-list';
-import CreateProjectModal from './create-project-modal';
-
+import React from "react";
+import { useTeamContext } from "@/contexts/team-context";
+import FilterDropdown from "./filters-dropdown";
+import { ProjectList } from "./projects/project-list";
+import CreateProjectModal from "./create-project-modal";
+import { useGetTeamProjects } from "@/queries/project-query";
+import { useSearchParams } from "next/navigation";
+import {
+  type StatusOption,
+  type SortField,
+  type SortOrder,
+  type DateRange,
+} from "@/types/project-types";
+import { FiInfo } from "react-icons/fi";
 const EmptyTeamState = () => (
   <div className="flex flex-col items-center justify-center h-full text-center px-4 py-24">
     <div className="bg-gray-100 p-6 rounded-full mb-4">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="9" cy="7" r="4"></circle>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-      </svg>
+      <FiInfo size={35} />
     </div>
     <h3 className="text-xl font-semibold mb-2">No Team Selected</h3>
     <p className="text-gray-500 mb-6 max-w-md">
-      Please select a team from the sidebar to view and manage projects for that team.
+      Please select a team from the sidebar to view and manage projects for that
+      team.
     </p>
   </div>
 );
@@ -37,28 +41,51 @@ const EmptyProjects = () => (
 );
 
 const Functions = () => {
-  const { 
-    activeTeam, 
-    projects, 
-    isLoadingProjects 
-  } = useTeamContext();
+  const { activeTeam } = useTeamContext();
+  const searchParams = useSearchParams();
+
+  // Extract filter values from URL params
+  const filters = {
+    status: (searchParams.get("status") as StatusOption) || "all",
+    sortField: (searchParams.get("sortField") as SortField) || "date",
+    sortOrder: (searchParams.get("sortOrder") as SortOrder) || "desc",
+    dateRange: (searchParams.get("dateRange") as DateRange) || "all",
+    search: searchParams.get("search") || "",
+  };
+  // Fetch projects for the active team
+  const {
+    data: projects,
+    isLoading,
+    isError,
+    error,
+  } = useGetTeamProjects(activeTeam?.id || "", filters);
 
   if (!activeTeam) {
     return <EmptyTeamState />;
   }
 
+  if (isError) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-600">
+        <p>
+          Error loading projects: {error?.message || "Unknown error occurred"}
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col h-full max-h-[calc(100vh-var(--header-height))] gap-4">
+    <div className="flex flex-col h-full w-full max-h-[calc(100vh-var(--header-height))] gap-4">
       <div className="flex w-full items-center justify-between">
-        <span className="text-xl font-semibold">Projects for {activeTeam.name}</span>
-        <CreateProjectModal />
+        <span className="text-xl font-semibold">Projects</span>
+        {projects && projects.length > 0 && <CreateProjectModal />}
       </div>
 
       <FilterDropdown />
 
-      {isLoadingProjects ? (
+      {isLoading ? (
         <LoadingProjects />
-      ) : projects.length > 0 ? (
+      ) : projects && projects.length > 0 ? (
         <ProjectList projects={projects} />
       ) : (
         <EmptyProjects />

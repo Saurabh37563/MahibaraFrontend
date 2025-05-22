@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable"
+} from "@/components/ui/resizable";
 import { IoMdAdd } from "react-icons/io";
 import { MdOutlineFileDownload } from "react-icons/md";
 import { LuFileSpreadsheet } from "react-icons/lu";
@@ -15,8 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import AnalysisView from "./AnalysisView";
 import SpreadSheetView from "./SpreadSheetView";
 import { z } from "zod";
-import FileUploadMapping from './file-upload';
-import { AnalysisSelectionModal } from './create-analysis';
+import FileUploadMapping from "./file-upload";
+import { AnalysisSelectionModal } from "./create-analysis";
 import { Button } from "@/components/ui/button";
 import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -66,7 +66,7 @@ const AnalysisDataSchema = z.object({
 
 // Derive TypeScript types from Zod schemas
 type Item = z.infer<typeof ItemSchema>;
-type SelectedItem = Item & { type: 'sheet' | 'analysis' };
+type SelectedItem = Item & { type: "sheet" | "analysis" };
 type SpreadsheetData = z.infer<typeof SpreadsheetDataSchema>;
 type AnalysisData = z.infer<typeof AnalysisDataSchema>;
 type DataType = SpreadsheetData | AnalysisData | null;
@@ -77,7 +77,9 @@ export default function Project() {
   const [data, setData] = useState<DataType>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
-  const [selectedTab, setSelectedTab] = useState<'sheets' | 'analysis'>('sheets');
+  const [selectedTab, setSelectedTab] = useState<"sheets" | "analysis">(
+    "sheets"
+  );
 
   // Check if we're on a mobile device
   useEffect(() => {
@@ -89,11 +91,11 @@ export default function Project() {
         setSidebarOpen(true);
       }
     };
-    
+
     checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
-    return () => window.removeEventListener('resize', checkIfMobile);
+    window.addEventListener("resize", checkIfMobile);
+
+    return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
   const sheets: Item[] = [
@@ -108,7 +110,7 @@ export default function Project() {
     { id: 9, name: "Adv To Vendor", status: "info" },
     { id: 10, name: "PO Matrix", status: "neutral" },
   ];
-  
+
   const analysis: Item[] = [
     { id: 1, name: "Top Vendors (80-20)", status: "success" },
     { id: 2, name: "Top Items (80-20)", status: "warning" },
@@ -116,7 +118,7 @@ export default function Project() {
     { id: 4, name: "PO By Location", status: "info" },
     { id: 5, name: "PO By Currency", status: "neutral" },
   ];
-  
+
   const statusDotColors: Record<z.infer<typeof StatusEnum>, string> = {
     success: "bg-green-500",
     warning: "bg-yellow-500",
@@ -135,51 +137,65 @@ export default function Project() {
     setLoading(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      if (selectedItem?.type === 'sheet') {
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      if (selectedItem?.type === "sheet") {
         // Mock spreadsheet data - generate more rows for virtualization
         const columns = [
-          { key: 'id', name: 'ID', width: 100 },
-          { key: 'reference', name: 'Reference', width: 165 },
-          { key: 'date', name: 'Date', width: 165 },
-          { key: 'vendor', name: 'Vendor', width: 165 },
-          { key: 'amount', name: 'Amount', width: 165 },
-          { key: 'status', name: 'Status', width: 165 }
+          { key: "id", name: "ID", width: 100 },
+          { key: "reference", name: "Reference", width: 165 },
+          { key: "date", name: "Date", width: 165 },
+          { key: "vendor", name: "Vendor", width: 165 },
+          { key: "amount", name: "Amount", width: 165 },
+          { key: "status", name: "Status", width: 165 },
         ];
-        
-        const rows = Array(10000).fill(0).map((_, i) => ({
-          id: i + 1,
-          reference: `REF-${Math.floor(10000 + Math.random() * 90000)}`,
-          date: new Date(Date.now() - Math.random() * 10000000000).toLocaleDateString(),
-          vendor: ['ABC Corp', 'XYZ Ltd', 'Global Solutions', 'Tech Innovations'][Math.floor(Math.random() * 4)],
-          amount: `$${(1000 + Math.random() * 9000).toFixed(2)}`,
-          status: ['Pending', 'Approved', 'Rejected', 'In Progress'][Math.floor(Math.random() * 4)]
-        }));
-        
-        const fileStatuses = ['validated', 'pending', 'error'] as const;
-        const randomStatus = fileStatuses[Math.floor(Math.random() * fileStatuses.length)];
-  
+
+        const rows = Array(10000)
+          .fill(0)
+          .map((_, i) => ({
+            id: i + 1,
+            reference: `REF-${Math.floor(10000 + Math.random() * 90000)}`,
+            date: new Date(
+              Date.now() - Math.random() * 10000000000
+            ).toLocaleDateString(),
+            vendor: [
+              "ABC Corp",
+              "XYZ Ltd",
+              "Global Solutions",
+              "Tech Innovations",
+            ][Math.floor(Math.random() * 4)],
+            amount: `$${(1000 + Math.random() * 9000).toFixed(2)}`,
+            status: ["Pending", "Approved", "Rejected", "In Progress"][
+              Math.floor(Math.random() * 4)
+            ],
+          }));
+
+        const fileStatuses = ["validated", "pending", "error"] as const;
+        const randomStatus =
+          fileStatuses[Math.floor(Math.random() * fileStatuses.length)];
+
         const sheetData = {
-          lastModified: "Jan 15, 2024", 
-          size: "2.4 MB", 
-          records: 234,  
-          columns, 
-          rows, 
-          status: randomStatus 
+          lastModified: "Jan 15, 2024",
+          size: "2.4 MB",
+          records: 234,
+          columns,
+          rows,
+          status: randomStatus,
         };
-        
+
         // Validate with Zod
         const validatedData = SpreadsheetDataSchema.parse(sheetData);
         setData(validatedData);
       } else {
         // Mock analysis data
-        const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        const values = Array(6).fill(0).map(() => Math.floor(Math.random() * 100));
-        
-        const chartTypes = ['bar', 'line', 'pie'] as const;
+        const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+        const values = Array(6)
+          .fill(0)
+          .map(() => Math.floor(Math.random() * 100));
+
+        const chartTypes = ["bar", "line", "pie"] as const;
         const analysisStatuses = ["completed", "running", "deleted"] as const;
-        
+
         const analysisData = {
           status: analysisStatuses[Math.floor(Math.random() * 3)],
           threshold: "20%",
@@ -189,26 +205,26 @@ export default function Project() {
           values,
           summary: `This analysis shows the distribution of ${selectedItem?.name} across different periods.`,
           keyPoints: [
-            'Point 1: Significant increase in Q2',
-            'Point 2: ABC Corp is the top vendor',
-            'Point 3: 80% of purchases come from 20% of vendors'
-          ]
+            "Point 1: Significant increase in Q2",
+            "Point 2: ABC Corp is the top vendor",
+            "Point 3: 80% of purchases come from 20% of vendors",
+          ],
         };
-        
+
         // Validate with Zod
         const validatedData = AnalysisDataSchema.parse(analysisData);
         setData(validatedData);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleItemClick = (item: Item, type: 'sheet' | 'analysis'): void => {
+  const handleItemClick = (item: Item, type: "sheet" | "analysis"): void => {
     setSelectedItem({ ...item, type });
-    
+
     // On mobile, close the sidebar after selection
     if (isMobile) {
       setSidebarOpen(false);
@@ -221,7 +237,7 @@ export default function Project() {
 
   // Mobile sidebar component
   const MobileSidebar = () => (
-    <div 
+    <div
       className={`
         fixed inset-y-0 left-0 
         w-[280px] max-w-[80vw]
@@ -232,7 +248,7 @@ export default function Project() {
         border-r border-gray-200
         shadow-xl
         transition-all duration-300 ease-in-out
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
       `}
     >
       <div className="p-3 border-b border-gray-200 flex justify-between items-center">
@@ -241,43 +257,59 @@ export default function Project() {
           <X className="h-4 w-4" />
         </Button>
       </div>
-      
+
       <div className="flex border-b border-gray-200">
-        <button 
-          className={`flex-1 py-2 text-xs font-medium ${selectedTab === 'sheets' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}
-          onClick={() => setSelectedTab('sheets')}
+        <button
+          className={`flex-1 py-2 text-xs font-medium ${
+            selectedTab === "sheets"
+              ? "text-primary border-b-2 border-primary"
+              : "text-gray-500"
+          }`}
+          onClick={() => setSelectedTab("sheets")}
         >
           Sheets ({sheets.length})
         </button>
-        <button 
-          className={`flex-1 py-2 text-xs font-medium ${selectedTab === 'analysis' ? 'text-primary border-b-2 border-primary' : 'text-gray-500'}`}
-          onClick={() => setSelectedTab('analysis')}
+        <button
+          className={`flex-1 py-2 text-xs font-medium ${
+            selectedTab === "analysis"
+              ? "text-primary border-b-2 border-primary"
+              : "text-gray-500"
+          }`}
+          onClick={() => setSelectedTab("analysis")}
         >
           Analysis ({analysis.length})
         </button>
       </div>
-      
-      {selectedTab === 'sheets' ? (
+
+      {selectedTab === "sheets" ? (
         <div className="flex-1 overflow-y-auto">
           <div className="flex items-center justify-between p-3 bg-gray-50">
             <div className="text-xs flex items-center gap-1">
               <span>Sheets</span>
-              <span className="text-[12px] mt-[2px] text-muted-foreground">({sheets.length})</span>
+              <span className="text-[12px] mt-[2px] text-muted-foreground">
+                ({sheets.length})
+              </span>
             </div>
             <div className="flex gap-2 items-center">
               <FileUploadMapping />
-              <MdOutlineFileDownload className="text-muted-foreground cursor-pointer" size={16} />
+              <MdOutlineFileDownload
+                className="text-muted-foreground cursor-pointer"
+                size={16}
+              />
             </div>
           </div>
-          
+
           <div className="overflow-y-auto py-4">
             {sheets.map((sheet) => (
               <div
                 key={sheet.id}
                 className={`flex group items-center justify-between rounded-md p-2 mx-1 hover:bg-slate-50 cursor-pointer ${
-                  selectedItem?.id === sheet.id && selectedItem?.type === 'sheet' ? 'bg-slate-100' : ''
+                  selectedItem?.id === sheet.id &&
+                  selectedItem?.type === "sheet"
+                    ? "bg-slate-100"
+                    : ""
                 }`}
-                onClick={() => handleItemClick(sheet, 'sheet')}
+                onClick={() => handleItemClick(sheet, "sheet")}
               >
                 <div className="text-xs flex items-center gap-2">
                   <LuFileSpreadsheet className="text-gray-400" />
@@ -300,22 +332,30 @@ export default function Project() {
           <div className="flex items-center justify-between p-3 bg-gray-50">
             <div className="text-xs flex items-center gap-1">
               <span>Analysis</span>
-              <span className="text-[12px] mt-[2px] text-muted-foreground">({analysis.length})</span>
+              <span className="text-[12px] mt-[2px] text-muted-foreground">
+                ({analysis.length})
+              </span>
             </div>
             <div className="flex gap-2 items-center">
               <AnalysisSelectionModal />
-              <MdOutlineFileDownload className="text-muted-foreground cursor-pointer" size={16} />
+              <MdOutlineFileDownload
+                className="text-muted-foreground cursor-pointer"
+                size={16}
+              />
             </div>
           </div>
-          
+
           <div className="overflow-y-auto py-4">
             {analysis.map((item) => (
               <div
                 key={item.id}
                 className={`flex group items-center justify-between rounded-md p-2 mx-1 hover:bg-slate-50 cursor-pointer ${
-                  selectedItem?.id === item.id && selectedItem?.type === 'analysis' ? 'bg-slate-100' : ''
+                  selectedItem?.id === item.id &&
+                  selectedItem?.type === "analysis"
+                    ? "bg-slate-100"
+                    : ""
                 }`}
-                onClick={() => handleItemClick(item, 'analysis')}
+                onClick={() => handleItemClick(item, "analysis")}
               >
                 <div className="text-xs flex items-center gap-2">
                   <LuChartPie className="text-gray-400" />
@@ -350,35 +390,37 @@ export default function Project() {
           <ChevronRight className="h-4 w-4" />
         </Button>
       )} */}
-      
+
       {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/30 z-40"
           onClick={toggleSidebar}
         />
       )}
-      
+
       {/* Mobile sidebar */}
       {isMobile && <MobileSidebar />}
-      
+
       {/* Desktop layout with resizable panels */}
       {!isMobile ? (
-        <ResizablePanelGroup
-          direction="horizontal"
-          className="w-full h-full"
-        >
+        <ResizablePanelGroup direction="horizontal" className="w-full h-full">
           <ResizablePanel defaultSize={25}>
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel className="flex flex-col w-full" defaultSize={50}>
                 <div className="flex items-center justify-between px-3 bg-gray-50">
                   <div className="text-xs flex items-center gap-1">
                     <span className="">Sheets</span>
-                    <span className="text-[12px] mt-[2px] text-muted-foreground">({sheets.length})</span>
+                    <span className="text-[12px] mt-[2px] text-muted-foreground">
+                      ({sheets.length})
+                    </span>
                   </div>
                   <div className="flex gap-2 items-center">
                     <FileUploadMapping />
-                    <MdOutlineFileDownload className="text-muted-foreground cursor-pointer" size={16} />
+                    <MdOutlineFileDownload
+                      className="text-muted-foreground cursor-pointer"
+                      size={16}
+                    />
                   </div>
                 </div>
                 <div className="overflow-y-auto py-4 px-2">
@@ -386,9 +428,12 @@ export default function Project() {
                     <div
                       key={sheet.id}
                       className={`flex group items-center justify-between rounded-sm p-2 hover:bg-slate-50 cursor-pointer ${
-                        selectedItem?.id === sheet.id && selectedItem?.type === 'sheet' ? 'bg-slate-200 border-l-4  border-primary' : ''
+                        selectedItem?.id === sheet.id &&
+                        selectedItem?.type === "sheet"
+                          ? "bg-slate-200 border-l-4  border-primary"
+                          : ""
                       }`}
-                      onClick={() => handleItemClick(sheet, 'sheet')}
+                      onClick={() => handleItemClick(sheet, "sheet")}
                     >
                       <div className="text-xs flex items-center gap-2">
                         <LuFileSpreadsheet className="text-gray-400" />
@@ -411,11 +456,16 @@ export default function Project() {
                 <div className="flex items-center justify-between px-3 bg-gray-50">
                   <div className="text-xs flex items-center gap-1">
                     <span className="">Analysis</span>
-                    <span className="text-[12px] mt-[2px] text-muted-foreground">({analysis.length})</span>
+                    <span className="text-[12px] mt-[2px] text-muted-foreground">
+                      ({analysis.length})
+                    </span>
                   </div>
                   <div className="flex gap-2 items-center">
                     <AnalysisSelectionModal />
-                    <MdOutlineFileDownload className="text-muted-foreground cursor-pointer" size={16} />
+                    <MdOutlineFileDownload
+                      className="text-muted-foreground cursor-pointer"
+                      size={16}
+                    />
                   </div>
                 </div>
                 <div className="overflow-y-auto py-4 px-2">
@@ -423,9 +473,12 @@ export default function Project() {
                     <div
                       key={item.id}
                       className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
-                        selectedItem?.id === item.id && selectedItem?.type === 'analysis' ? 'bg-slate-200 border-l-4  border-primary' : ''
+                        selectedItem?.id === item.id &&
+                        selectedItem?.type === "analysis"
+                          ? "bg-slate-200 border-l-4  border-primary"
+                          : ""
                       }`}
-                      onClick={() => handleItemClick(item, 'analysis')}
+                      onClick={() => handleItemClick(item, "analysis")}
                     >
                       <div className="text-xs flex items-center gap-2">
                         <LuChartPie className="text-gray-400" />
@@ -458,20 +511,24 @@ export default function Project() {
                 "
               />
 
-              <div className="
+              <div
+                className="
                 pointer-events-none 
                 absolute inset-0 
                 bg-white dark:bg-black 
                 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]
-              " />
+              "
+              />
 
               <div className="relative z-10 h-full">
                 {!selectedItem ? (
-                  <div className="
+                  <div
+                    className="
                     absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white 
                     rounded-lg shadow-sm p-4 w-fit text-gray-400 z-20 flex flex-col items-center justify-center
-                  ">
-                    <LuFileSpreadsheet size={40} className="mb-4"/>
+                  "
+                  >
+                    <LuFileSpreadsheet size={40} className="mb-4" />
                     <p className="text-gray-500 text-sm">
                       Select a sheet or analysis to view details
                     </p>
@@ -491,18 +548,16 @@ export default function Project() {
                       </div>
                     </div>
                   </div>
+                ) : selectedItem.type === "sheet" ? (
+                  <SpreadSheetView
+                    data={data as SpreadsheetData}
+                    title={selectedItem.name}
+                  />
                 ) : (
-                  selectedItem.type === 'sheet' ? (
-                    <SpreadSheetView 
-                      data={data as SpreadsheetData} 
-                      title={selectedItem.name} 
-                    />
-                  ) : (
-                    <AnalysisView 
-                      data={data as AnalysisData} 
-                      title={selectedItem.name} 
-                    />
-                  )
+                  <AnalysisView
+                    data={data as AnalysisData}
+                    title={selectedItem.name}
+                  />
                 )}
               </div>
             </div>
@@ -519,29 +574,31 @@ export default function Project() {
               dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]
             "
           />
-          
-          <div className="
+
+          <div
+            className="
             pointer-events-none 
             absolute inset-0 
             bg-white dark:bg-black 
             [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]
-          " />
-          
+          "
+          />
+
           <div className="relative z-10 h-full">
-   
-            
             {!selectedItem ? (
-              <div className="
+              <div
+                className="
                 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white 
                 rounded-lg shadow-sm p-4 w-fit text-gray-400 z-20 flex flex-col items-center justify-center
-              ">
-                <LuFileSpreadsheet size={40} className="mb-4"/>
+              "
+              >
+                <LuFileSpreadsheet size={40} className="mb-4" />
                 <p className="text-gray-500 text-sm text-center">
                   Select a sheet or analysis to view details
                 </p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="mt-4"
                   onClick={toggleSidebar}
                 >
@@ -560,47 +617,46 @@ export default function Project() {
                   <Skeleton className="h-4 w-full" />
                 </div>
               </div>
-            ) : (
-              selectedItem.type === 'sheet' ? (
-               <>
-               <div className='w-full pt-2'>
-                {isMobile && !sidebarOpen && (
-                  <Button 
-                    variant="outline" 
-                    className="  py-4 h-8 w-8 rounded-full p-0"
-                    onClick={toggleSidebar}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                )}
-                </div>
-                <SpreadSheetView 
-                  data={data as SpreadsheetData} 
-                  title={selectedItem.name} 
-                /></>
-              ) : (
-                <>
-                <div className='w-full pt-2  '>
+            ) : selectedItem.type === "sheet" ? (
+              <>
+                <div className="w-full pt-2">
                   {isMobile && !sidebarOpen && (
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       className="  py-4 h-8 w-8 rounded-full p-0"
                       onClick={toggleSidebar}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
                   )}
-               
                 </div>
-                   <AnalysisView 
-                   data={data as AnalysisData} 
-                   title={selectedItem.name} 
-                 /></>
-              )
+                <SpreadSheetView
+                  data={data as SpreadsheetData}
+                  title={selectedItem.name}
+                />
+              </>
+            ) : (
+              <>
+                <div className="w-full pt-2  ">
+                  {isMobile && !sidebarOpen && (
+                    <Button
+                      variant="outline"
+                      className="  py-4 h-8 w-8 rounded-full p-0"
+                      onClick={toggleSidebar}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+                <AnalysisView
+                  data={data as AnalysisData}
+                  title={selectedItem.name}
+                />
+              </>
             )}
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }

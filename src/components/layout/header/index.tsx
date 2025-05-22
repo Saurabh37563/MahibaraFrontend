@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   CommandDialog,
@@ -33,21 +33,23 @@ import {
   CommandItem,
   CommandList
 } from "@/components/ui/command";
+import { signOut } from "next-auth/react";
+import { useAuth } from "@/contexts/auth-context";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import { FiSidebar } from "react-icons/fi";
 
-// Create a client
+
 const queryClient = new QueryClient();
 
-// Custom useDebounce hook
+
 function useDebounce<T>(value: T, delay = 500): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
   useEffect(() => {
-    // Set a timeout to update the debounced value after the delay
     const timer = setTimeout(() => {
       setDebouncedValue(value);
     }, delay);
 
-    // Clean up the timeout if the value changes or component unmounts
     return () => {
       clearTimeout(timer);
     };
@@ -83,7 +85,6 @@ interface SearchResponse {
 const UserContext = createContext<UserData | null>(null);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  // Dummy user data - in a real app this would come from authentication
   const userData: UserData = {
     id: "user-1",
     name: "John Doe",
@@ -99,16 +100,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useUser() {
-  const context = useContext(UserContext);
-  // Modified to safely handle cases where context is null
-  return context || {
-    id: "",
-    name: "Guest User",
-    email: "guest@example.com",
-    role: "Guest"
-  };
-}
+
 
 // Routes that should display the search bar
 const SEARCHABLE_ROUTES = [
@@ -121,7 +113,6 @@ const SEARCHABLE_ROUTES = [
   "/functions",
 ];
 
-// Mock function to fetch search results - replace with actual API call
 const fetchSearchResults = async ({ 
   query = "", 
   cursor = null,
@@ -131,10 +122,9 @@ const fetchSearchResults = async ({
   cursor: string | null,
   limit?: number
 }): Promise<SearchResponse> => {
-  // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 500));
   
-  // Mock data for search results
+
   const allResults = [
     { id: "fn-1", title: "Data Processing", description: "Process raw data into structured format", type: "function", path: "/functions/fn-1" },
     { id: "fn-2", title: "Text Analysis", description: "Analyze text for sentiment and keywords", type: "function", path: "/functions/fn-2" },
@@ -153,7 +143,7 @@ const fetchSearchResults = async ({
     { id: "fn-15", title: "Entity Recognition", description: "Identify entities in text", type: "function", path: "/functions/fn-15" },
   ];
   
-  // Filter results by search query if provided
+
   const filteredResults = query 
     ? allResults.filter(result => 
         result.title.toLowerCase().includes(query.toLowerCase()) || 
@@ -161,12 +151,11 @@ const fetchSearchResults = async ({
       )
     : allResults;
   
-  // Implement cursor-based pagination
+
   const startIndex = cursor ? parseInt(cursor) : 0;
   const endIndex = startIndex + limit;
   const paginatedResults = filteredResults.slice(startIndex, endIndex);
-  
-  // Determine if there are more items
+
   const nextCursorValue = endIndex < filteredResults.length ? endIndex.toString() : null;
   
   return {
@@ -176,25 +165,25 @@ const fetchSearchResults = async ({
   };
 };
 
-// Header Component (without the query client provider)
 const HeaderContent = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { ref: loadMoreRef, inView } = useInView();
-  const user = useUser();
-  
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
+  const {user, token}:any = useAuth()
+    const sidebarContext = useSidebar();
+  const { 
+    isOpen = false, 
+    setIsOpen = () => {},  
+    isMobile = false 
+  }:any = sidebarContext || {};
   const [commandOpen, setCommandOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Check if current route should show search
   const shouldShowSearch = SEARCHABLE_ROUTES.some((route) =>
     pathname?.startsWith(route) || false
   );
 
-  // Handle keyboard shortcut to open search
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -207,7 +196,6 @@ const HeaderContent = () => {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Search query with React Query
   const {
     data,
     fetchNextPage,
@@ -217,7 +205,7 @@ const HeaderContent = () => {
     isError,
   } = useInfiniteQuery({
     queryKey: ['searchResults', debouncedQuery],
-    queryFn: ({ pageParam }) => fetchSearchResults({
+    queryFn: ({ pageParam }:any) => fetchSearchResults({
       query: debouncedQuery,
       cursor: pageParam as string | null,
     }),
@@ -226,50 +214,59 @@ const HeaderContent = () => {
     enabled: debouncedQuery.length > 0 && commandOpen,
   });
 
-  // Flatten all pages of results
+
   const allResults = React.useMemo(() => {
     if (!data) return [];
     return data.pages.flatMap(page => page.results);
   }, [data]);
 
-  // Load more when scrolling to bottom
+
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // Handle selecting a search result
   const handleSelectSearchResult = useCallback((path: string) => {
     setCommandOpen(false);
     setSearchQuery("");
     router.push(path);
   }, [router]);
 
-  // Handle closing the command dialog
+
   const handleCommandClose = useCallback(() => {
     setCommandOpen(false);
     setSearchQuery("");
   }, []);
 
-  // Get user initials for avatar fallback
+
   const getUserInitials = () => {
     if (!user || !user.name) return "U";
     
     return user.name
       .split(' ')
-      .map(n => n[0])
+      .map((n:any) => n[0])
       .join('')
       .toUpperCase();
   };
+
+  const isFunctionsPage = pathname === '/functions';
 
   return (
     <>
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="w-full mx-auto px-2">
           <div className="flex justify-between items-center h-16">
+
+        
+
             {/* Left section - Logo */}
-            <div className="flex items-center lg:pl-0 pl-10">
+            <div className="flex items-center ">
+              {isMobile && !isOpen && isFunctionsPage && (
+                <SidebarTrigger className=" size-10">
+                    <FiSidebar size={40}/>
+                </SidebarTrigger>
+              )}
               <Link href="/" className="flex-shrink-0">
                 <div className="h-8 w-auto font-bold text-xl flex items-center">
                   <span className="text-green-950 px-2 py-1 rounded">
@@ -317,7 +314,7 @@ const HeaderContent = () => {
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" className="flex items-center gap-2 px-2 h-10">
                     <Avatar className="h-8 w-8">
-                      <AvatarImage src={user?.avatar} alt={user?.name || "User"} />
+                      <AvatarImage src={user?.image} alt={user?.name || "User"} />
                       <AvatarFallback>{getUserInitials()}</AvatarFallback>
                     </Avatar>
                     
@@ -334,20 +331,20 @@ const HeaderContent = () => {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  {/* <DropdownMenuItem>
                     <Settings className="mr-2 h-4 w-4" />
                     <span>Settings</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  </DropdownMenuItem> */}
+                  <DropdownMenuItem onClick={() => router.push('/help-and-support')}>
                     <HelpCircle className="mr-2 h-4 w-4" />
                     <span>Help & Support</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-red-600">
+                  <DropdownMenuItem onClick={() => {signOut({callbackUrl:"/login"})}} className="text-red-600">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Sign out</span>
                   </DropdownMenuItem>

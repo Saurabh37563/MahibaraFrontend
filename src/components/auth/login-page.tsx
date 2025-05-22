@@ -6,11 +6,9 @@ import * as z from "zod";
 import { SiZoho } from "react-icons/si";
 import { HiExclamationCircle } from "react-icons/hi";
 import Link from "next/link";
-import { Router } from "next/router";
 import { useRouter } from "next/navigation";
-import { signIn, signOut, useSession } from "next-auth/react"
+import { signIn } from "next-auth/react"
 
-const callbackUrl = 'http://localhost:3000/functions'
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
   password: z
@@ -31,8 +29,6 @@ const LoginPage = () => {
       password: "",
     },
   });
-  const { data: session } = useSession();
-  console.log("Session Data : ", session)
 
   const router = useRouter()
   const onSubmit = async (data:any) => { //TODO : use types
@@ -126,15 +122,7 @@ const LoginPage = () => {
                   >
                     Forgot password?
                   </Link>
-                  <p className="text-center text-sm text-gray-600">
-                    Don't have an account?{" "}
-                    <Link
-                      href="/signup"
-                      className="font-medium text-emerald-600 hover:text-emerald-500"
-                    >
-                      Sign up
-                  </Link>
-                  </p>
+                
                 </div>
             <button
               type="submit"
@@ -155,11 +143,11 @@ const LoginPage = () => {
 
             <button
               type="button"
-              onClick={() => signIn("zitadel", { callbackUrl: "/functions" })}
+              onClick={() => signIn("zoho")}
               className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               <SiZoho className="mr-2 h-4 w-4 text-blue-600" />
-              Sign in with Zoho(SSO)
+              Sign in with Zoho
             </button>
 
             
@@ -167,7 +155,6 @@ const LoginPage = () => {
         </div>
       </div>
 
-      {/* Right Side - Green Banner */}
       <div className=" flex-1 hidden md:flex flex-col justify-center bg-emerald-900 px-8 py-12 text-white">
         <div className="mx-auto max-w-md">
           <h2 className="text-3xl text-center font-bold">
@@ -178,6 +165,7 @@ const LoginPage = () => {
           </p>
           
         </div>
+       
       </div>
     </div>
   );
