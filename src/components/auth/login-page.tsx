@@ -7,7 +7,7 @@ import { SiZoho } from "react-icons/si";
 import { HiExclamationCircle } from "react-icons/hi";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react"
+import { signIn } from "next-auth/react";
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -17,7 +17,6 @@ const loginSchema = z.object({
 });
 
 const LoginPage = () => {
-  
   const {
     register,
     handleSubmit,
@@ -30,13 +29,13 @@ const LoginPage = () => {
     },
   });
 
-  const router = useRouter()
-  const onSubmit = async (data:any) => { //TODO : use types
-    
-    console.log("Login data:", data);
-    await new Promise((resolve) => router.push('/agents'));
-  };
+  const router = useRouter();
+  const onSubmit = async (data: any) => {
+    //TODO : use types
 
+    console.log("Login data:", data);
+    await new Promise((resolve) => resolve(router.push("/agents")));
+  };
 
   return (
     <div className="flex min-h-screen flex-col md:flex-row">
@@ -90,7 +89,6 @@ const LoginPage = () => {
                 >
                   Password
                 </label>
-                
               </div>
               <div className="relative">
                 <input
@@ -116,14 +114,13 @@ const LoginPage = () => {
             </div>
 
             <div className="flex justify-between">
-                  <Link
-                    href="/forgotPassword"
-                    className="text-sm text-green-800 hover:text-emerald-600"
-                  >
-                    Forgot password?
-                  </Link>
-                
-                </div>
+              <Link
+                href="/forgotPassword"
+                className="text-sm text-green-800 hover:text-emerald-600"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <button
               type="submit"
               disabled={isSubmitting}
@@ -137,20 +134,25 @@ const LoginPage = () => {
                 <div className="w-full border-t border-gray-300"></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-2 text-gray-500">or continue with</span>
+                <span className="bg-white px-2 text-gray-500">
+                  or continue with
+                </span>
               </div>
             </div>
 
             <button
               type="button"
-              onClick={() => signIn("zoho")}
+              onClick={() =>
+                signIn("zoho", {
+                  callbackUrl: "/agents",
+                  redirect: true,
+                })
+              }
               className="flex w-full items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
             >
               <SiZoho className="mr-2 h-4 w-4 text-blue-600" />
               Sign in with Zoho
             </button>
-
-            
           </form>
         </div>
       </div>
@@ -161,11 +163,9 @@ const LoginPage = () => {
             Faster Audits, Smarter Decisions
           </h2>
           <p className="mt-4 text-xl text-center font-light text-gray-200 opacity-90 before:content-['“'] after:content-['”']">
-          Automate audits in seconds and make faster, smarter decisions.
+            Automate audits in seconds and make faster, smarter decisions.
           </p>
-          
         </div>
-       
       </div>
     </div>
   );

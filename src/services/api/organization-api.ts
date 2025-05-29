@@ -8,28 +8,28 @@ export const organizationApi = {
     const response = await axios.get(USER_DATA_URL?.searchUsers, {
       params: { query },
       headers: {
-        Authorization: `Bearer test-token`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
       },
     })
     return response.data
   },
 
-  getAllUserOrganizations: async (user_id: string): Promise<any[]> => {
+  getAllUserOrganizations: async (user_id: number): Promise<any[]> => {
     const response = await axios.get(ORGANIZATION_ENDPOINTS?.getAllUserOrganizations, {
       params: { user_id }, 
       headers: {
-        Authorization: `Bearer test-token`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
       },
     })
-    return response.data
+    return response.data?.data
   },
 
   createOrganization: async (data: CreateOrganizationRequest): Promise<Organization> => {
     const response = await axios.post(ORGANIZATION_ENDPOINTS?.postCreateOrganization, data, {
       headers: {
-        Authorization: `Bearer test-token`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
       },
     })
-    return response.data
+    return response.data?.data
   },
 }

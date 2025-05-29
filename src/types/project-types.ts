@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-// Define the status enum first
+// Project Status Types
 export const ProjectStatusEnum = {
   COMPLETED: "completed",
   IN_PROGRESS: "in-progress",
@@ -11,7 +11,6 @@ export const ProjectStatusEnum = {
   ERROR: "error",
 } as const;
 
-// Create the Zod schema for status
 export const ProjectStatusSchema = z.enum([
   ProjectStatusEnum.COMPLETED,
   ProjectStatusEnum.IN_PROGRESS,
@@ -22,15 +21,25 @@ export const ProjectStatusSchema = z.enum([
   ProjectStatusEnum.ERROR,
 ]);
 
-// Create the Project schema
+export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+
+// Project Schema
 export const ProjectSchema = z.object({
   projectName: z.string().min(1, "Project name is required"),
   projectDescription: z.string().optional(),
   status: ProjectStatusSchema,
 });
 
-// Filter types
-export type StatusOption = "all" | "active" | "completed" | "archived" | "pending" | "error";
+export type ProjectType = z.infer<typeof ProjectSchema>;
+
+// Filter Types
+export type StatusOption =
+  | "all"
+  | "active"
+  | "completed"
+  | "archived"
+  | "pending"
+  | "error";
 export type SortField = "title" | "date" | "priority" | "status";
 export type SortOrder = "asc" | "desc";
 export type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
@@ -43,14 +52,59 @@ export interface FilterState {
   search: string;
 }
 
-// File Upload & Mapping Types
-export interface UploadedFile {
+// Sheet Types
+export interface Sheet {
   id: string;
   name: string;
-  size: number;
-  type: string;
-  lastModified?: number;
-  data?: ArrayBuffer;
+}
+
+// File Upload Types
+export interface UploadedFileInfo {
+  id: string;
+  file_id: number;
+  file_name: string;
+  file_link: string;
+  sheets: Sheet[];
+  progress: number;
+  status: FileStatus;
+}
+
+export type FileStatus = "uploading" | "completed" | "error";
+
+export interface UploadProgress {
+  fileId: string;
+  progress: number;
+}
+
+export interface UploadResponse {
+  success: boolean;
+  file_id: number;
+  file_link: string;
+  file_name: string;
+  message?: string;
+}
+
+// API Response Types
+export interface FileUploadResponse {
+  success: boolean;
+  message: string;
+  data: {
+    file_id: number;
+    filename: string;
+    storage_path: string;
+    file_size: number;
+    content_type: string;
+    project_id: number;
+    message: string;
+  };
+  error: null | string;
+  metadata: null | any;
+}
+
+// Sheet Types
+export interface SheetType {
+  name: string;
+  isValidated: boolean;
 }
 
 export interface SheetData {
@@ -65,30 +119,50 @@ export interface StandardSheet {
   fields: string[];
 }
 
-// Mapping schema for connecting uploaded files to standard sheets
+// Sheet Mapping Types
+export interface SheetMapping {
+  fileId: string;
+  sheetId: string;
+  sheetType: string;
+  sheetIndex: number; // Add this line
+}
+
+// Form Types
+export interface FormValues {
+  mappings: SheetMapping[];
+}
+
+// Form Validation Schemas
+export const formSchema = z.object({
+  mappings: z
+    .array(
+      z.object({
+        fileId: z.string().min(1, "File selection is required"),
+        sheetId: z.string().min(1, "Sheet selection is required"),
+        sheetType: z.string().min(1, "Sheet type selection is required"),
+        // sheetName: z.string().min(1, "Sheet name is required").optional(),
+        sheetIndex: z.number().min(0, "Sheet index is required"),
+      }),
+    )
+    .min(1, "At least one mapping is required"),
+});
+
 export const MappingSchema = z.object({
   id: z.string(),
   fileId: z.string().min(1, "File is required"),
-  sheetName: z.string().min(1, "Sheet is required"),
+  sheetId: z.string().min(1, "Sheet is required"),
+  sheetType: z.string().min(1, "Sheet type is required"),
   mappings: z.record(z.string(), z.string()),
 });
 
-// Form schema for the entire file upload and mapping form
-export const formSchema = z.object({
-  mappings: z.array(MappingSchema),
-});
-
-// Form Types (used in React components)
-export type ProjectType = z.infer<typeof ProjectSchema>;
 export type MappingType = z.infer<typeof MappingSchema>;
-export type FormValues = z.infer<typeof formSchema>;
 
 // API Types
 export interface Project {
   id: string;
   name: string;
   description?: string;
-  status: z.infer<typeof ProjectStatusSchema>;
+  status: ProjectStatus;
   modifiedDate: string;
   team_id: string;
   priority?: number;
@@ -98,17 +172,16 @@ export interface Project {
 export interface CreateProjectRequest {
   name: string;
   description?: string;
-  status: z.infer<typeof ProjectStatusSchema>;
+  status: ProjectStatus;
   team_id: string;
 }
 
 export interface UpdateProjectStatusRequest {
-  status: z.infer<typeof ProjectStatusSchema>;
+  status: ProjectStatus;
 }
 
-// File Processing API Request Types
 export interface ProcessFilesRequest {
-  files: UploadedFile[];
+  files: UploadedFileInfo[];
   mappings: MappingType[];
 }
 
@@ -119,10 +192,22 @@ export interface FileProcessingResult {
   errors?: string[];
 }
 
-// Type mapping helper for form to API conversion
+export interface SheetMappingSubmitRequest {
+  project_id: string;
+  mappings: Array<{
+    file_id: number;
+    file_name: string;
+    sheet_id: string;
+    sheet_name: string;
+    sheet_type: string;
+    sheet_index: number; // Add this line
+  }>;
+}
+
+// Helper Functions
 export const mapFormToApiRequest = (
   formData: ProjectType,
-  teamId: string
+  teamId: string,
 ): CreateProjectRequest => ({
   name: formData.projectName,
   description: formData.projectDescription,
@@ -130,22 +215,35 @@ export const mapFormToApiRequest = (
   team_id: teamId,
 });
 
-// Helper for mapping file upload form submissions
 export const mapFileUploadToApiRequest = (
-  formData: FormValues
+  formData: FormValues,
+  files: UploadedFileInfo[],
 ): ProcessFilesRequest => ({
-  files: [], // This would be populated from your uploadedFiles state
-  mappings: formData.mappings,
+  files,
+  mappings: formData.mappings.map((mapping) => ({
+    id: mapping.fileId,
+    fileId: mapping.fileId,
+    sheetId: mapping.sheetId,
+    // sheetName: mapping.sheetName,
+    sheetType: mapping.sheetType,
+    mappings: {},
+  })),
 });
 
-// Re-export ProjectStatus type from context for convenience
-export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+export interface FileMetadata {
+  file_id: number;
+  file_link: string;
+  file_name: string;
+  status: FileStatus;
+}
 
-
-export interface FilterState {
-  status: StatusOption;
-  sortField: SortField;
-  sortOrder: SortOrder;
-  dateRange: DateRange;
-  search: string;
+// Update the error handling types
+export interface ApiError {
+  response?: {
+    data?: {
+      message?: string;
+    };
+    status?: number;
+  };
+  message: string;
 }

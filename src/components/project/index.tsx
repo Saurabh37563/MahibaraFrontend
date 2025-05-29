@@ -1,30 +1,37 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { IoMdAdd } from "react-icons/io";
-import { MdOutlineFileDownload } from "react-icons/md";
 import { LuFileSpreadsheet } from "react-icons/lu";
-import { HiOutlineDotsVertical } from "react-icons/hi";
-import { LuChartPie } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
-import AnalysisView from "./AnalysisView";
-import SpreadSheetView from "./SpreadSheetView";
+import AnalysisView from "./analysis-view";
+import SpreadSheetView from "./sheet-type-view";
 import { z } from "zod";
-import FileUploadMapping from "./file-upload";
-import { AnalysisSelectionModal } from "./create-analysis";
 import { Button } from "@/components/ui/button";
-import { Menu, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, ChevronRight } from "lucide-react";
+import axios from "axios";
+import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
 
-// Define Zod schemas (unchanged)
-const StatusEnum = z.enum(["success", "warning", "danger", "info", "neutral"]);
+// Import the new components
+import SheetsPanel from "./sheets-panel";
+import AnalysisPanel from "./analysis-panel";
+import MobileSidebar from "./mobile-sidebar";
+
+// Define Zod schemas
+const StatusEnum = z.enum([
+  "success",
+  "warning",
+  "danger",
+  "info",
+  "neutral",
+  "uploaded",
+]);
 
 const ItemSchema = z.object({
-  id: z.number(),
   name: z.string(),
   status: StatusEnum,
 });
@@ -64,15 +71,116 @@ const AnalysisDataSchema = z.object({
   keyPoints: z.array(z.string()),
 });
 
-// Derive TypeScript types from Zod schemas
+// Types
 type Item = z.infer<typeof ItemSchema>;
-type SelectedItem = Item & { type: "sheet" | "analysis" };
+type SelectedItem = Item & {
+  type: "sheet" | "analysis";
+  index: number;
+  status: string;
+};
+
 type SpreadsheetData = z.infer<typeof SpreadsheetDataSchema>;
 type AnalysisData = z.infer<typeof AnalysisDataSchema>;
 type DataType = SpreadsheetData | AnalysisData | null;
 
+// Sample analysis data for reference
+const analysisTemplates = [
+  {
+    id: "a1",
+    name: "Credit Risk",
+    summary: "Assess credit risk exposure across portfolio",
+  },
+  {
+    id: "a2",
+    name: "Market Risk",
+    summary: "Analyze market volatility and potential impacts",
+  },
+  {
+    id: "a3",
+    name: "Operational Risk",
+    summary: "Evaluate operational processes and risk factors",
+  },
+  {
+    id: "a4",
+    name: "ROI Analysis",
+    summary: "Calculate return on investment across projects",
+  },
+  {
+    id: "a5",
+    name: "Profit Margin Analysis",
+    summary: "Track profit margins by product and service",
+  },
+  {
+    id: "a6",
+    name: "Liquidity Analysis",
+    summary: "Monitor cash flow and liquidity positions",
+  },
+  {
+    id: "a7",
+    name: "SWOT Analysis",
+    summary: "Strengths, weaknesses, opportunities, and threats assessment",
+  },
+  {
+    id: "a8",
+    name: "Porter's Five Forces",
+    summary: "Industry competitiveness analysis framework",
+  },
+  {
+    id: "a9",
+    name: "Market Share Analysis",
+    summary: "Track market positioning and share trends",
+  },
+  {
+    id: "a10",
+    name: "Demographic Analysis",
+    summary: "Customer demographic patterns and trends",
+  },
+  {
+    id: "a11",
+    name: "Behavior Analysis",
+    summary: "Customer behavior and purchasing patterns",
+  },
+  {
+    id: "a12",
+    name: "Satisfaction Survey",
+    summary: "Customer satisfaction metrics and feedback",
+  },
+  {
+    id: "a13",
+    name: "Growth Opportunities",
+    summary: "Identify and evaluate growth opportunities",
+  },
+  {
+    id: "a14",
+    name: "Partnership Analysis",
+    summary: "Assess potential partnerships and alliances",
+  },
+  {
+    id: "a15",
+    name: "Expansion Strategy",
+    summary: "Geographic and market expansion planning",
+  },
+  {
+    id: "a16",
+    name: "Budget Analysis",
+    summary: "Budget allocation and optimization analysis",
+  },
+  {
+    id: "a17",
+    name: "Personnel Distribution",
+    summary: "Human resource allocation and planning",
+  },
+  {
+    id: "a18",
+    name: "Asset Utilization",
+    summary: "Asset efficiency and utilization metrics",
+  },
+];
+
 export default function Project() {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
+  const [sheets, setSheets] = useState<Item[]>([]);
+  const [analysis, setAnalysis] = useState<Item[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [data, setData] = useState<DataType>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -81,7 +189,90 @@ export default function Project() {
     "sheets"
   );
 
-  // Check if we're on a mobile device
+  const statusDotColors: Record<z.infer<typeof StatusEnum>, string> = {
+    success: "bg-green-500",
+    warning: "bg-yellow-500",
+    danger: "bg-red-500",
+    info: "bg-blue-500",
+    neutral: "bg-gray-400",
+    uploaded: "bg-purple-500",
+  };
+
+  const mapStatusToUI = (status: string): z.infer<typeof StatusEnum> => {
+    switch (status.toLowerCase()) {
+      case "validated":
+      case "completed":
+        return "success";
+      case "pending":
+        return "info";
+      case "processing":
+        return "warning";
+      case "failed":
+      case "error":
+        return "danger";
+      case "uploaded":
+        return "uploaded";
+      default:
+        return "neutral";
+    }
+  };
+
+  const handleError = (error: Error) => {
+    console.error("Spreadsheet error:", error);
+  };
+
+  const handleFileLoad = (sheets: string[]) => {
+    console.log("Loaded sheets:", sheets);
+  };
+
+  const handleDelete = () => {
+    console.log("Delete requested");
+  };
+
+  // Get list of template IDs that have already been used to create analyses
+  const getCreatedAnalysisTemplateIds = (): string[] => {
+    return analysis
+      .map((item) => item.templateId)
+      .filter((id): id is string => id !== undefined);
+  };
+
+  // Only showing the updated handleAnalysisCreate function - rest of the file remains the same
+
+  // Handle analysis creation and removal
+  const handleAnalysisCreate = (selectedAnalysisIds: string[]) => {
+    console.log("Updating analyses with IDs:", selectedAnalysisIds);
+
+    // Get the analysis details from the templates for new analyses
+    const newAnalyses: Item[] = selectedAnalysisIds.map((id) => {
+      const template = analysisTemplates.find((t) => t.id === id);
+      if (template) {
+        return {
+          id: `user-${id}-${Date.now()}`, // Create unique ID for user's analysis
+          name: template.name,
+          status: "info" as const, // New analysis starts as "info" (pending)
+          summary: template.summary,
+          templateId: id, // Store the original template ID
+        };
+      }
+      return {
+        id: `unknown-${Date.now()}`,
+        name: "Unknown Analysis",
+        status: "neutral" as const,
+        summary: "Analysis template not found",
+        templateId: id,
+      };
+    });
+
+    // Replace the entire analysis list with the new selection
+    // This handles both adding new analyses and removing unselected ones
+    setAnalysis(newAnalyses);
+
+    console.log(
+      `Successfully updated analysis list with ${newAnalyses.length} items`
+    );
+  };
+
+  // Mobile detection
   useEffect(() => {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -94,38 +285,26 @@ export default function Project() {
 
     checkIfMobile();
     window.addEventListener("resize", checkIfMobile);
-
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
-  const sheets: Item[] = [
-    { id: 1, name: "PR Register", status: "success" },
-    { id: 2, name: "PO Register", status: "warning" },
-    { id: 3, name: "GRN Register", status: "danger" },
-    { id: 4, name: "Invoice Reg", status: "info" },
-    { id: 5, name: "Payment Reg", status: "neutral" },
-    { id: 6, name: "Vendor Master", status: "success" },
-    { id: 7, name: "Item Master", status: "warning" },
-    { id: 8, name: "GRIR Report", status: "danger" },
-    { id: 9, name: "Adv To Vendor", status: "info" },
-    { id: 10, name: "PO Matrix", status: "neutral" },
-  ];
-
-  const analysis: Item[] = [
-    { id: 1, name: "Top Vendors (80-20)", status: "success" },
-    { id: 2, name: "Top Items (80-20)", status: "warning" },
-    { id: 3, name: "PO By Creater", status: "danger" },
-    { id: 4, name: "PO By Location", status: "info" },
-    { id: 5, name: "PO By Currency", status: "neutral" },
-  ];
-
-  const statusDotColors: Record<z.infer<typeof StatusEnum>, string> = {
-    success: "bg-green-500",
-    warning: "bg-yellow-500",
-    danger: "bg-red-500",
-    info: "bg-blue-500",
-    neutral: "bg-gray-400",
+  // Fetch mapped sheets
+  const getMappedSheetForProject = async () => {
+    try {
+      const response = await axios.get(
+        FILE_UPLOAD_ENDPOINTS?.getMappedSheetTypes + "/38"
+      );
+      const sheetsData = response?.data?.data?.sheet_types as Item[];
+      setSheets(sheetsData);
+    } catch (error) {
+      console.error("Error fetching mapped sheets:", error);
+      setSheets([]);
+    }
   };
+
+  useEffect(() => {
+    getMappedSheetForProject();
+  }, []);
 
   useEffect(() => {
     if (selectedItem) {
@@ -136,11 +315,9 @@ export default function Project() {
   const fetchData = async (): Promise<void> => {
     setLoading(true);
     try {
-      // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedItem?.type === "sheet") {
-        // Mock spreadsheet data - generate more rows for virtualization
         const columns = [
           { key: "id", name: "ID", width: 100 },
           { key: "reference", name: "Reference", width: 165 },
@@ -183,11 +360,9 @@ export default function Project() {
           status: randomStatus,
         };
 
-        // Validate with Zod
         const validatedData = SpreadsheetDataSchema.parse(sheetData);
         setData(validatedData);
       } else {
-        // Mock analysis data
         const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
         const values = Array(6)
           .fill(0)
@@ -211,7 +386,6 @@ export default function Project() {
           ],
         };
 
-        // Validate with Zod
         const validatedData = AnalysisDataSchema.parse(analysisData);
         setData(validatedData);
       }
@@ -222,10 +396,17 @@ export default function Project() {
     }
   };
 
-  const handleItemClick = (item: Item, type: "sheet" | "analysis"): void => {
-    setSelectedItem({ ...item, type });
-
-    // On mobile, close the sidebar after selection
+  const handleItemClick = (
+    item: Item,
+    type: "sheet" | "analysis",
+    index: number
+  ): void => {
+    setSelectedItem({
+      ...item,
+      type,
+      index,
+      status: item.status,
+    });
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -235,162 +416,94 @@ export default function Project() {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Mobile sidebar component
-  const MobileSidebar = () => (
-    <div
-      className={`
-        fixed inset-y-0 left-0 
-        w-[280px] max-w-[80vw]
-        bg-white
-        z-50
-        overflow-hidden
-        flex flex-col
-        border-r border-gray-200
-        shadow-xl
-        transition-all duration-300 ease-in-out
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
-      `}
-    >
-      <div className="p-3 border-b border-gray-200 flex justify-between items-center">
-        <h2 className="font-semibold text-sm">Project Explorer</h2>
-        <Button variant="ghost" size="icon" onClick={toggleSidebar}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+  // Content component for consistency
+  const renderContent = () => {
+    if (!selectedItem) {
+      return (
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-sm p-4 w-fit text-gray-400 z-20 flex flex-col items-center justify-center">
+          <LuFileSpreadsheet size={40} className="mb-4" />
+          <p className="text-gray-500 text-sm text-center">
+            Select a sheet or analysis to view details
+          </p>
+          {isMobile && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={toggleSidebar}
+            >
+              <Menu className="h-4 w-4 mr-2" />
+              <span className="text-xs">Open Explorer</span>
+            </Button>
+          )}
+        </div>
+      );
+    }
 
-      <div className="flex border-b border-gray-200">
-        <button
-          className={`flex-1 py-2 text-xs font-medium ${
-            selectedTab === "sheets"
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-500"
-          }`}
-          onClick={() => setSelectedTab("sheets")}
-        >
-          Sheets ({sheets.length})
-        </button>
-        <button
-          className={`flex-1 py-2 text-xs font-medium ${
-            selectedTab === "analysis"
-              ? "text-primary border-b-2 border-primary"
-              : "text-gray-500"
-          }`}
-          onClick={() => setSelectedTab("analysis")}
-        >
-          Analysis ({analysis.length})
-        </button>
-      </div>
-
-      {selectedTab === "sheets" ? (
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between p-3 bg-gray-50">
-            <div className="text-xs flex items-center gap-1">
-              <span>Sheets</span>
-              <span className="text-[12px] mt-[2px] text-muted-foreground">
-                ({sheets.length})
-              </span>
+    if (loading) {
+      return (
+        <div className={`${isMobile ? "p-4" : "p-6"} h-full`}>
+          <Skeleton className="h-8 w-1/2 mb-6" />
+          <div
+            className={
+              isMobile ? "space-y-4" : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+            }
+          >
+            <Skeleton className={isMobile ? "h-60 w-full" : "h-80 w-full"} />
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-full" />
+              <Skeleton className={isMobile ? "h-20 w-full" : "h-24 w-full"} />
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="h-4 w-full" />
+              {!isMobile && (
+                <>
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-4/5" />
+                </>
+              )}
             </div>
-            <div className="flex gap-2 items-center">
-              <FileUploadMapping />
-              <MdOutlineFileDownload
-                className="text-muted-foreground cursor-pointer"
-                size={16}
-              />
-            </div>
-          </div>
-
-          <div className="overflow-y-auto py-4">
-            {sheets.map((sheet) => (
-              <div
-                key={sheet.id}
-                className={`flex group items-center justify-between rounded-md p-2 mx-1 hover:bg-slate-50 cursor-pointer ${
-                  selectedItem?.id === sheet.id &&
-                  selectedItem?.type === "sheet"
-                    ? "bg-slate-100"
-                    : ""
-                }`}
-                onClick={() => handleItemClick(sheet, "sheet")}
-              >
-                <div className="text-xs flex items-center gap-2">
-                  <LuFileSpreadsheet className="text-gray-400" />
-                  <span className="text-gray-950">{sheet.name}</span>
-                  <span
-                    className={`size-[6px] rounded-full ${
-                      statusDotColors[sheet.status] || "bg-gray-300"
-                    }`}
-                  />
-                </div>
-                <div className="gap-2 hidden group-hover:flex items-center">
-                  <HiOutlineDotsVertical className="text-gray-400" />
-                </div>
-              </div>
-            ))}
           </div>
         </div>
-      ) : (
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex items-center justify-between p-3 bg-gray-50">
-            <div className="text-xs flex items-center gap-1">
-              <span>Analysis</span>
-              <span className="text-[12px] mt-[2px] text-muted-foreground">
-                ({analysis.length})
-              </span>
-            </div>
-            <div className="flex gap-2 items-center">
-              <AnalysisSelectionModal />
-              <MdOutlineFileDownload
-                className="text-muted-foreground cursor-pointer"
-                size={16}
-              />
-            </div>
-          </div>
+      );
+    }
 
-          <div className="overflow-y-auto py-4">
-            {analysis.map((item) => (
-              <div
-                key={item.id}
-                className={`flex group items-center justify-between rounded-md p-2 mx-1 hover:bg-slate-50 cursor-pointer ${
-                  selectedItem?.id === item.id &&
-                  selectedItem?.type === "analysis"
-                    ? "bg-slate-100"
-                    : ""
-                }`}
-                onClick={() => handleItemClick(item, "analysis")}
-              >
-                <div className="text-xs flex items-center gap-2">
-                  <LuChartPie className="text-gray-400" />
-                  <span className="text-gray-950">{item.name}</span>
-                  <span
-                    className={`size-[6px] rounded-full ${
-                      statusDotColors[item.status] || "bg-gray-300"
-                    }`}
-                  />
-                </div>
-                <div className="gap-2 hidden group-hover:flex items-center">
-                  <HiOutlineDotsVertical className="text-gray-400" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    return selectedItem.type === "sheet" ? (
+      <SpreadSheetView
+        title="Financial Data"
+        sheetType="financial-data"
+        onError={handleError}
+        onFileLoad={handleFileLoad}
+        onDelete={handleDelete}
+      />
+    ) : (
+      <AnalysisView
+        title="Financial Analysis"
+        analysisType="financial-analysis"
+        onError={(error) => console.error(error)}
+        onAnalysisComplete={() => console.log("Analysis completed")}
+      />
+    );
+  };
 
+  // Update mobile sidebar props to include analysis
+  const mobileSidebarProps = {
+    sidebarOpen,
+    toggleSidebar,
+    selectedTab,
+    setSelectedTab,
+    sheets,
+    analysis, // Add analysis to mobile sidebar
+    selectedItem,
+    onItemClick: handleItemClick,
+    statusDotColors,
+    mapStatusToUI,
+    onAnalysisCreate: handleAnalysisCreate, // Add analysis creation handler
+    createdAnalysisTemplateIds: getCreatedAnalysisTemplateIds(), // Add created template IDs
+  };
+
+  // Main render
   return (
     <div className="h-[calc(100dvh-65px)] w-full relative">
-      {/* Mobile sidebar toggle button */}
-      {/* {isMobile && !sidebarOpen && (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="fixed top-[60px] left-0 z-50 h-8 w-8 rounded-full p-0"
-          onClick={toggleSidebar}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      )} */}
-
       {/* Mobile backdrop */}
       {isMobile && sidebarOpen && (
         <div
@@ -400,260 +513,63 @@ export default function Project() {
       )}
 
       {/* Mobile sidebar */}
-      {isMobile && <MobileSidebar />}
+      {isMobile && <MobileSidebar {...mobileSidebarProps} />}
 
-      {/* Desktop layout with resizable panels */}
+      {/* Desktop layout */}
       {!isMobile ? (
         <ResizablePanelGroup direction="horizontal" className="w-full h-full">
           <ResizablePanel defaultSize={25}>
             <ResizablePanelGroup direction="vertical">
-              <ResizablePanel className="flex flex-col w-full" defaultSize={50}>
-                <div className="flex items-center justify-between px-3 bg-gray-50">
-                  <div className="text-xs flex items-center gap-1">
-                    <span className="">Sheets</span>
-                    <span className="text-[12px] mt-[2px] text-muted-foreground">
-                      ({sheets.length})
-                    </span>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <FileUploadMapping />
-                    <MdOutlineFileDownload
-                      className="text-muted-foreground cursor-pointer"
-                      size={16}
-                    />
-                  </div>
-                </div>
-                <div className="overflow-y-auto py-4 px-2">
-                  {sheets.map((sheet) => (
-                    <div
-                      key={sheet.id}
-                      className={`flex group items-center justify-between rounded-sm p-2 hover:bg-slate-50 cursor-pointer ${
-                        selectedItem?.id === sheet.id &&
-                        selectedItem?.type === "sheet"
-                          ? "bg-slate-200 border-l-4  border-primary"
-                          : ""
-                      }`}
-                      onClick={() => handleItemClick(sheet, "sheet")}
-                    >
-                      <div className="text-xs flex items-center gap-2">
-                        <LuFileSpreadsheet className="text-gray-400" />
-                        <span className="text-gray-950">{sheet.name}</span>
-                        <span
-                          className={`size-[6px] rounded-full ${
-                            statusDotColors[sheet.status] || "bg-gray-300"
-                          }`}
-                        />
-                      </div>
-                      <div className="gap-2 hidden group-hover:flex items-center">
-                        <HiOutlineDotsVertical className="text-gray-400" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <ResizablePanel defaultSize={50}>
+                <SheetsPanel
+                  sheets={sheets}
+                  selectedItem={selectedItem}
+                  onItemClick={handleItemClick}
+                  statusDotColors={statusDotColors}
+                  mapStatusToUI={mapStatusToUI}
+                />
               </ResizablePanel>
               <ResizableHandle />
-              <ResizablePanel className="flex flex-col w-full" defaultSize={50}>
-                <div className="flex items-center justify-between px-3 bg-gray-50">
-                  <div className="text-xs flex items-center gap-1">
-                    <span className="">Analysis</span>
-                    <span className="text-[12px] mt-[2px] text-muted-foreground">
-                      ({analysis.length})
-                    </span>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <AnalysisSelectionModal />
-                    <MdOutlineFileDownload
-                      className="text-muted-foreground cursor-pointer"
-                      size={16}
-                    />
-                  </div>
-                </div>
-                <div className="overflow-y-auto py-4 px-2">
-                  {analysis.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
-                        selectedItem?.id === item.id &&
-                        selectedItem?.type === "analysis"
-                          ? "bg-slate-200 border-l-4  border-primary"
-                          : ""
-                      }`}
-                      onClick={() => handleItemClick(item, "analysis")}
-                    >
-                      <div className="text-xs flex items-center gap-2">
-                        <LuChartPie className="text-gray-400" />
-                        <span className="text-gray-950">{item.name}</span>
-                        <span
-                          className={`size-[6px] rounded-full ${
-                            statusDotColors[item.status] || "bg-gray-300"
-                          }`}
-                        />
-                      </div>
-                      <div className="gap-2 hidden group-hover:flex items-center">
-                        <HiOutlineDotsVertical className="text-gray-400" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <ResizablePanel defaultSize={50}>
+                <AnalysisPanel
+                  analysis={analysis}
+                  selectedItem={selectedItem}
+                  onItemClick={handleItemClick}
+                  statusDotColors={statusDotColors}
+                  onAnalysisCreate={handleAnalysisCreate}
+                  createdAnalysisTemplateIds={getCreatedAnalysisTemplateIds()}
+                />
               </ResizablePanel>
             </ResizablePanelGroup>
           </ResizablePanel>
           <ResizableHandle />
           <ResizablePanel defaultSize={75}>
+            {/* Content Area */}
             <div className="relative h-full w-full bg-white dark:bg-black overflow-hidden">
-              {/* Content area (identical for both mobile and desktop) */}
-              <div
-                className="
-                  absolute inset-0 
-                  [background-size:20px_20px] 
-                  [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] 
-                  dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]
-                "
-              />
-
-              <div
-                className="
-                pointer-events-none 
-                absolute inset-0 
-                bg-white dark:bg-black 
-                [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]
-              "
-              />
-
-              <div className="relative z-10 h-full">
-                {!selectedItem ? (
-                  <div
-                    className="
-                    absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white 
-                    rounded-lg shadow-sm p-4 w-fit text-gray-400 z-20 flex flex-col items-center justify-center
-                  "
-                  >
-                    <LuFileSpreadsheet size={40} className="mb-4" />
-                    <p className="text-gray-500 text-sm">
-                      Select a sheet or analysis to view details
-                    </p>
-                  </div>
-                ) : loading ? (
-                  <div className="p-6 h-full">
-                    <Skeleton className="h-8 w-1/4 mb-6" />
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <Skeleton className="h-80 w-full" />
-                      <div className="space-y-4">
-                        <Skeleton className="h-6 w-full" />
-                        <Skeleton className="h-24 w-full" />
-                        <Skeleton className="h-6 w-1/2" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-4/5" />
-                      </div>
-                    </div>
-                  </div>
-                ) : selectedItem.type === "sheet" ? (
-                  <SpreadSheetView
-                    data={data as SpreadsheetData}
-                    title={selectedItem.name}
-                  />
-                ) : (
-                  <AnalysisView
-                    data={data as AnalysisData}
-                    title={selectedItem.name}
-                  />
-                )}
-              </div>
+              <div className="absolute inset-0 [background-size:20px_20px] [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]" />
+              <div className="pointer-events-none absolute inset-0 bg-white dark:bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
+              <div className="relative z-10 h-full">{renderContent()}</div>
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       ) : (
-        // Mobile content view (takes full width when sidebar is closed)
+        // Mobile content view
         <div className="relative h-full w-full bg-white dark:bg-black overflow-hidden">
-          <div
-            className="
-              absolute inset-0 
-              [background-size:20px_20px] 
-              [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] 
-              dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]
-            "
-          />
-
-          <div
-            className="
-            pointer-events-none 
-            absolute inset-0 
-            bg-white dark:bg-black 
-            [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]
-          "
-          />
-
+          <div className="absolute inset-0 [background-size:20px_20px] [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]" />
+          <div className="pointer-events-none absolute inset-0 bg-white dark:bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
           <div className="relative z-10 h-full">
-            {!selectedItem ? (
-              <div
-                className="
-                absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white 
-                rounded-lg shadow-sm p-4 w-fit text-gray-400 z-20 flex flex-col items-center justify-center
-              "
-              >
-                <LuFileSpreadsheet size={40} className="mb-4" />
-                <p className="text-gray-500 text-sm text-center">
-                  Select a sheet or analysis to view details
-                </p>
+            {!sidebarOpen && selectedItem && (
+              <div className="w-full pt-2 pl-2">
                 <Button
                   variant="outline"
-                  size="sm"
-                  className="mt-4"
+                  className="py-4 h-8 w-8 rounded-full p-0"
                   onClick={toggleSidebar}
                 >
-                  <Menu className="h-4 w-4 mr-2" />
-                  <span className="text-xs">Open Explorer</span>
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
-            ) : loading ? (
-              <div className="p-4 h-full">
-                <Skeleton className="h-8 w-1/2 mb-6" />
-                <div className="space-y-4">
-                  <Skeleton className="h-60 w-full" />
-                  <Skeleton className="h-6 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-6 w-1/2" />
-                  <Skeleton className="h-4 w-full" />
-                </div>
-              </div>
-            ) : selectedItem.type === "sheet" ? (
-              <>
-                <div className="w-full pt-2">
-                  {isMobile && !sidebarOpen && (
-                    <Button
-                      variant="outline"
-                      className="  py-4 h-8 w-8 rounded-full p-0"
-                      onClick={toggleSidebar}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <SpreadSheetView
-                  data={data as SpreadsheetData}
-                  title={selectedItem.name}
-                />
-              </>
-            ) : (
-              <>
-                <div className="w-full pt-2  ">
-                  {isMobile && !sidebarOpen && (
-                    <Button
-                      variant="outline"
-                      className="  py-4 h-8 w-8 rounded-full p-0"
-                      onClick={toggleSidebar}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-                <AnalysisView
-                  data={data as AnalysisData}
-                  title={selectedItem.name}
-                />
-              </>
             )}
+            {renderContent()}
           </div>
         </div>
       )}

@@ -1,12 +1,18 @@
 "use client";
 
-import React, { createContext, useState, useContext, ReactNode, memo } from "react";
+import React, {
+  createContext,
+  useState,
+  useContext,
+  ReactNode,
+  memo,
+} from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { z } from "zod";
 
 // Zod schemas
 const OrganizationSchema = z.object({
-  id: z.string(),
+  id: z.number(),
   name: z.string(),
   avatar: z.string().optional(),
 });
@@ -19,7 +25,9 @@ const TeamSchema = z.object({
     z.object({
       id: z.string(),
       name: z.string(),
-      avatar: z.string().optional(),
+      email: z.string().optional(),
+      image: z.string().optional(),
+      designation: z.string().optional(),
     })
   ),
 });
@@ -106,11 +114,7 @@ const queryClient = new QueryClient({
 export const TeamContextProvider: React.FC<TeamProviderProps> = ({
   children,
 }) => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TeamProvider>{children}</TeamProvider>
-    </QueryClientProvider>
-  );
+  return <TeamProvider>{children}</TeamProvider>;
 };
 
 // Export types for use in other components

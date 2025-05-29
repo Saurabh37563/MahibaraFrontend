@@ -27,7 +27,7 @@ const formSchema = z.object({
   members: z
     .array(
       z.object({
-        id: z.string(),
+        id: z.number(),
         permission: z.enum(["view", "edit"]),
         modulePermissions: z
           .record(z.enum(["no_access", "view", "edit", "manage"]))
@@ -38,7 +38,7 @@ const formSchema = z.object({
       message: "Please select at least one team member.",
     }),
 });
-  
+
 export type CreateTeamFormValues = z.infer<typeof formSchema>;
 
 interface CreateTeamFormProps {

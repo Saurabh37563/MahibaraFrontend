@@ -89,6 +89,7 @@ export default function FunctionsSidebar() {
                             "bg-green-400/20 text-green-950 hover:bg-green-400/30" // subtle accent background
                         )}
                         onClick={() => {
+                          console.log("Selected team:", team);
                           setActiveTeam(team);
                           if (isMobile) {
                             setIsOpen(false);
@@ -102,22 +103,17 @@ export default function FunctionsSidebar() {
                           spacing={-1}
                           size="xs"
                         >
-                          <Avatar>
-                            <AvatarImage src="/avatars/01.png" alt="User 1" />
-                            <AvatarFallback>JD</AvatarFallback>
-                          </Avatar>
-                          <Avatar>
-                            <AvatarImage src="/avatars/02.png" alt="User 2" />
-                            <AvatarFallback>AB</AvatarFallback>
-                          </Avatar>
-                          <Avatar>
-                            <AvatarImage src="/avatars/03.png" alt="User 3" />
-                            <AvatarFallback>CD</AvatarFallback>
-                          </Avatar>
-                          <Avatar>
-                            <AvatarImage src="/avatars/04.png" alt="User 4" />
-                            <AvatarFallback>EF</AvatarFallback>
-                          </Avatar>
+                          {team?.members?.map((member: any) => (
+                            <Avatar>
+                              <AvatarImage
+                                src={member?.image || ""}
+                                alt="User 1"
+                              />
+                              <AvatarFallback>
+                                {member?.name?.split("")[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                          ))}
                         </AvatarGroup>
                       </Button>
                     </SidebarMenuItem>

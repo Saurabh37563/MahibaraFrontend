@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { PROJECT_ENDPOINTS } from '@/constants/endpoints-constant';
+import { BASE_TEMP_BACKEND_URL, PROJECT_ENDPOINTS } from '@/constants/endpoints-constant';
 import type { 
   Project, 
   CreateProjectRequest, 
@@ -20,6 +20,11 @@ export const projectApi = {
       // Build query parameters
       const queryParams = new URLSearchParams();
 
+      if(team_id) {
+        queryParams.append('team_id', team_id);
+      } else {
+        throw new Error('Team ID is required to fetch projects.');
+      }
       if (filters) {
         // Only add non-default filter values
         if (filters.status && filters.status !== 'all') {
@@ -44,12 +49,12 @@ export const projectApi = {
       }
 
       // Construct the URL with query parameters
-      const url = `${PROJECT_ENDPOINTS.getTeamProjects}/${team_id}/projects${
+      const url = `${PROJECT_ENDPOINTS.getTeamProjects}${
         queryParams.toString() ? `?${queryParams.toString()}` : ''
       }`;
 
-      const response = await axiosInstance.get<Project[]>(url);
-      return response.data;
+      const response = await axiosInstance.get<any>(url);
+      return response?.data?.data || [];
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(
@@ -64,7 +69,7 @@ export const projectApi = {
   createProject: async (data: CreateProjectRequest): Promise<Project> => {
     try {
       const response = await axiosInstance.post<Project>(
-        `${PROJECT_ENDPOINTS.createProject}/${data.team_id}/projects`,
+        `${BASE_TEMP_BACKEND_URL}/api/v1/projects/create_project`,
         data
       );
       return response.data;
@@ -85,11 +90,11 @@ export const projectApi = {
     data: UpdateProjectStatusRequest
   ): Promise<Project> => {
     try {
-      const response = await axiosInstance.patch<Project>(
-        `${PROJECT_ENDPOINTS.updateProject}/${team_id}/projects/${project_id}`,
+      const response = await axiosInstance.patch<any>(
+        `${PROJECT_ENDPOINTS.updateProject}/${project_id}/status/${data?.status}`,
         data
       );
-      return response.data;
+      return response.data?.data || {};
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(

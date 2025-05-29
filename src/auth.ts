@@ -4,8 +4,8 @@ import Zoho from "next-auth/providers/zoho"
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
      Zitadel({
-      clientId: process.env.AUTH_ZITADEL_ID!,
-      clientSecret: process.env.AUTH_ZITADEL_SECRET!,
+      clientId: "321878730312098023",
+      // clientSecret: process.env.AUTH_ZITADEL_SECRET!,
     }),
     Zoho({
       clientId: process.env.AUTH_ZOHO_ID,

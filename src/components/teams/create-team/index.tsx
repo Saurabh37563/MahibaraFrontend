@@ -59,7 +59,7 @@ export default function CreateTeam() {
 
       await createTeamMutation.mutateAsync({
         org_id: activeOrg.id,
-        team: teamData,
+        team: teamData,   
       });
 
       toast.success("Team created successfully.");

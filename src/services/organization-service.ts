@@ -5,8 +5,8 @@ export const MOCK_USERS: User[] = [/* same as yours */]
 
 interface OrganizationService {
   searchUsers: (query: string) => Promise<User[]>
-  createOrganization: (name: string, description: string | undefined, organizationHeadId: string) => Promise<Organization>
-  getAllUserOrganizations: (user_id: string) => Promise<any[]>
+  createOrganization: (name: string, description: string | undefined, organizationHeadId: number) => Promise<Organization>
+  getAllUserOrganizations: (user_id: number) => Promise<any[]>
 }
 
 const organizationService: OrganizationService = {
@@ -26,7 +26,7 @@ const organizationService: OrganizationService = {
     }
   },
 
-  getAllUserOrganizations: async (user_id: string): Promise<any[]> => {
+  getAllUserOrganizations: async (user_id: number): Promise<any[]> => {
     try {
       console.log("Fetching organizations for user:", user_id)
       const response = await organizationApi.getAllUserOrganizations(user_id)
@@ -40,10 +40,10 @@ const organizationService: OrganizationService = {
   createOrganization: async (
     name: string,
     description: string | undefined,
-    owner_id: string
+    owner_id: number
   ): Promise<Organization> => {
     try {
-      const response = await organizationApi.createOrganization({ name, description, owner_id })
+      const response = await organizationApi.createOrganization({ name, description, organisation_admin:owner_id })
       return response
     } catch (error) {
       console.error("Error creating organization:", error)

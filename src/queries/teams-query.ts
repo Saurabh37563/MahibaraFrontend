@@ -4,22 +4,21 @@ import { Team, TeamCreate } from '@/types/team-types';
 
 export const TEAMS_QUERY_KEYS = {
   all: ['teams'] as const,
-  byOrganization: (organizationId: string) => [...TEAMS_QUERY_KEYS.all, 'organization', organizationId] as const,
+  byOrganization: (organizationId: number) => [...TEAMS_QUERY_KEYS.all, 'organization', organizationId] as const,
 };
 
-export const useGetTeamsByOrganization = (organizationId: string | null) => {
+export const useGetTeamsByOrganization = (organizationId: number | null) => {
   return useQuery<Team[], Error>({
-    queryKey: TEAMS_QUERY_KEYS.byOrganization(organizationId || ''),
+    queryKey: TEAMS_QUERY_KEYS.byOrganization(organizationId as number),
     queryFn: () => TeamsService.getTeamsByOrganization(organizationId!),
     enabled: !!organizationId,
-    staleTime: 2 * 60 * 1000, // 2 minutes
   });
 };
 
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<Team, Error, { org_id: string; team: TeamCreate }>({
+  return useMutation<Team, Error, { org_id: number; team: TeamCreate }>({
     mutationFn: ({ org_id, team }) => 
       TeamsService.createTeam(org_id, team),
     onSuccess: (newTeam, { org_id }) => {

@@ -116,26 +116,25 @@ export class SSEClient {
   private buildUrl(): string {
     try {
       const baseUrl = new URL(this.options.url, window.location.origin);
-  
+
       const hardcodedParam = "1747911898074"; // 👈 Hardcoded path param
-  
+
       const path = baseUrl.pathname.endsWith("/")
         ? `${baseUrl.pathname}${hardcodedParam}`
         : `${baseUrl.pathname}/${hardcodedParam}`;
-  
+
       baseUrl.pathname = path;
-  
+
       const token = "test-token"; // 👈 Hardcoded token
       baseUrl.searchParams.append("token", token);
       baseUrl.searchParams.append("timestamp", token);
-  
+
       return baseUrl.toString();
     } catch (error) {
       this.log("error", "Failed to build URL:", error);
       throw error;
     }
   }
-  
 
   private log(
     level: "error" | "warn" | "info" | "debug",
@@ -149,7 +148,7 @@ export class SSEClient {
     if (messageLevel <= configLevel) {
       const timestamp = new Date().toISOString();
       const prefix = `[SSEClient ${timestamp}]`;
-      // console[level](prefix, message, ...data);
+      console[level](prefix, message, ...data);
     }
   }
 

@@ -13,6 +13,7 @@ export interface Organization {
   name: string
   description?: string
   owner_id: string
+  organisation_admin?: number
   createdAt?: string
   updatedAt?: string
 }
@@ -21,7 +22,7 @@ export interface Organization {
 export interface CreateOrganizationRequest {
   name: string
   description?: string
-  owner_id: string
+  organisation_admin: number
 }
 
 // For query parameters (example)

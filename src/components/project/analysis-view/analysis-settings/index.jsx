@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { FiInfo, FiCheck } from "react-icons/fi"
-import { PiMagicWand } from "react-icons/pi"
-import { Loader2, Settings, Trash2, CheckCircle2 } from "lucide-react"
+import { useState } from "react";
+import { FiInfo, FiCheck } from "react-icons/fi";
+import { PiMagicWand } from "react-icons/pi";
+import { Loader2, Settings, Trash2, CheckCircle2 } from "lucide-react";
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -16,133 +16,161 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { cn } from "@/lib/utils"
-import { Progress } from "@/components/ui/progress"
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import { Progress } from "@/components/ui/progress";
 
 export default function ColumnMappingDialog() {
   // Dialog open state
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
 
   // Mock data and state for demonstration
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
   const [sourceColumns, setSourceColumns] = useState([
-    { id: "1", name: "First Name", summary: "Customer's first name", required: true },
-    { id: "2", name: "Last Name", summary: "Customer's last name", required: true },
-    { id: "3", name: "Email", summary: "Customer's email address", required: true },
-    { id: "4", name: "Phone", summary: "Customer's phone number", required: false },
-    { id: "5", name: "Address", summary: "Customer's address", required: false },
-    { id: "6", name: "City", summary: "Customer's city", required: false },
-    { id: "7", name: "State", summary: "Customer's state", required: false },
-    { id: "8", name: "Zip", summary: "Customer's zip code", required: false },
-  ])
+    {
+      id: "1",
+      name: "First Name",
+      summary: "Customer's first name",
+      required: true,
+    },
+    {
+      id: "2",
+      name: "Last Name",
+      summary: "Customer's last name",
+      required: true,
+    },
+    {
+      id: "3",
+      name: "Email",
+      summary: "Customer's email address",
+      required: true,
+    },
+  ]);
 
   const [targetColumns, setTargetColumns] = useState([
     { id: "a", name: "First Name", required: true },
     { id: "b", name: "Last Name", required: true },
     { id: "c", name: "Email Address", required: true },
-    { id: "d", name: "Phone Number", required: false },
-    { id: "e", name: "Street Address", required: false },
-    { id: "f", name: "City", required: false },
-    { id: "g", name: "State/Province", required: false },
-    { id: "h", name: "Postal Code", required: false },
-  ])
+  ]);
 
   const [columnMappingQuery, setColumnMappingQuery] = useState({
-    data: { "1": "a", "2": "b", "3": "c" },
-  })
+    data: { 1: "a", 2: "b", 3: "c" },
+  });
 
   // New state to track approved mappings
-  const [approvedMappings, setApprovedMappings] = useState(new Set(["1", "2", "3"]))
-  
-  const [saveMapping, setSaveMapping] = useState({ isLoading: false })
-  const [isApproveAllLoading, setIsApproveAllLoading] = useState(false)
+  const [approvedMappings, setApprovedMappings] = useState(
+    new Set(["1", "2", "3"]),
+  );
+
+  const [saveMapping, setSaveMapping] = useState({ isLoading: false });
+  const [isApproveAllLoading, setIsApproveAllLoading] = useState(false);
 
   // Derived values
-  const totalSourceColumns = sourceColumns.length
-  const usedTargetColumns = Object.values(columnMappingQuery.data || {})
-  const mappedColumnsCount = Object.keys(columnMappingQuery.data || {}).length
-  const approvedColumnsCount = approvedMappings.size
+  const totalSourceColumns = sourceColumns.length;
+  const usedTargetColumns = Object.values(columnMappingQuery.data || {});
+  const mappedColumnsCount = Object.keys(columnMappingQuery.data || {}).length;
+  const approvedColumnsCount = approvedMappings.size;
 
-  const unmappedRequired = targetColumns.filter((col) => col.required && !usedTargetColumns.includes(col.id))
-  
+  const unmappedRequired = targetColumns.filter(
+    (col) => col.required && !usedTargetColumns.includes(col.id),
+  );
+
   // Find required source columns that are mapped but not approved
   const requiredSourceColumnsNotApproved = sourceColumns
-    .filter(col => col.required && 
-           columnMappingQuery.data[col.id] && 
-           !approvedMappings.has(col.id))
-    .map(col => col.name)
+    .filter(
+      (col) =>
+        col.required &&
+        columnMappingQuery.data[col.id] &&
+        !approvedMappings.has(col.id),
+    )
+    .map((col) => col.name);
 
-  const isAllRequiredMapped = unmappedRequired.length === 0
-  const isAllRequiredApproved = requiredSourceColumnsNotApproved.length === 0
+  const isAllRequiredMapped = unmappedRequired.length === 0;
+  const isAllRequiredApproved = requiredSourceColumnsNotApproved.length === 0;
 
   const [isAutoRemapLoading, setIsAutoRemapLoading] = useState(false);
-  
+
   const handleAutoMap = async () => {
     setIsAutoRemapLoading(true);
     // Simulate a long operation
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     // Clear approvals when remapping
-    setApprovedMappings(new Set())
+    setApprovedMappings(new Set());
     setIsAutoRemapLoading(false);
   };
 
   const handleApproveAll = async () => {
     setIsApproveAllLoading(true);
     // Simulate a short operation
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
+    await new Promise((resolve) => setTimeout(resolve, 800));
+
     // Approve all currently mapped columns
-    const newApprovedSet = new Set(approvedMappings)
-    Object.keys(columnMappingQuery.data).forEach(sourceId => {
-      if (columnMappingQuery.data[sourceId] && columnMappingQuery.data[sourceId] !== "none") {
-        newApprovedSet.add(sourceId)
+    const newApprovedSet = new Set(approvedMappings);
+    Object.keys(columnMappingQuery.data).forEach((sourceId) => {
+      if (
+        columnMappingQuery.data[sourceId] &&
+        columnMappingQuery.data[sourceId] !== "none"
+      ) {
+        newApprovedSet.add(sourceId);
       }
-    })
-    
-    setApprovedMappings(newApprovedSet)
+    });
+
+    setApprovedMappings(newApprovedSet);
     setIsApproveAllLoading(false);
   };
 
   const handleApproveMapping = (sourceId) => {
-    const newApprovedSet = new Set(approvedMappings)
-    newApprovedSet.add(sourceId)
-    setApprovedMappings(newApprovedSet)
-  }
+    const newApprovedSet = new Set(approvedMappings);
+    newApprovedSet.add(sourceId);
+    setApprovedMappings(newApprovedSet);
+  };
 
   const handleColumnMappingChange = (sourceId, targetId) => {
     // When mapping changes, remove approval
-    const newApprovedSet = new Set(approvedMappings)
-    newApprovedSet.delete(sourceId)
-    setApprovedMappings(newApprovedSet)
-    
+    const newApprovedSet = new Set(approvedMappings);
+    newApprovedSet.delete(sourceId);
+    setApprovedMappings(newApprovedSet);
+
     setColumnMappingQuery((prev) => ({
       data: { ...prev.data, [sourceId]: targetId },
-    }))
-  }
+    }));
+  };
 
   const clearMapping = (sourceId) => {
     // When mapping is cleared, remove approval
-    const newApprovedSet = new Set(approvedMappings)
-    newApprovedSet.delete(sourceId)
-    setApprovedMappings(newApprovedSet)
-    
-    const newData = { ...columnMappingQuery.data }
-    delete newData[sourceId]
-    setColumnMappingQuery({ data: newData })
-  }
+    const newApprovedSet = new Set(approvedMappings);
+    newApprovedSet.delete(sourceId);
+    setApprovedMappings(newApprovedSet);
+
+    const newData = { ...columnMappingQuery.data };
+    delete newData[sourceId];
+    setColumnMappingQuery({ data: newData });
+  };
 
   const handleSubmit = (callback) => {
-    setSaveMapping({ isLoading: true })
+    setSaveMapping({ isLoading: true });
     setTimeout(() => {
-      setSaveMapping({ isLoading: false })
-      callback()
-    }, 1000)
-  }
+      setSaveMapping({ isLoading: false });
+      callback();
+    }, 1000);
+  };
 
-  const canComplete = isAllRequiredMapped && isAllRequiredApproved
+  const canComplete = isAllRequiredMapped && isAllRequiredApproved;
 
   return (
     <>
@@ -153,16 +181,16 @@ export default function ColumnMappingDialog() {
           height: 10px;
           background-color: #f5f5f5;
         }
-        
+
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background-color: #cccccc;
           border-radius: 5px;
         }
-        
+
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: #aaaaaa;
         }
-        
+
         .custom-scrollbar {
           scrollbar-width: thin;
           scrollbar-color: #cccccc #f5f5f5;
@@ -179,7 +207,9 @@ export default function ColumnMappingDialog() {
         <DialogContent className="max-w-full sm:max-w-[95%] md:max-w-[85%] lg:max-w-[75%] h-[90vh] p-3 sm:p-4 md:p-6 overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Column Mapping</DialogTitle>
-            <DialogDescription>Verify the suggested mappings and adjust if needed</DialogDescription>
+            <DialogDescription>
+              Verify the suggested mappings and adjust if needed
+            </DialogDescription>
           </DialogHeader>
 
           {isLoading ? (
@@ -192,8 +222,10 @@ export default function ColumnMappingDialog() {
               <div className="space-y-4 mt-2 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                   <div className="text-sm text-gray-600">
-                    {mappedColumnsCount} of {totalSourceColumns} columns mapped 
-                    <span className="ml-2 text-green-700">({approvedColumnsCount} approved)</span>
+                    {mappedColumnsCount} of {totalSourceColumns} columns mapped
+                    <span className="ml-2 text-green-700">
+                      ({approvedColumnsCount} approved)
+                    </span>
                   </div>
                   <div className="flex gap-2">
                     {/* New Approve All Button */}
@@ -201,7 +233,7 @@ export default function ColumnMappingDialog() {
                       variant="outline"
                       className={cn(
                         "relative overflow-hidden transition-all duration-300 bg-blue-800/10 hover:bg-blue-800/20 text-blue-800 hover:shadow-lg",
-                        isApproveAllLoading && "pointer-events-none"
+                        isApproveAllLoading && "pointer-events-none",
                       )}
                       onClick={handleApproveAll}
                       disabled={isApproveAllLoading || mappedColumnsCount === 0}
@@ -215,7 +247,10 @@ export default function ColumnMappingDialog() {
                         </>
                       ) : (
                         <span className="flex items-center">
-                          <CheckCircle2 className="mr-2 transition-transform hover:translate-y-[-2px]" size={18} />
+                          <CheckCircle2
+                            className="mr-2 transition-transform hover:translate-y-[-2px]"
+                            size={18}
+                          />
                           Approve All
                         </span>
                       )}
@@ -226,7 +261,7 @@ export default function ColumnMappingDialog() {
                       variant="outline"
                       className={cn(
                         "relative overflow-hidden transition-all duration-300 bg-green-800/10 hover:bg-green-800/20 text-green-800 hover:shadow-lg",
-                        isAutoRemapLoading && "pointer-events-none"
+                        isAutoRemapLoading && "pointer-events-none",
                       )}
                       onClick={handleAutoMap}
                       disabled={isAutoRemapLoading}
@@ -234,9 +269,9 @@ export default function ColumnMappingDialog() {
                       {isAutoRemapLoading ? (
                         <>
                           <span className="flex items-center">
-                            <PiMagicWand 
-                              className="mr-2 animate-[bounce_1s_ease-in-out_infinite]" 
-                              size={18} 
+                            <PiMagicWand
+                              className="mr-2 animate-[bounce_1s_ease-in-out_infinite]"
+                              size={18}
                             />
                             <span>Mapping...</span>
                           </span>
@@ -255,15 +290,16 @@ export default function ColumnMappingDialog() {
                   </div>
                 </div>
 
-                <Progress 
-                  value={(approvedColumnsCount / totalSourceColumns) * 100} 
-                  className="h-2 w-full bg-gray-200" 
+                <Progress
+                  value={(approvedColumnsCount / totalSourceColumns) * 100}
+                  className="h-2 w-full bg-gray-200"
                 />
 
                 {unmappedRequired.length > 0 && (
                   <Alert className="bg-amber-50 border-amber-200">
                     <AlertDescription className="text-amber-800">
-                      There are {unmappedRequired.length} required target columns that haven't been mapped yet:
+                      There are {unmappedRequired.length} required target
+                      columns that haven't been mapped yet:
                       <div className="flex flex-wrap gap-1 mt-2">
                         {unmappedRequired.map((col) => (
                           <Badge
@@ -278,7 +314,7 @@ export default function ColumnMappingDialog() {
                     </AlertDescription>
                   </Alert>
                 )}
-                
+
                 {requiredSourceColumnsNotApproved.length > 0 && (
                   <Alert className="bg-blue-50 border-blue-200">
                     <AlertDescription className="text-blue-800">
@@ -303,28 +339,47 @@ export default function ColumnMappingDialog() {
               <div className="flex-grow overflow-hidden mt-4 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
                 <div
                   className="custom-scrollbar"
-                  style={{ maxHeight: "calc(100% - 20px)", overflowY: "scroll", overflowX: "scroll" }}
+                  style={{
+                    maxHeight: "calc(100% - 20px)",
+                    overflowY: "scroll",
+                    overflowX: "scroll",
+                  }}
                 >
                   <div className="min-w-[800px] pb-4">
                     <Table className="w-full">
                       <TableHeader className="sticky top-0 bg-background z-10">
                         <TableRow>
-                          <TableHead className="w-[35%]">Source Column</TableHead>
-                          <TableHead className="w-[45%]">Target Column</TableHead>
-                          <TableHead className="w-[20%] text-right">Actions</TableHead>
+                          <TableHead className="w-[35%]">
+                            Source Column
+                          </TableHead>
+                          <TableHead className="w-[45%]">
+                            Target Column
+                          </TableHead>
+                          <TableHead className="w-[20%] text-right">
+                            Actions
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {sourceColumns.map((sourceColumn) => {
-                          const mappedTargetId = columnMappingQuery.data?.[sourceColumn.id] || ""
-                          const isApproved = approvedMappings.has(sourceColumn.id)
-                          const canApprove = mappedTargetId && mappedTargetId !== "none"
+                          const mappedTargetId =
+                            columnMappingQuery.data?.[sourceColumn.id] || "";
+                          const isApproved = approvedMappings.has(
+                            sourceColumn.id,
+                          );
+                          const canApprove =
+                            mappedTargetId && mappedTargetId !== "none";
 
                           return (
-                            <TableRow key={sourceColumn.id} className={isApproved ? "bg-green-50" : ""}>
+                            <TableRow
+                              key={sourceColumn.id}
+                              className={isApproved ? "bg-green-50" : ""}
+                            >
                               <TableCell className="font-medium">
                                 <div className="flex flex-wrap gap-1 items-center">
-                                  <span className="w-fit">{sourceColumn.name}</span>
+                                  <span className="w-fit">
+                                    {sourceColumn.name}
+                                  </span>
                                   {sourceColumn?.required && (
                                     <Badge className="text-xs rounded-full bg-yellow-500/10 text-amber-700 whitespace-nowrap">
                                       Required
@@ -337,23 +392,31 @@ export default function ColumnMappingDialog() {
                                   )}
                                 </div>
                                 {sourceColumn.summary && (
-                                  <div className="text-gray-500 mt-1 w-fit text-sm">{sourceColumn.summary}</div>
+                                  <div className="text-gray-500 mt-1 w-fit text-sm">
+                                    {sourceColumn.summary}
+                                  </div>
                                 )}
                               </TableCell>
                               <TableCell>
                                 <Select
                                   value={mappedTargetId}
-                                  onValueChange={(value) => handleColumnMappingChange(sourceColumn.id, value)}
+                                  onValueChange={(value) =>
+                                    handleColumnMappingChange(
+                                      sourceColumn.id,
+                                      value,
+                                    )
+                                  }
                                 >
                                   <SelectTrigger className="w-full">
                                     <SelectValue placeholder="Select a target column" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem >None</SelectItem>
+                                    <SelectItem>None</SelectItem>
                                     {targetColumns.map((targetColumn) => {
                                       const isUsed =
-                                        usedTargetColumns.includes(targetColumn.id) &&
-                                        mappedTargetId !== targetColumn.id
+                                        usedTargetColumns.includes(
+                                          targetColumn.id,
+                                        ) && mappedTargetId !== targetColumn.id;
 
                                       return (
                                         <SelectItem
@@ -365,7 +428,7 @@ export default function ColumnMappingDialog() {
                                           {targetColumn.name}
                                           {targetColumn.required && " *"}
                                         </SelectItem>
-                                      )
+                                      );
                                     })}
                                   </SelectContent>
                                 </Select>
@@ -376,10 +439,15 @@ export default function ColumnMappingDialog() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => handleApproveMapping(sourceColumn.id)}
+                                      onClick={() =>
+                                        handleApproveMapping(sourceColumn.id)
+                                      }
                                       className="text-blue-600 border-blue-200 hover:bg-blue-50"
                                     >
-                                      <CheckCircle2 size={14} className="mr-1" />
+                                      <CheckCircle2
+                                        size={14}
+                                        className="mr-1"
+                                      />
                                       Approve
                                     </Button>
                                   )}
@@ -387,7 +455,9 @@ export default function ColumnMappingDialog() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      onClick={() => clearMapping(sourceColumn.id)}
+                                      onClick={() =>
+                                        clearMapping(sourceColumn.id)
+                                      }
                                       className="text-gray-500 hover:text-red-500"
                                     >
                                       <Trash2 size={16} />
@@ -396,20 +466,23 @@ export default function ColumnMappingDialog() {
                                 </div>
                               </TableCell>
                             </TableRow>
-                          )
+                          );
                         })}
                       </TableBody>
                     </Table>
                   </div>
 
                   {sourceColumns.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">No source columns available for mapping</div>
+                    <div className="text-center py-8 text-gray-500">
+                      No source columns available for mapping
+                    </div>
                   )}
                 </div>
               </div>
 
               <div className="text-sm text-gray-500 flex items-center gap-1 mt-4 flex-shrink-0">
-                <span className="text-red-500">*</span> Indicates required target columns
+                <span className="text-red-500">*</span> Indicates required
+                target columns
               </div>
 
               <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:space-x-2 mt-4 pt-4 border-t flex-shrink-0">
@@ -417,18 +490,27 @@ export default function ColumnMappingDialog() {
                   <FiInfo />
                   {canComplete
                     ? "All required columns are mapped and approved"
-                    : `${!isAllRequiredMapped ? unmappedRequired.length + " required columns still need to be mapped" : 
-                        requiredSourceColumnsNotApproved.length + " required mappings need approval"}`}
+                    : `${
+                        !isAllRequiredMapped
+                          ? unmappedRequired.length +
+                            " required columns still need to be mapped"
+                          : requiredSourceColumnsNotApproved.length +
+                            " required mappings need approval"
+                      }`}
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                  <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => setOpen(false)}
+                    className="w-full sm:w-auto"
+                  >
                     Cancel
                   </Button>
                   <Button
                     className="bg-green-900 w-full sm:w-auto"
                     onClick={() =>
                       handleSubmit(() => {
-                        setOpen(false)
+                        setOpen(false);
                       })
                     }
                     disabled={!canComplete || saveMapping.isLoading}
@@ -449,5 +531,5 @@ export default function ColumnMappingDialog() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

@@ -25,7 +25,7 @@ import { Organization } from "@/types/organization-types";
 
 interface OrganizationSwitcherProps {
   activeOrg: any | null;
-  setActiveOrg: (org: Organization) => void;
+  setActiveOrg: (org: any) => void; // TODO : change to appropriate type
   setActiveTeam: (team: Team | null) => void;
 }
 
@@ -34,7 +34,9 @@ export function OrganizationSwitcher({
   setActiveOrg,
   setActiveTeam,
 }: OrganizationSwitcherProps) {
-  const { data: organizations = [], isLoading } = useGetAllUserOrganizations("11111111-1111-1111-1111-111111111111");
+  const { data: organizations = [], isLoading } = useGetAllUserOrganizations(
+    10 // TODO : Change this to the actual user ID
+  );
   const { isMobile } = useSidebar ? useSidebar() : { isMobile: false };
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -61,7 +63,9 @@ export function OrganizationSwitcher({
                   <>
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg  ">
                       <Avatar className="size-8">
-                        <AvatarFallback>{activeOrg.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>
+                          {activeOrg.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
                       </Avatar>
                     </div>
                     <div className="grid flex-1 text-left text-sm leading-tight">
@@ -105,8 +109,10 @@ export function OrganizationSwitcher({
                 >
                   <div className="flex size-6 items-center justify-center rounded-sm border">
                     <Avatar className="h-5 w-5">
-                      <AvatarImage src={org?.avatar ?? 'Test'} alt={org.name} />
-                      <AvatarFallback>{org.name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarImage src={org?.avatar ?? "Test"} alt={org.name} />
+                      <AvatarFallback>
+                        {org.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                   </div>
                   {org.name}

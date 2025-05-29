@@ -1,0 +1,410 @@
+"use client";
+
+import { useState } from "react";
+import { UseFormReturn } from "react-hook-form";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { FormControl, FormField, FormItem } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Trash2 } from "lucide-react";
+import { MdVerified } from "react-icons/md";
+import { useFileUpload } from "@/contexts/file-upload-context";
+import { FormValues, SheetMapping } from "@/types/project-types";
+
+interface SheetMapperProps {
+  form: UseFormReturn<FormValues>;
+}
+
+export function SheetMapper({ form }: SheetMapperProps) {
+  const {
+    uploadedFiles,
+    sheetTypes,
+    mappings,
+    addMapping,
+    removeMapping,
+    updateMapping,
+    isSheetTypeValidated,
+  } = useFileUpload();
+
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  // State to hold the mapping that is pending confirmation
+  const [pendingMapping, setPendingMapping] = useState<{
+    index: number;
+    mapping: SheetMapping;
+  } | null>(null);
+
+  const getAvailableSheetTypes = (currentMappingIndex: number) => {
+    return sheetTypes.filter((type) => {
+      const isUsedElsewhere = mappings.some(
+        (mapping, idx) =>
+          idx !== currentMappingIndex && mapping.sheetType === type.name
+      );
+      return !isUsedElsewhere;
+    });
+  };
+
+  const getSheets = (fileId: string) => {
+    const file = uploadedFiles.find((f) => f.id === fileId);
+    return file?.sheets || [];
+  };
+
+  const handleAddMapping = () => {
+    const unmappedTypes = sheetTypes.filter(
+      (type) => !mappings.some((mapping) => mapping.sheetType === type.name)
+    );
+
+    if (unmappedTypes.length === 0) {
+      return;
+    }
+
+    addMapping({
+      fileId: "",
+      sheetId: "",
+      sheetType: "",
+      sheetIndex: 0,
+    });
+  };
+
+  const handleRemoveMapping = (index: number) => {
+    removeMapping(index);
+  };
+
+  const handleFileChange = (index: number, fileId: string) => {
+    const currentMapping = mappings[index];
+    updateMapping(index, {
+      ...currentMapping,
+      fileId,
+      sheetId: "",
+    });
+  };
+
+  const handleSheetChange = (index: number, sheetId: string) => {
+    const currentMapping = mappings[index];
+    const sheets = getSheets(currentMapping.fileId);
+    const selectedSheetIndex = sheets.findIndex(
+      (sheet) => sheet.id === sheetId
+    );
+
+    updateMapping(index, {
+      ...currentMapping,
+      sheetId,
+      sheetIndex: selectedSheetIndex, // Add this line
+    });
+  };
+
+  const handleSheetTypeChange = (index: number, sheetType: string) => {
+    const isAlreadyMapped = mappings.some(
+      (mapping, idx) => idx !== index && mapping.sheetType === sheetType
+    );
+
+    if (isAlreadyMapped) {
+      return;
+    }
+
+    const currentMapping = { ...mappings[index] };
+
+    if (
+      isSheetTypeValidated(sheetType) &&
+      currentMapping.sheetType !== sheetType
+    ) {
+      setPendingMapping({
+        index,
+        mapping: {
+          ...currentMapping,
+          sheetType,
+          fileId: "",
+          sheetId: "",
+          // sheetName: "",
+        },
+      });
+      setConfirmationOpen(true);
+      return;
+    }
+
+    updateMapping(index, {
+      ...currentMapping,
+      sheetType,
+      fileId: "",
+      sheetId: "",
+      // sheetName: "",
+    });
+  };
+
+  const handleConfirmValidatedType = (confirmed: boolean) => {
+    setConfirmationOpen(false);
+
+    if (confirmed && pendingMapping) {
+      updateMapping(pendingMapping.index, pendingMapping.mapping);
+    }
+
+    setPendingMapping(null);
+  };
+
+  if (mappings.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">Sheet Mappings</h3>
+          <Button
+            type="button"
+            onClick={handleAddMapping}
+            size="sm"
+            className="bg-green-900 hover:bg-green-800"
+          >
+            Add Mapping
+          </Button>
+        </div>
+
+        <div className="text-center p-6 border rounded-md text-muted-foreground">
+          <p>No mappings yet. Click Add Mapping to start.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-medium">Sheet Mappings</h3>
+        <Button
+          type="button"
+          onClick={handleAddMapping}
+          size="sm"
+          className="bg-green-900 hover:bg-green-800"
+          disabled={mappings.length >= sheetTypes.length}
+        >
+          Add Mapping
+        </Button>
+      </div>
+
+      <div className="border rounded-md overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[30%]">Data Type</TableHead>
+              <TableHead className="w-[30%]">Workbook Name</TableHead>
+              <TableHead className="w-[30%]">Sheet in File</TableHead>
+              <TableHead className="w-[10%] text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {mappings.map((mapping, index) => (
+              <TableRow key={index}>
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    name={`mappings.${index}.sheetType`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleSheetTypeChange(index, value);
+                          }}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select sheet type">
+                                {field.value ? (
+                                  <div className="flex items-center gap-2">
+                                    <span>
+                                      {
+                                        sheetTypes.find(
+                                          (type) => type.name === field.value
+                                        )?.name
+                                      }
+                                    </span>
+                                    {isSheetTypeValidated(field.value) && (
+                                      <MdVerified
+                                        className="text-green-800"
+                                        title="Previously validated"
+                                      />
+                                    )}
+                                  </div>
+                                ) : (
+                                  "Select sheet type"
+                                )}
+                              </SelectValue>
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {getAvailableSheetTypes(index).map((type) => (
+                              <SelectItem key={type.name} value={type.name}>
+                                <div className="flex items-center gap-2">
+                                  <span>{type.name}</span>
+                                  {type.isValidated && (
+                                    <MdVerified
+                                      className="text-green-800"
+                                      title="Previously validated"
+                                    />
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    name={`mappings.${index}.fileId`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            handleFileChange(index, value);
+                          }}
+                          disabled={!mapping.sheetType}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a file" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {uploadedFiles.map((file) => (
+                              <SelectItem key={file.id} value={file.id}>
+                                {file.file_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+
+                <TableCell>
+                  <FormField
+                    control={form.control}
+                    name={`mappings.${index}.sheetId`}
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col">
+                        <Select
+                          value={field.value || ""}
+                          onValueChange={(value) => {
+                            const selectedSheet = getSheets(
+                              mapping.fileId
+                            ).find((sheet) => sheet.id === value);
+                            if (selectedSheet) {
+                              field.onChange(value);
+                              handleSheetChange(index, selectedSheet.id);
+                            }
+                          }}
+                          disabled={!mapping.fileId || !mapping.sheetType}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a sheet" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {getSheets(mapping.fileId).map((sheet) => (
+                              <SelectItem key={sheet.id} value={sheet.id}>
+                                {sheet.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+                </TableCell>
+
+                <TableCell className="text-right">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveMapping(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                  {/* Alert Dialog for removing mapping */}
+                  <AlertDialog
+                    open={deleteConfirmationOpen}
+                    onOpenChange={setDeleteConfirmationOpen}
+                  >
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Mapping ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove this mapping?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel
+                          onClick={() => setDeleteConfirmationOpen(false)}
+                        >
+                          No, cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleRemoveMapping(index)}
+                        >
+                          Yes, remove mapping
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update Validated Mapping?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This sheet type has been mapped and validated previously. Do you
+              want to update this file mapping?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => handleConfirmValidatedType(false)}
+            >
+              No, cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleConfirmValidatedType(true)}>
+              Yes, update mapping
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}

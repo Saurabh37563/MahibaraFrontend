@@ -16,16 +16,23 @@ export const TeamMemberSchema = z.object({
 // Team Member with Permissions Schema
 export const TeamMemberWithPermissionSchema = TeamMemberSchema.extend({
   permission: z.enum(["view", "edit"]),
-  modulePermissions: z.record(z.enum(["no_access", "view", "edit", "manage"])).optional(),
+  modulePermissions: z
+  .object({
+    projects: z.enum(["no_access", "view", "edit", "manage"]),
+    analytics: z.enum(["no_access", "view", "edit", "manage"]),
+    file_processing: z.enum(["no_access", "view", "edit", "manage"]),
+  })
+  .optional()
+
 });
 
 // Team Creation Schema
 export const TeamCreateSchema = z.object({
   name: z.string().min(2, "Team name must be at least 2 characters"),
   description: z.string().optional(),
-  org_id:z.string(),
+  org_id:z.number(),
   members: z.array(z.object({
-    id: z.string(),
+    id: z.number(),
     modulePermissions: z.object({
       projects: z.enum(["no_access", "view", "edit", "manage"]),
       analytics: z.enum(["no_access", "view", "edit", "manage"]),

@@ -32,6 +32,7 @@ import type {
   AccessLevel,
   ModuleType,
 } from "@/types/team-types";
+import axios from "axios";
 
 const PERMISSION_LEVELS: {
   value: AccessLevel;
@@ -59,8 +60,6 @@ const PERMISSION_LEVELS: {
     description: "Full administrative access",
   },
 ];
-
-
 
 const MODULES: {
   value: ModuleType;
@@ -90,43 +89,60 @@ interface TeamMemberSelectorProps {
 }
 
 // Mock users API (replace with your actual API)
+// const usersApi = {
+//   getUsers: async (search = "") => {
+//     await new Promise((resolve) => setTimeout(resolve, 500));
+//     const users = [
+//       {
+//         id: "1",
+//         name: "Saurabh Kumar",
+//         email: "saurabh@email.com",
+//         position: "Frontend Developer",
+//         image: "https://github.com/shadcn.png",
+//       },
+//       {
+//         id: "2",
+//         name: "John Doe",
+//         email: "john@email.com",
+//         position: "Backend Developer",
+//         image: "https://github.com/shadcn.png",
+//       },
+//       {
+//         id: "3",
+//         name: "Jane Smith",
+//         email: "jane@email.com",
+//         position: "UI Designer",
+//         image: null,
+//       },
+//     ];
+
+//     if (search) {
+//       const searchLower = search.toLowerCase();
+//       return users.filter(
+//         (user) =>
+//           user.name.toLowerCase().includes(searchLower) ||
+//           user.email.toLowerCase().includes(searchLower) ||
+//           user.position.toLowerCase().includes(searchLower)
+//       );
+//     }
+//     return users;
+//   },
+// };
+
 const usersApi = {
   getUsers: async (search = "") => {
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    const users = [
-      {
-        id: "1",
-        name: "Saurabh Kumar",
-        email: "saurabh@email.com",
-        position: "Frontend Developer",
-        image: "https://github.com/shadcn.png",
-      },
-      {
-        id: "2",
-        name: "John Doe",
-        email: "john@email.com",
-        position: "Backend Developer",
-        image: "https://github.com/shadcn.png",
-      },
-      {
-        id: "3",
-        name: "Jane Smith",
-        email: "jane@email.com",
-        position: "UI Designer",
-        image: null,
-      },
-    ];
-
-    if (search) {
-      const searchLower = search.toLowerCase();
-      return users.filter(
-        (user) =>
-          user.name.toLowerCase().includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower) ||
-          user.position.toLowerCase().includes(searchLower)
+    try {
+      const response = await axios.get(
+        "http://192.168.1.63:8000/api/v1/teams/user-info",
+        {
+          params: { search },
+        }
       );
+      return response.data?.data; // Assuming the API returns a list of users
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      throw new Error("Could not load users");
     }
-    return users;
   },
 };
 
@@ -243,7 +259,7 @@ export function TeamMemberSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-2 w-[var(--radix-popover-trigger-width)]"
+          className="p-2 h-full overflow-y-scroll   w-[var(--radix-popover-trigger-width)]"
           align="start"
           side="bottom"
           sideOffset={4}
@@ -254,7 +270,7 @@ export function TeamMemberSelector({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <ScrollArea className="max-h-72 rounded-md">
+          <ScrollArea className="rounded-md max-h-72 ">
             <div className="p-2 space-y-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-4">

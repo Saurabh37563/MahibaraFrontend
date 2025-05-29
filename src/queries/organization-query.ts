@@ -15,7 +15,7 @@ export function useSearchUsers(query: string): UseQueryResult<User[], Error> {
 export interface CreateOrganizationParams {
   name: string
   description?: string
-  owner_id: string
+  owner_id: number
 }
 
 // Create Organization
@@ -30,14 +30,14 @@ export function useCreateOrganization(): UseMutationResult<
     onSuccess: (newOrg, variables) => {
       console.log("New Org data:", newOrg);
       // variables.owner_id holds the user_id passed to mutation
-      queryClient.invalidateQueries({ queryKey: ['organizations', newOrg.owner_id] });
+      queryClient.invalidateQueries({ queryKey: ['organizations', newOrg.organisation_admin] });
     },
   });
 }
 
 
 // Fetch organizations with user_id in query key
-export function useGetAllUserOrganizations(user_id: string): UseQueryResult<any[], Error> {
+export function useGetAllUserOrganizations(user_id: number): UseQueryResult<any[], Error> {
   return useQuery({
     queryKey: ['organizations', user_id],
     queryFn: () => organizationService.getAllUserOrganizations(user_id),

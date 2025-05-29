@@ -1,3 +1,4 @@
+"use client";
 import { useState } from "react";
 import moment from "moment";
 import { Project } from "@/types/project-types";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ProjectStatusDialog } from "./project-status-dialog";
 import { ProjectDeleteDialog } from "./project-delete-dialog";
 import { useRouter } from "next/navigation";
+import { useTeamContext } from "@/contexts/team-context";
 
 // Define project status types and config
 type ProjectStatus = "completed" | "in-progress" | "pending" | "draft";
@@ -61,6 +63,7 @@ interface ProjectCardProps {
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
+  const { activeOrg } = useTeamContext();
   const status = project.status as ProjectStatus;
   const { color, iconColor, borderColor, bgColor } =
     statusConfig[status] || statusConfig["draft"];
@@ -72,7 +75,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   const fromNow = moment(project.modifiedDate).fromNow();
 
   const handleCardClick = () => {
-    router.push(`/functions/${project.id}`);
+    const newParams = new URLSearchParams();
+    newParams.set("orgName", activeOrg?.name || "Unknown Org");
+    newParams.set("projectName", project.name);
+    router.push(`/functions/${project.id}/?${newParams.toString()}`);
   };
 
   return (
