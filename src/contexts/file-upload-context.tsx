@@ -16,7 +16,6 @@ import type {
 } from "@/types/project-types";
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
-import { useParams } from "next/navigation";
 
 interface FileUploadContextType {
   uploadedFiles: UploadedFileInfo[];

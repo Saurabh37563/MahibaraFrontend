@@ -1,7 +1,8 @@
 import http from "@/lib/http";
-import {USER_AUTH_URL} from '@/constants/endpoints-constant'
+import { USER_AUTH_URL } from '@/constants/endpoints-constant';
+
 export const authApi = {
-  login: async (credentials:any) => {
+  login: async (credentials: Record<string, unknown>) => {
     const response = await http.post(USER_AUTH_URL?.postLogin, credentials);
     return response.data;
   },
@@ -9,10 +10,4 @@ export const authApi = {
     const response = await http.post(USER_AUTH_URL?.postLogout);
     return response.data;
   },
-  userData: async () => {
-    const response = await http.get(USER_AUTH_URL?.getUserData);
-    return response.data;
-  },
-
-
 };

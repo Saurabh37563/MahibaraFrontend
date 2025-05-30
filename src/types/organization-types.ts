@@ -9,9 +9,10 @@ export interface User {
 
 // Organization type
 export interface Organization {
-  id: string
+  id: number
   name: string
   description?: string
+  image?: string | null
   owner_id: string
   organisation_admin?: number
   createdAt?: string

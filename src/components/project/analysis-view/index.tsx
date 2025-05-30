@@ -8,16 +8,7 @@ import React, {
   useRef,
 } from "react";
 import { useParams, useRouter } from "next/navigation";
-import {
-  FiInfo,
-  FiRefreshCw,
-  FiSearch,
-  FiPlay,
-  FiAlertTriangle,
-} from "react-icons/fi";
-import { IoMdCheckmark } from "react-icons/io";
-import { LuFileSpreadsheet } from "react-icons/lu";
-import { IoWarningOutline } from "react-icons/io5";
+import { FiRefreshCw, FiAlertTriangle } from "react-icons/fi";
 import {
   FileSpreadsheet,
   CheckCircle,
@@ -86,13 +77,13 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const dataFetchedRef = useRef(false);
 
   // Define final statuses that should stop SSE connection
-  const FINAL_STATUSES = ["completed", "failed"];
+  const FINAL_STATUSES = useMemo(() => ["completed", "failed"], []);
 
   // Determine if SSE should be active
   const shouldConnectSSE = useMemo(() => {
     if (!enableSSE || !projectId || !analysisData) return false;
     return !FINAL_STATUSES.includes(analysisData.status);
-  }, [enableSSE, projectId, analysisData]);
+  }, [enableSSE, projectId, analysisData, FINAL_STATUSES]);
 
   // SSE connections
   const sseUrl = useMemo(() => {
@@ -101,8 +92,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   }, [projectId]);
 
   const {
-    isConnected: sseConnected,
-    error: sseError,
+    // isConnected: sseConnected,
+    // error: sseError,
     addEventListener,
     disconnect: disconnectSSE,
   } = useSSE(sseUrl, {
@@ -141,7 +132,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         label: "Failed",
       },
     }),
-    []
+    [] // No dependency needed
   );
 
   // Simulated API call for fetching analysis data
@@ -217,6 +208,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       message: "Analysis has been queued",
       progress: 0,
       isSourceFileChanged: false,
+      fileUrl: prev?.fileUrl ?? "", // Ensure fileUrl is always a string
     }));
   };
 
@@ -331,6 +323,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     analysisType,
     disconnectSSE,
     onAnalysisComplete,
+    FINAL_STATUSES, // Now FINAL_STATUSES is stable due to useMemo
   ]);
 
   // Handle trigger analysis
@@ -593,8 +586,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                 Analysis Not Started
               </h3>
               <p className="text-gray-600 mb-4">
-                Click "Start Analysis" to begin the {analysisType} analysis for
-                this project.
+                Click &quot;Start Analysis&quot; to begin the {analysisType}{" "}
+                analysis for this project.
               </p>
               <Button
                 onClick={handleTriggerAnalysis}

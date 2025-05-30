@@ -18,7 +18,6 @@ interface SSEHook {
 export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
   const {
     enabled = true,
-    token,
     autoReconnect = true,
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
@@ -162,7 +161,7 @@ export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
     return () => {
       disconnect();
     };
-  }, [enabled, url]); // Remove connect and disconnect from dependencies to prevent loops
+  }, [enabled, url, connect, disconnect]); // Remove connect and disconnect from dependencies to prevent loops
 
   return {
     isConnected,

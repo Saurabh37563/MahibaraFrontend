@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSSE } from "@/hooks/useSSE";
-import { SpreadsheetData, SSEEvent } from "@/types/spreadsheet-types";
 import { FiLoader } from "react-icons/fi";
 import DownloadFile from "./download-sheet";
 import DeleteSheet from "./delete-sheet";
@@ -37,7 +36,7 @@ interface ApiResponse {
   message: string;
   data: SheetApiResponse;
   error: null | string;
-  metadata: null | any;
+  metadata: Record<string, unknown> | null;
 }
 
 interface SheetApiResponse {
@@ -117,11 +116,7 @@ const fetchSheetData = async (
 };
 
 const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
-  title = "Spreadsheet",
   sheetType,
-  onError,
-  onFileLoad,
-  onFileUpload,
   onDelete,
   enableSSE = true,
   onClearSelection,
@@ -166,7 +161,8 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     if (!shouldConnectSSE || !sheetData) return;
     const unsubscribeFileStatus = addEventListener("file_status", (event) => {
       try {
-        const eventData: SSEEvent["data"] =
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const eventData: any =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
         const actualData = eventData?.data || eventData;
         if (
@@ -194,7 +190,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
             }, 2000);
           }
         }
-      } catch (error) {
+      } catch {
         // ignore
       }
     });
@@ -208,7 +204,6 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     sheetType,
     disconnectSSE,
     sheetData,
-    queryClient,
   ]);
 
   // Render status badge

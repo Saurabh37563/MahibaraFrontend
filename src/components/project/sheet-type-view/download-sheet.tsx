@@ -51,25 +51,41 @@ const DownloadFile = ({
       if ("showSaveFilePicker" in window) {
         try {
           // Modern File System Access API (Chrome 86+, Edge 86+)
-          const fileHandle = await (window as any).showSaveFilePicker({
-            suggestedName: filename,
-            types: [
-              {
-                description: "Downloaded file",
-                accept: { "*/*": [] },
-              },
-            ],
-          });
+          type ShowSaveFilePickerType = (
+            options: SaveFilePickerOptions
+          ) => Promise<FileSystemFileHandle>;
+          interface SaveFilePickerOptions {
+            suggestedName?: string;
+            types?: Array<{
+              description?: string;
+              accept: Record<string, string[]>;
+            }>;
+          }
+          const maybeWindow = window as unknown as {
+            showSaveFilePicker?: ShowSaveFilePickerType;
+          };
+          if (typeof maybeWindow.showSaveFilePicker === "function") {
+            const fileHandle = await maybeWindow.showSaveFilePicker({
+              suggestedName: filename,
+              types: [
+                {
+                  description: "Downloaded file",
+                  accept: { "*/*": [] },
+                },
+              ],
+            });
 
-          const writable = await fileHandle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          return { success: true, cancelled: false };
-        } catch (fsError: any) {
+            const writable = await fileHandle.createWritable();
+            await writable.write(blob);
+            await writable.close();
+            return { success: true, cancelled: false };
+          }
+        } catch (fsError: unknown) {
           // Check if user cancelled the save dialog
+          const errorObj = fsError as { name?: string; message?: string };
           if (
-            fsError.name === "AbortError" ||
-            fsError.message?.includes("aborted")
+            errorObj?.name === "AbortError" ||
+            errorObj?.message?.includes("aborted")
           ) {
             console.log("User cancelled the save dialog");
             return { success: false, cancelled: true };
@@ -78,7 +94,7 @@ const DownloadFile = ({
           // API not supported or other error, fall back to traditional method
           console.log(
             "File System Access API not available or error occurred, using fallback:",
-            fsError.message,
+            errorObj?.message
           );
           // Continue to fallback method below
         }
@@ -100,7 +116,7 @@ const DownloadFile = ({
       URL.revokeObjectURL(downloadUrl);
 
       return { success: true, cancelled: false };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Download failed:", error);
       throw error;
     }
@@ -136,7 +152,7 @@ const DownloadFile = ({
         error instanceof Error ? error.message : "Unknown error occurred";
       setError(`Failed to download file: ${errorMessage}`);
       onDownloadError?.(
-        error instanceof Error ? error : new Error(errorMessage),
+        error instanceof Error ? error : new Error(errorMessage)
       );
     } finally {
       setLoading(false);

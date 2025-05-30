@@ -99,7 +99,7 @@ export interface FileUploadResponse {
     message: string;
   };
   error: null | string;
-  metadata: null | any;
+  metadata: null | Record<string, unknown>;
 }
 
 // Sheet Types
@@ -111,7 +111,7 @@ export interface SheetType {
 export interface SheetData {
   name: string;
   headers: string[];
-  rows: Record<string, any>[];
+  rows: Record<string, unknown>[];
 }
 
 export interface StandardSheet {

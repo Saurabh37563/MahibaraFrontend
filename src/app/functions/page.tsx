@@ -1,8 +1,21 @@
-import TeamDashboard from '@/components/teams';
-import React from 'react';
+"use client";
+
+import TeamDashboard from "@/components/teams";
+import { Loader2 } from "lucide-react";
+import React, { Suspense } from "react";
 
 const Page = () => {
-  return <TeamDashboard />;
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="animate-spin" />
+        </div>
+      }
+    >
+      <TeamDashboard />
+    </Suspense>
+  );
 };
 
 export default Page;

@@ -38,9 +38,9 @@ interface ExcelViewerProps {
 }
 
 interface CellData {
-  value: any;
+  value: string | number | boolean | Date | null | undefined;
   type: "string" | "number" | "boolean" | "date" | "formula" | "empty";
-  style?: any;
+  style?: Record<string, unknown>;
   formula?: string;
   displayValue?: string;
 }
@@ -74,7 +74,7 @@ const VirtualCell = memo<{
   width: number;
   searchTerm: string;
   isHeader: boolean;
-}>(({ cellData, columnIndex, rowIndex, width, searchTerm, isHeader }) => {
+}>(({ cellData, width, searchTerm, isHeader }) => {
   if (!cellData) {
     return (
       <div
@@ -120,7 +120,6 @@ VirtualCell.displayName = "VirtualCell";
 const ExcelViewer: React.FC<ExcelViewerProps> = ({
   fileUrl,
   fileBuffer,
-  fileName = "Spreadsheet",
   onError,
   onLoad,
   className = "",
@@ -152,70 +151,135 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   }, []);
 
   // Format cell value for display
-  const formatCellValue = useCallback((cell: any): CellData => {
-    if (!cell) {
-      return { value: "", type: "empty", displayValue: "" };
-    }
+  const formatCellValue = useCallback(
+    (cell: XLSX.CellObject | undefined): CellData => {
+      if (!cell) {
+        return { value: "", type: "empty", displayValue: "" };
+      }
 
-    let cellData: CellData = {
-      value: cell.v,
-      type: "empty",
-      displayValue: "",
-    };
+      const cellData: CellData = {
+        value: cell.v,
+        type: "empty",
+        displayValue: "",
+      };
 
-    try {
-      if (cell.f) {
-        cellData.type = "formula";
-        cellData.formula = cell.f;
-        cellData.value = cell.v;
-        cellData.displayValue = cell.v?.toString() || "";
-      } else if (cell.t === "n") {
-        cellData.type = "number";
-        cellData.value = cell.v;
-        // Format numbers with appropriate precision
-        cellData.displayValue =
-          typeof cell.v === "number"
-            ? cell.v.toLocaleString(undefined, { maximumFractionDigits: 6 })
-            : cell.v?.toString() || "";
-      } else if (
-        cell.t === "d" ||
-        (cell.t === "n" && cell.z && cell.z.includes("d"))
-      ) {
-        cellData.type = "date";
-        cellData.value = cell.v;
-        // Format dates
-        if (cell.v instanceof Date) {
-          cellData.displayValue = cell.v.toLocaleDateString();
-        } else if (typeof cell.v === "number") {
-          const date = XLSX.SSF.parse_date_code(cell.v);
-          cellData.displayValue = new Date(
-            date.y,
-            date.m - 1,
-            date.d
-          ).toLocaleDateString();
+      try {
+        if (cell.f) {
+          cellData.type = "formula";
+          cellData.formula = cell.f;
+          cellData.value = cell.v;
+          cellData.displayValue = cell.v?.toString() || "";
+        } else if (cell.t === "n") {
+          // Check if this number is actually a date by inspecting the format string
+          const isDate =
+            cell.t === "n" &&
+            typeof cell.z === "string" &&
+            cell.z.toLowerCase().includes("d");
+          if (isDate) {
+            cellData.type = "date";
+            cellData.value = cell.v;
+            if (cell.v instanceof Date) {
+              cellData.displayValue = cell.v.toLocaleDateString();
+            } else if (typeof cell.v === "number") {
+              const date = XLSX.SSF.parse_date_code(cell.v);
+              if (
+                date &&
+                typeof date.y === "number" &&
+                typeof date.m === "number" &&
+                typeof date.d === "number"
+              ) {
+                cellData.displayValue = new Date(
+                  date.y,
+                  date.m - 1,
+                  date.d
+                ).toLocaleDateString();
+              } else {
+                cellData.displayValue = cell.v?.toString() || "";
+              }
+            } else {
+              cellData.displayValue = cell.v?.toString() || "";
+            }
+          } else {
+            cellData.type = "number";
+            cellData.value = cell.v;
+            cellData.displayValue =
+              typeof cell.v === "number"
+                ? cell.v.toLocaleString(undefined, { maximumFractionDigits: 6 })
+                : cell.v?.toString() || "";
+          }
+        } else if (cell.t === "d") {
+          cellData.type = "date";
+          cellData.value = cell.v;
+          if (cell.v instanceof Date) {
+            cellData.displayValue = cell.v.toLocaleDateString();
+          } else {
+            cellData.displayValue = cell.v?.toString() || "";
+          }
+        } else if (cell.t === "b") {
+          cellData.type = "boolean";
+          cellData.value = cell.v;
+          cellData.displayValue = cell.v ? "TRUE" : "FALSE";
         } else {
+          cellData.type = "string";
+          cellData.value = cell.v || "";
           cellData.displayValue = cell.v?.toString() || "";
         }
-      } else if (cell.t === "b") {
-        cellData.type = "boolean";
-        cellData.value = cell.v;
-        cellData.displayValue = cell.v ? "TRUE" : "FALSE";
-      } else {
-        cellData.type = "string";
-        cellData.value = cell.v || "";
+
+        if (cell.s) {
+          cellData.style = cell.s as Record<string, unknown>;
+        }
+      } catch (error) {
+        console.warn("Error formatting cell:", error);
         cellData.displayValue = cell.v?.toString() || "";
       }
 
-      if (cell.s) {
-        cellData.style = cell.s;
-      }
-    } catch (error) {
-      console.warn("Error formatting cell:", error);
-      cellData.displayValue = cell.v?.toString() || "";
-    }
+      return cellData;
+    },
+    []
+  );
 
-    return cellData;
-  }, []);
+  const calculateColumnWidths = useCallback(
+    (sheet: SheetData) => {
+      if (!parentRef.current) return;
+
+      const containerWidth = parentRef.current.offsetWidth;
+      const widths: number[] = [];
+      const maxWidth = 300;
+      const minWidth = 120;
+
+      // Calculate initial widths based on content
+      for (let col = 0; col < sheet.colCount; col++) {
+        let maxLength = 0;
+
+        // Check first 100 rows for performance
+        const rowsToCheck = Math.min(sheet.rowCount, 100);
+        for (let row = 0; row < rowsToCheck; row++) {
+          const cellValue = sheet.data[row]?.[col]?.displayValue || "";
+          maxLength = Math.max(maxLength, cellValue.length);
+        }
+
+        const width = Math.min(
+          Math.max(maxLength * 8 + 20, minWidth),
+          maxWidth
+        );
+        widths.push(width);
+      }
+
+      // If total width is less than container, distribute extra space
+      const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+      if (totalWidth < containerWidth && widths.length > 0) {
+        const extraSpace = containerWidth - totalWidth;
+        const additionalWidthPerColumn = extraSpace / widths.length;
+
+        for (let i = 0; i < widths.length; i++) {
+          widths[i] = Math.min(widths[i] + additionalWidthPerColumn, maxWidth);
+        }
+      }
+
+      updateState({ columnWidths: widths });
+    },
+    [updateState]
+  );
 
   // Process Excel file with progress tracking
   const processExcelFile = useCallback(
@@ -367,52 +431,17 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         }
       }
     },
-    [formatCellValue, maxRows, onError, onLoad, updateState]
+    [
+      formatCellValue,
+      maxRows,
+      onError,
+      onLoad,
+      updateState,
+      calculateColumnWidths,
+    ]
   );
 
   // Calculate optimal column widths
-  const calculateColumnWidths = useCallback(
-    (sheet: SheetData) => {
-      if (!parentRef.current) return;
-
-      const containerWidth = parentRef.current.offsetWidth;
-      const widths: number[] = [];
-      const maxWidth = 300;
-      const minWidth = 120;
-
-      // Calculate initial widths based on content
-      for (let col = 0; col < sheet.colCount; col++) {
-        let maxLength = 0;
-
-        // Check first 100 rows for performance
-        const rowsToCheck = Math.min(sheet.rowCount, 100);
-        for (let row = 0; row < rowsToCheck; row++) {
-          const cellValue = sheet.data[row]?.[col]?.displayValue || "";
-          maxLength = Math.max(maxLength, cellValue.length);
-        }
-
-        const width = Math.min(
-          Math.max(maxLength * 8 + 20, minWidth),
-          maxWidth
-        );
-        widths.push(width);
-      }
-
-      // If total width is less than container, distribute extra space
-      const totalWidth = widths.reduce((sum, width) => sum + width, 0);
-      if (totalWidth < containerWidth && widths.length > 0) {
-        const extraSpace = containerWidth - totalWidth;
-        const additionalWidthPerColumn = extraSpace / widths.length;
-
-        for (let i = 0; i < widths.length; i++) {
-          widths[i] = Math.min(widths[i] + additionalWidthPerColumn, maxWidth);
-        }
-      }
-
-      updateState({ columnWidths: widths });
-    },
-    [updateState]
-  );
 
   // Load file effect with proper error handling
   useEffect(() => {
@@ -473,7 +502,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   }, [state.sheets, state.activeSheetIndex]);
 
   // Filter data based on search and pagination
-  const { filteredData, totalFilteredRows, paginatedData } = useMemo(() => {
+  const { totalFilteredRows, paginatedData } = useMemo(() => {
     if (!currentSheet)
       return { filteredData: [], totalFilteredRows: 0, paginatedData: [] };
 
@@ -610,7 +639,6 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   const headerHeight = 60;
   const tabsHeight = state.sheets.length > 1 ? 40 : 0;
   const paginationHeight = 60;
-  const tableHeight = height - headerHeight - tabsHeight - paginationHeight;
 
   return (
     <div className={`flex flex-col ${className} h-full  overflow-hidden `}>

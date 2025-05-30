@@ -1,11 +1,7 @@
 "use client";
 
 import React from "react";
-import {
-  useTeamContext,
-  type Organization,
-  type Team,
-} from "@/contexts/team-context";
+import { useTeamContext } from "@/contexts/team-context";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { OrganizationSwitcher } from "./organization-switcher";
@@ -18,27 +14,40 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   useSidebar,
-  SidebarHeader,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 import { AvatarGroup } from "@/components/ui/avatargroup";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TeamSchema } from "@/contexts/team-context";
+import type { Organization } from "@/contexts/team-context";
 
 export default function FunctionsSidebar() {
   const { activeOrg, setActiveOrg, activeTeam, setActiveTeam } =
     useTeamContext();
 
   const sidebarContext = useSidebar();
-  const {
-    isOpen = false,
-    setOpen,
-    setIsOpen = () => {},
-    isMobile = false,
-  }: any = sidebarContext || {};
+  // Use type assertion to allow setIsOpen if it exists, otherwise fallback
+  const setIsOpen =
+    (sidebarContext as { setIsOpen?: (open: boolean) => void })?.setIsOpen ??
+    (() => {});
+  const isMobile =
+    (sidebarContext as { isMobile?: boolean })?.isMobile ?? false;
 
   // Replace the teams part with:
-  const { data: teams = [], isLoading: isLoadingTeams } =
+  const { data: rawTeams = [], isLoading: isLoadingTeams } =
     useGetTeamsByOrganization(activeOrg?.id ?? null);
+
+  // Use the correct type for teams
+  type TeamType = ReturnType<typeof TeamSchema.parse>;
+  const teams = React.useMemo(
+    () => rawTeams.map((team: unknown) => TeamSchema.parse(team)),
+    [rawTeams]
+  );
+
+  // Helper to wrap setActiveOrg to accept Organization (id as string)
+  const handleSetActiveOrg = (org: Organization) => {
+    setActiveOrg(org);
+  };
 
   return (
     <>
@@ -52,7 +61,7 @@ export default function FunctionsSidebar() {
           <div className="px-4 py-2 space-y-4">
             <OrganizationSwitcher
               activeOrg={activeOrg}
-              setActiveOrg={setActiveOrg}
+              setActiveOrg={handleSetActiveOrg}
               setActiveTeam={setActiveTeam}
             />
 
@@ -77,8 +86,8 @@ export default function FunctionsSidebar() {
                 </div>
               ) : teams.length > 0 ? (
                 <SidebarMenu>
-                  {teams.map((team) => (
-                    <SidebarMenuItem key={team.id}>
+                  {teams.map((team: TeamType) => (
+                    <SidebarMenuItem key={team.name}>
                       <Button
                         variant={
                           activeTeam?.id === team.id ? "default" : "ghost"
@@ -86,7 +95,7 @@ export default function FunctionsSidebar() {
                         className={cn(
                           "w-full flex justify-between capitalize  text-left font-normal",
                           activeTeam?.id === team.id &&
-                            "bg-green-400/20 text-green-950 hover:bg-green-400/30" // subtle accent background
+                            "bg-green-400/20 text-green-950 hover:bg-green-400/30"
                         )}
                         onClick={() => {
                           console.log("Selected team:", team);
@@ -103,17 +112,30 @@ export default function FunctionsSidebar() {
                           spacing={-1}
                           size="xs"
                         >
-                          {team?.members?.map((member: any) => (
-                            <Avatar>
-                              <AvatarImage
-                                src={member?.image || ""}
-                                alt="User 1"
-                              />
-                              <AvatarFallback>
-                                {member?.name?.split("")[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          ))}
+                          {team?.members?.map(
+                            (
+                              member: {
+                                id: string | number;
+                                email?: string;
+                                name?: string;
+                                image?: string;
+                                // other possible fields...
+                              },
+                              idx: number
+                            ) => (
+                              <Avatar
+                                key={String(member?.id) || member?.email || idx}
+                              >
+                                <AvatarImage
+                                  src={member?.image || ""}
+                                  alt="User 1"
+                                />
+                                <AvatarFallback>
+                                  {member?.name?.split("")[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                            )
+                          )}
                         </AvatarGroup>
                       </Button>
                     </SidebarMenuItem>

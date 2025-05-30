@@ -1,7 +1,14 @@
-'use client'
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, UserSchema } from '@/types/user-types';
-import { useSession, signOut as nextAuthSignOut } from 'next-auth/react';
+"use client";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { User, UserSchema } from "@/types/user-types";
+import { useSession, signOut as nextAuthSignOut } from "next-auth/react";
+import { getErrorMessage } from "@/utils/getErrorMassage";
 
 type AuthContextType = {
   user: User | null;
@@ -18,80 +25,82 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Get NextAuth session
   const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {
     // First try to get user info from NextAuth session
-    if (sessionStatus === 'authenticated' && session) {
+    if (sessionStatus === "authenticated" && session) {
       // Extract token from session
       const sessionToken = session.accessToken as string;
-      
+
       if (sessionToken) {
         setToken(sessionToken);
-        
+
         // Create a user object from session data
         try {
           // Build user object from session data
           const sessionUser = {
-            id: session.user?.id || 'unknown',
+            id: session.user?.id || "unknown",
             name: session.user?.name,
-            email: session.user?.email || 'unknown@example.com',
+            email: session.user?.email || "unknown@example.com",
             image: session.user?.image,
             // Additional fields with default values
             organizationId: null,
             organizationName: null,
-            userType: 'USER', // Default value
+            userType: "USER", // Default value
             createdAt: null,
-            updatedAt: null
+            updatedAt: null,
           };
-          
+
           // Validate with Zod schema
           const validatedUser = UserSchema.parse(sessionUser);
           setUser(validatedUser);
-          
+
           // Optionally store in localStorage as backup
-          localStorage.setItem('auth_token', sessionToken);
-          localStorage.setItem('user', JSON.stringify(validatedUser));
+          localStorage.setItem("auth_token", sessionToken);
+          localStorage.setItem("user", JSON.stringify(validatedUser));
         } catch (e) {
-          console.error('Failed to validate session user data:', e);
-          setError('Invalid session user data');
+          console.error("Failed to validate session user data:", e);
+          setError("Invalid session user data");
         }
       }
-    } else if (sessionStatus === 'unauthenticated') {
+    } else if (sessionStatus === "unauthenticated") {
       // Fallback to localStorage if no session is available
-      const storedToken = localStorage.getItem('auth_token');
-      const storedUser = localStorage.getItem('user');
-      
+      const storedToken = localStorage.getItem("auth_token");
+      const storedUser = localStorage.getItem("user");
+
       if (storedToken && storedUser) {
         try {
           const parsedUser = UserSchema.parse(JSON.parse(storedUser));
           setUser(parsedUser);
           setToken(storedToken);
-        } catch (e) {
-          setError('Invalid user data stored');
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('user');
+        } catch (e: unknown) {
+          const errorMessage = getErrorMessage(e, "Invalid user data stored");
+          console.error("Failed to parse stored user data:", errorMessage);
+          setError("Invalid user data stored");
+          localStorage.removeItem("auth_token");
+          localStorage.removeItem("user");
         }
       }
     }
-    
+
     // Set loading to false once we've checked both session and localStorage
-    if (sessionStatus !== 'loading') {
+    if (sessionStatus !== "loading") {
       setLoading(false);
     }
   }, [session, sessionStatus]);
 
   const logout = async () => {
     // Clear localStorage
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    
+    localStorage.removeItem("auth_token");
+    localStorage.removeItem("user");
+
     // Reset state
     setUser(null);
     setToken(null);
-    
+
     // Use NextAuth signOut
     await nextAuthSignOut();
   };
@@ -106,7 +115,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };

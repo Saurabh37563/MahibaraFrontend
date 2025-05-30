@@ -1,12 +1,13 @@
 import { organizationApi } from '@/services/api/organization-api'
 import { Organization, User } from '@/types/organization-types'
+import { getErrorMessage } from '@/utils/getErrorMassage'
 
 export const MOCK_USERS: User[] = [/* same as yours */]
 
 interface OrganizationService {
   searchUsers: (query: string) => Promise<User[]>
   createOrganization: (name: string, description: string | undefined, organizationHeadId: number) => Promise<Organization>
-  getAllUserOrganizations: (user_id: number) => Promise<any[]>
+  getAllUserOrganizations: (user_id: number) => Promise<Organization[]>
 }
 
 const organizationService: OrganizationService = {
@@ -26,13 +27,14 @@ const organizationService: OrganizationService = {
     }
   },
 
-  getAllUserOrganizations: async (user_id: number): Promise<any[]> => {
+  getAllUserOrganizations: async (user_id: number): Promise<Organization[]> => {
     try {
       console.log("Fetching organizations for user:", user_id)
       const response = await organizationApi.getAllUserOrganizations(user_id)
       return response
     } catch (error) {
-      console.error("Error fetching organizations:", error)
+      const msg = getErrorMessage(error, "Error fetching organizations")
+      console.error(msg)
       return []
     }
   },
@@ -43,10 +45,11 @@ const organizationService: OrganizationService = {
     owner_id: number
   ): Promise<Organization> => {
     try {
-      const response = await organizationApi.createOrganization({ name, description, organisation_admin:owner_id })
+      const response = await organizationApi.createOrganization({ name, description, organisation_admin: owner_id })
       return response
     } catch (error) {
-      console.error("Error creating organization:", error)
+      const msg = getErrorMessage(error, "Error creating organization")
+      console.error(msg)
       throw error
     }
   }

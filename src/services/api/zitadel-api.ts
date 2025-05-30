@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import axios from 'axios';
+import { getErrorMessage } from '@/utils/getErrorMassage';
 
 export const zitadelApi = {
   getToken: async (): Promise<string> => {
@@ -12,7 +13,6 @@ export const zitadelApi = {
       throw new Error('Missing required environment variables');
     }
 
-  
     const privateKey = process.env.NEXT_PUBLIC_ZITADEL_SA_PRIVATE_KEY
       .replace(/\\n/g, '\n')
       .trim();
@@ -32,7 +32,6 @@ export const zitadelApi = {
         { algorithm: 'RS256' }
       );
       
-
       console.log("Generated JWT successfully");
 
       const tokenResponse = await axios.post(
@@ -51,15 +50,10 @@ export const zitadelApi = {
 
       console.log("Successfully exchanged JWT for access token");
       return tokenResponse.data.access_token;
-    } catch (error: any) {
-      console.error("Error generating token:", error);
-      
-    
-      if (error.message) {
-        console.error("Error message:", error.message);
-      }
-      
-      throw new Error(`Failed to generate token: ${error.message || 'Unknown error'}`);
+    } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, "Failed to get ZITADEL token");
+      console.error(errorMessage);
+      throw new Error(errorMessage);
     }
   },
 

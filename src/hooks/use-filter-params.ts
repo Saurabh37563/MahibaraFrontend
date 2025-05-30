@@ -30,8 +30,20 @@ export function useFilterParams(filters: FilterState, setFilters: (filters: Filt
 
     searchParams.forEach((value, key) => {
       if (key in DEFAULT_FILTERS) {
-        newFilters[key as keyof FilterState] = value as any;
-        hasChanges = true;
+        const defaultValue = DEFAULT_FILTERS[key as keyof FilterState];
+        if (typeof value === "string" && value !== "") {
+          // Only assign if the type matches the default
+          if (typeof defaultValue === "number") {
+            const parsed = Number(value);
+            if (!isNaN(parsed)) {
+              (newFilters as Record<string, number>)[key] = parsed;
+              hasChanges = true;
+            }
+          } else if (typeof defaultValue === "string") {
+            (newFilters as Record<string, string>)[key] = value;
+            hasChanges = true;
+          }
+        }
       }
     });
 

@@ -30,13 +30,7 @@ import {
 import { useTeamContext } from "@/contexts/team-context";
 import { useCreateProject } from "@/queries/project-query";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { getErrorMessage } from "@/utils/getErrorMassage";
 
 const CreateProjectModal = () => {
   const [open, setOpen] = useState(false);
@@ -66,8 +60,9 @@ const CreateProjectModal = () => {
       toast.success("Project created successfully");
       setOpen(false);
       form.reset();
-    } catch (error) {
-      toast.error("Failed to create project");
+    } catch (err: unknown) {
+      const errorMessage = getErrorMessage(err, "Failed to create project");
+      toast.error(errorMessage);
     }
   };
 
@@ -119,8 +114,6 @@ const CreateProjectModal = () => {
                 </FormItem>
               )}
             />
-
-
 
             <DialogFooter>
               <Button

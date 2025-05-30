@@ -60,11 +60,15 @@ const DeleteSheet = ({
         `/api/projects/${projectId}/files/${sheetType}`
       );
       return response.data;
-    } catch (err: any) {
-      const status = err?.response?.status ?? null;
+    } catch (err: unknown) {
+      // err is unknown, so we need to narrow its type
+      const axiosError = err as {
+        response?: { status?: number; data?: { message?: string } };
+      };
+      const status = axiosError?.response?.status ?? null;
       const message = getUserFriendlyMessage(
         status,
-        err?.response?.data?.message || "Failed to delete the file."
+        axiosError?.response?.data?.message || "Failed to delete the file."
       );
       throw new Error(message);
     }
@@ -81,7 +85,7 @@ const DeleteSheet = ({
       await deleteFile(projectId, sheetType);
       onDeleteComplete?.();
       setOpen(false);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
       setError(errorMessage);
       onDeleteError?.(err instanceof Error ? err : new Error(errorMessage));
@@ -113,7 +117,8 @@ const DeleteSheet = ({
           <DialogDescription>
             {fileName ? (
               <>
-                Are you sure you want to delete <strong>"{fileName}"</strong>?
+                Are you sure you want to delete
+                <strong>&quot;{fileName}&quot;</strong>?
                 <br />
                 <span className="text-sm text-gray-500 mt-1 block">
                   Project: {projectId} • Type: {sheetType}

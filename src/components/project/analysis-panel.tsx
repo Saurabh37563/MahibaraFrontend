@@ -1,36 +1,33 @@
 "use client";
 
-import { MdOutlineFileDownload } from "react-icons/md";
 import { LuChartPie } from "react-icons/lu";
-import { HiOutlineDotsVertical } from "react-icons/hi";
 import { AnalysisSelectionModal } from "./create-analysis";
 import { z } from "zod";
 
-// Define Zod schemas
-const StatusEnum = z.enum([
-  "success",
-  "warning",
-  "danger",
-  "info",
-  "neutral",
-  "uploaded",
-]);
+type StatusEnum =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "uploaded";
 
-const ItemSchema = z.object({
-  id: z.string().optional(),
-  name: z.string(),
-  status: StatusEnum,
-  summary: z.string().optional(),
-  templateId: z.string().optional(), // Add templateId to track original template
-});
-
-type Item = z.infer<typeof ItemSchema>;
+// Use ItemSchema only for type inference, do not assign it if not used elsewhere
+type Item = z.infer<
+  ReturnType<typeof z.object> & {
+    id: z.ZodOptional<z.ZodString>;
+    name: z.ZodString;
+    status: StatusEnum;
+    summary: z.ZodOptional<z.ZodString>;
+    templateId: z.ZodOptional<z.ZodString>;
+  }
+>;
 
 interface AnalysisPanelProps {
   analysis: Item[];
-  selectedItem: any;
+  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
   onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
-  statusDotColors: Record<z.infer<typeof StatusEnum>, string>;
+  statusDotColors: Record<StatusEnum, string>;
   onAnalysisCreate: (selectedAnalysisIds: string[]) => void;
   createdAnalysisTemplateIds: string[]; // Track which template IDs have been used
 }
@@ -90,7 +87,9 @@ export default function AnalysisPanel({
                 <span className="text-gray-950">{item.name}</span>
                 <span
                   className={`size-[6px] rounded-full ${
-                    statusDotColors[item.status] || "bg-gray-300"
+                    statusDotColors[
+                      item.status as keyof typeof statusDotColors
+                    ] || "bg-gray-300"
                   }`}
                 />
               </div>

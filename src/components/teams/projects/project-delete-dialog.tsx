@@ -8,12 +8,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useDeleteProject } from "@/queries/project-query";
-import { Project } from "@/types/project-types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface ProjectDeleteDialogProps {
-  project: any;
+  project: {
+    id: string;
+    name: string;
+    team_id: string;
+    // Add other fields if needed
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

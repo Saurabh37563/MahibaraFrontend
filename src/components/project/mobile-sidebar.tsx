@@ -4,24 +4,20 @@ import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import SheetsPanel from "./sheets-panel";
 import AnalysisPanel from "./analysis-panel";
-import { z } from "zod";
 
-// Define Zod schemas
-const StatusEnum = z.enum([
-  "success",
-  "warning",
-  "danger",
-  "info",
-  "neutral",
-  "uploaded",
-]);
+// Remove the runtime z.enum and use a TypeScript type instead
+type StatusEnum =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "uploaded";
 
-const ItemSchema = z.object({
-  name: z.string(),
-  status: StatusEnum,
-});
-
-type Item = z.infer<typeof ItemSchema>;
+type Item = {
+  name: string;
+  status: StatusEnum;
+};
 
 interface MobileSidebarProps {
   sidebarOpen: boolean;
@@ -30,10 +26,14 @@ interface MobileSidebarProps {
   setSelectedTab: (tab: "sheets" | "analysis") => void;
   sheets: Item[];
   analysis: Item[];
-  selectedItem: any;
-  onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
-  statusDotColors: Record<z.infer<typeof StatusEnum>, string>;
-  mapStatusToUI: (status: string) => z.infer<typeof StatusEnum>;
+  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
+  onItemClick: (
+    item: Record<string, unknown>,
+    type: "sheet" | "analysis",
+    index: number
+  ) => void;
+  statusDotColors: Record<StatusEnum, string>;
+  mapStatusToUI: (status: string) => StatusEnum;
 }
 
 export default function MobileSidebar({
@@ -111,6 +111,8 @@ export default function MobileSidebar({
             selectedItem={selectedItem}
             onItemClick={onItemClick}
             statusDotColors={statusDotColors}
+            onAnalysisCreate={() => {}} // Provide a no-op handler for mobile
+            createdAnalysisTemplateIds={[]} // Provide an empty array for mobile
           />
         )}
       </div>

@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { User, UserUpdateData } from '@/types/user-types';
+import { UserUpdateData } from '@/types/user-types';
 import { USER_DATA_URL, USER_AUTH_URL } from '@/constants/endpoints-constant';
 
 export const userApi = {
-  getUserData: async (token: string) => {
+  getUserData: async () => {
     // For development/testing, return mock data
     return Promise.resolve({
       data: {
@@ -23,7 +23,7 @@ export const userApi = {
       status: 200,
       statusText: 'OK',
       headers: {},
-      config: {} as any
+      config: {} as Record<string, unknown>
     });
 
     // When ready for production, uncomment this:

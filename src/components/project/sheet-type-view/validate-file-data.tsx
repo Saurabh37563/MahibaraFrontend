@@ -8,7 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Loader2, AlertCircle, CheckCircle, Shield } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
 import { GrValidate } from "react-icons/gr";
 
 type ValidateFileProps = {
@@ -149,7 +149,7 @@ const ValidateFile = ({
             {fileName ? (
               <>
                 Validate data integrity and format for{" "}
-                <strong>"{fileName}"</strong>
+                <strong>&quot;{fileName}&apos;</strong>
                 <br />
                 <span className="text-sm text-gray-500 mt-1 block">
                   File ID: {file_id} • Sheet: {sheet_type} • Project:{" "}

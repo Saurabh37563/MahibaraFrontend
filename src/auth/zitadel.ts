@@ -41,14 +41,7 @@ export default function Zitadel(options: OAuthUserConfig<ZitadelProfile>): OAuth
         image: profile.picture,
       };
     },
-    style: {
-      logo: "/zitadel.svg",
-      logoDark: "/zitadel.svg",
-      bg: "#1E293B",
-      text: "#FFFFFF",
-      bgDark: "#0F172A",
-      textDark: "#FFFFFF",
-    },
+  
     options,
   };
 }

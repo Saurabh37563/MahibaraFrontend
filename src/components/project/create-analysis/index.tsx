@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -308,17 +307,6 @@ export function AnalysisSelectionModal({
 
       setSelectedAnalyses(newSelectedAnalyses);
     }
-  };
-
-  // Get analysis details by ID
-  const getAnalysisById = (id: string): Analysis | undefined => {
-    for (const section of analysisData) {
-      for (const subSection of section.subSections) {
-        const analysis = subSection.analyses.find((a) => a.id === id);
-        if (analysis) return analysis;
-      }
-    }
-    return undefined;
   };
 
   return (

@@ -27,7 +27,7 @@ export function useCreateOrganization(): UseMutationResult<
   return useMutation({
     mutationFn: ({ name, description, owner_id }) =>
       organizationService.createOrganization(name, description, owner_id),
-    onSuccess: (newOrg, variables) => {
+    onSuccess: (newOrg) => {
       console.log("New Org data:", newOrg);
       // variables.owner_id holds the user_id passed to mutation
       queryClient.invalidateQueries({ queryKey: ['organizations', newOrg.organisation_admin] });
@@ -35,9 +35,7 @@ export function useCreateOrganization(): UseMutationResult<
   });
 }
 
-
-// Fetch organizations with user_id in query key
-export function useGetAllUserOrganizations(user_id: number): UseQueryResult<any[], Error> {
+export function useGetAllUserOrganizations(user_id: number): UseQueryResult<Organization[], Error> {
   return useQuery({
     queryKey: ['organizations', user_id],
     queryFn: () => organizationService.getAllUserOrganizations(user_id),

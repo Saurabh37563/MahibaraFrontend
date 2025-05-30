@@ -12,7 +12,7 @@ export interface PaginatedProjectsResponse {
   success: boolean;
   message: string;
   data: Project[];
-  error: any;
+  error: unknown;
   metadata: {
     total_items: number;
     total_pages: number;
@@ -72,7 +72,7 @@ export const projectApi = {
         queryParams.toString() ? `?${queryParams.toString()}` : ''
       }`;
 
-      const response = await axiosInstance.get<any>(url);
+      const response = await axiosInstance.get<PaginatedProjectsResponse>(url);
       return response?.data || { data: [], metadata: {}, success: false, message: '', error: null };
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -109,11 +109,11 @@ export const projectApi = {
     data: UpdateProjectStatusRequest
   ): Promise<Project> => {
     try {
-      const response = await axiosInstance.patch<any>(
-        `${PROJECT_ENDPOINTS.updateProject}/${project_id}/status/${data?.status}`,
+      const response = await axiosInstance.patch<Project>(
+        `${PROJECT_ENDPOINTS.updateProject}/${project_id}/status/${typeof data.status === "string" ? data.status : ""}`,
         data
       );
-      return response.data?.data || {};
+      return response.data as Project || {};
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(

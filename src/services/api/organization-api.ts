@@ -1,7 +1,7 @@
 import axios from 'axios'
 import { USER_DATA_URL, ORGANIZATION_ENDPOINTS } from '@/constants/endpoints-constant'
 import { User, CreateOrganizationRequest, Organization } from '@/types/organization-types' 
-import http from '@/lib/http'
+
 
 export const organizationApi = {
   searchUsers: async (query: string): Promise<User[]> => {
@@ -14,7 +14,7 @@ export const organizationApi = {
     return response.data
   },
 
-  getAllUserOrganizations: async (user_id: number): Promise<any[]> => {
+  getAllUserOrganizations: async (user_id: number): Promise<Organization[]> => {
     const response = await axios.get(ORGANIZATION_ENDPOINTS?.getAllUserOrganizations, {
       params: { user_id }, 
       headers: {

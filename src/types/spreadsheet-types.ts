@@ -17,19 +17,18 @@ export interface SpreadsheetMetadata {
   }
   
   export interface SSEEvent {
-    type: string;
-    data: {
-      projectId: string;
-      status: string;
-      message?: string;
-      progress?: number;
-      fileUrl?: string;
-      metadata?: Partial<SpreadsheetMetadata>;
-    } | any;
+  type: string;
+  data: {
+    projectId: string;
+    status: string;
+    message?: string;
+    progress?: number;
+    fileUrl?: string;
+    metadata?: Partial<SpreadsheetMetadata>;
+  } | Record<string, unknown>;
   }
   
   export interface APIResponse {
     success: boolean;
     data: SpreadsheetData;
   }
-  

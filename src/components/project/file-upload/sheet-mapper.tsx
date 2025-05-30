@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { FormControl, FormField, FormItem } from "@/components/ui/form";
+import { FormField } from "@/components/ui/form";
 import {
   Select,
   SelectContent,
@@ -29,7 +29,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, X, Plus } from "lucide-react";
+import { X } from "lucide-react";
 import { MdVerified } from "react-icons/md";
 import { useFileUpload } from "@/contexts/file-upload-context";
 import { FormValues, SheetMapping } from "@/types/project-types";
@@ -434,10 +434,10 @@ export function SheetMapper({ form }: SheetMapperProps) {
     setPendingMapping(null);
   };
 
-  const handleRemoveMapping = (index: number) => {
-    setPendingDeleteIndex(index);
-    setDeleteConfirmationOpen(true);
-  };
+  // const handleRemoveMapping = (index: number) => {
+  //   setPendingDeleteIndex(index);
+  //   setDeleteConfirmationOpen(true);
+  // };
 
   const confirmRemoveMapping = () => {
     if (pendingDeleteIndex !== null) {

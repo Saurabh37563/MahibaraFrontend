@@ -1,51 +1,51 @@
-"use client"
-import { useEffect, useState } from "react"
-import { ChevronLeft, Home } from "lucide-react"
-import { useRouter } from "next/navigation"
-import { 
+"use client";
+import { useEffect } from "react";
+import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Button } from "@/components/ui/button"
-import { FiHome } from "react-icons/fi"
+} from "@/components/ui/breadcrumb";
+import { FiHome } from "react-icons/fi";
 
 interface ProfileBreadcrumbProps {
-  activeTab: string
+  activeTab: string;
 }
 
 export const ProfileBreadcrumb = ({ activeTab }: ProfileBreadcrumbProps) => {
-  const router = useRouter()
-  const [previousUrl, setPreviousUrl] = useState<string>("/")
-
   useEffect(() => {
-    const prevUrl = localStorage.getItem("previousUrl") || "/functions"
-    setPreviousUrl(prevUrl)
- 
+    const prevUrl = localStorage.getItem("previousUrl") || "/functions";
+
     return () => {
       if (window.location.pathname !== prevUrl) {
-        localStorage.setItem("previousUrl", window.location.pathname)
+        localStorage.setItem("previousUrl", window.location.pathname);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   return (
     <div className="mb-4 flex">
       <Breadcrumb>
         <BreadcrumbList>
-       
-        <BreadcrumbItem>
-          <BreadcrumbLink className="flex items-center gap-2" href="/functions"><FiHome/>Home</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{activeTab === "profile" ? "Profile" : "Security"}</BreadcrumbPage>
-        </BreadcrumbItem>
+          <BreadcrumbItem>
+            <BreadcrumbLink
+              className="flex items-center gap-2"
+              href="/functions"
+            >
+              <FiHome />
+              Home
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>
+              {activeTab === "profile" ? "Profile" : "Security"}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
     </div>
-  )
-}
+  );
+};

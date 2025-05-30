@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { useGetAllUserOrganizations } from "@/queries/organization-query"; // Import the hook
-import { Team, useTeamContext } from "@/contexts/team-context";
+import { Team } from "@/contexts/team-context";
+import type { Organization } from "@/contexts/team-context";
 import { ChevronsUpDown } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -21,11 +22,10 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import CreateOrganization from "../create-organization";
-import { Organization } from "@/types/organization-types";
 
 interface OrganizationSwitcherProps {
-  activeOrg: any | null;
-  setActiveOrg: (org: any) => void; // TODO : change to appropriate type
+  activeOrg: Organization | null;
+  setActiveOrg: (org: Organization) => void;
   setActiveTeam: (team: Team | null) => void;
 }
 
@@ -37,8 +37,17 @@ export function OrganizationSwitcher({
   const { data: organizations = [], isLoading } = useGetAllUserOrganizations(
     10 // TODO : Change this to the actual user ID
   );
-  const { isMobile } = useSidebar ? useSidebar() : { isMobile: false };
+  // Always call useSidebar unconditionally
+  const { isMobile } = useSidebar();
+
   const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Add this effect to set the first organization by default
+  useEffect(() => {
+    if (!isLoading && organizations.length > 0 && !activeOrg) {
+      setActiveOrg(organizations[0]);
+    }
+  }, [organizations, isLoading, activeOrg, setActiveOrg]);
 
   if (isLoading) {
     return (
@@ -109,7 +118,7 @@ export function OrganizationSwitcher({
                 >
                   <div className="flex size-6 items-center justify-center rounded-sm border">
                     <Avatar className="h-5 w-5">
-                      <AvatarImage src={org?.avatar ?? "Test"} alt={org.name} />
+                      <AvatarImage src={org?.image ?? "Test"} alt={org.name} />
                       <AvatarFallback>
                         {org.name.substring(0, 2).toUpperCase()}
                       </AvatarFallback>

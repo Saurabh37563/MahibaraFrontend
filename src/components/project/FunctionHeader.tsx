@@ -25,11 +25,21 @@ import { useAuth } from "@/contexts/auth-context";
 export default function FunctionHeader({
   selectedItem = null,
 }: {
-  selectedItem?: any;
+  selectedItem?: { name?: string } | null;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, token }: any = useAuth();
+  const auth = useAuth();
+  // Map auth.user to expected shape, ensuring name/email/image are string or undefined
+  const user =
+    auth.user && typeof auth.user === "object"
+      ? {
+          name: auth.user.name ?? undefined,
+          email: auth.user.email ?? undefined,
+          image: auth.user.image ?? undefined,
+        }
+      : null;
+  // Removed unused 'token'
   const orgName = searchParams.get("orgName") || "Unknown Org";
   const functionName = searchParams.get("projectName") || "Unknown Function";
 
@@ -40,7 +50,7 @@ export default function FunctionHeader({
 
     return user.name
       .split(" ")
-      .map((n: any) => n[0])
+      .map((n: string) => n[0])
       .join("")
       .toUpperCase();
   };
@@ -71,22 +81,30 @@ export default function FunctionHeader({
       {/* Right section: Avatar group */}
       <div className="flex items-center gap-2">
         <AvatarGroup className=" text-xs" max={2} spacing={-1} size="sm">
-          {activeTeam?.members?.map((member: any) => (
-            <Avatar key={member.id}>
-              <AvatarImage
-                src={member?.image || ""}
-                alt={member.name}
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-              <AvatarFallback>
-                {member.name
-                  .split(" ")
-                  .map((n: any) => n[0])
-                  .join("")
-                  .toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          ))}
+          {activeTeam?.members?.map((member) => {
+            // Accept both string and number for id, and handle missing name
+            const memberId = String(member.id);
+            const memberName = member.name ?? "U";
+            return (
+              <Avatar key={memberId}>
+                <AvatarImage
+                  src={member?.image || ""}
+                  alt={memberName}
+                  onError={(e) =>
+                    ((e.currentTarget as HTMLImageElement).style.display =
+                      "none")
+                  }
+                />
+                <AvatarFallback>
+                  {memberName
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .join("")
+                    .toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            );
+          })}
         </AvatarGroup>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

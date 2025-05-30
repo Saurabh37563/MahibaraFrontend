@@ -168,6 +168,7 @@ function FileUploadMapping({
     return () => {
       clearAllStates(); // Cleanup on component unmount
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

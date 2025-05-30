@@ -5,11 +5,21 @@ import { LuFileSearch } from "react-icons/lu";
 import { FiMessageSquare } from "react-icons/fi";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { IconType } from "react-icons";
+
+type Agent = {
+  id: string;
+  name: string;
+  icon: IconType;
+  info: string;
+  comingSoon: boolean;
+  path: string;
+};
 
 export default function Agents() {
   const router = useRouter();
 
-  const agentsList = [
+  const agentsList: Agent[] = [
     {
       id: "akash",
       name: "Akash",
@@ -36,7 +46,7 @@ export default function Agents() {
     },
   ];
 
-  const handleAgentClick = (agent: any) => {
+  const handleAgentClick = (agent: Agent) => {
     if (agent.comingSoon) {
       toast.info(`${agent.name} is coming soon!`);
     } else {
@@ -54,14 +64,15 @@ export default function Agents() {
               p-6 flex gap-4 flex-col w-[320px] sm:w-[380px] bg-white 
               border-gray-200 border rounded-xl shadow-sm 
               transition-all duration-300
-              ${agent.comingSoon 
-                ? "hover:shadow-md" 
-                : "hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1"
+              ${
+                agent.comingSoon
+                  ? "hover:shadow-md"
+                  : "hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1"
               }
             `}
             onClick={() => handleAgentClick(agent)}
-            style={{ 
-              cursor: agent.comingSoon ? "default" : "pointer" 
+            style={{
+              cursor: agent.comingSoon ? "default" : "pointer",
             }}
           >
             <div className="flex w-full justify-between items-start">
@@ -74,12 +85,14 @@ export default function Agents() {
                 </span>
               )}
             </div>
-            
+
             <div className="space-y-2">
               <p className="text-green-900 text-xl font-bold">{agent.name}</p>
-              <p className="text-gray-700 font-medium text-base">{agent.info}</p>
+              <p className="text-gray-700 font-medium text-base">
+                {agent.info}
+              </p>
             </div>
-            
+
             {!agent.comingSoon && (
               <div className="flex justify-end mt-2">
                 <span className="text-emerald-700 text-sm font-medium hover:underline">

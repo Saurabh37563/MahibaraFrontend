@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import Header from "./header";
 import { QueryProvider } from "@/providers/query-provider";
-import { SessionProvider } from "next-auth/react";
 const HEADER_VISIBLE_ROUTES = [
   "/dashboard",
   "/agents",

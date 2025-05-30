@@ -1,37 +1,45 @@
-"use client"
-import { useState } from "react"
-import { useUserQueries } from "@/queries/user-query"
-import { useAuth } from "@/contexts/auth-context"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Lock, Mail, User, Building, Clock } from "lucide-react"
-import { ProfileBreadcrumb } from "./profile-breadcrumb"
+"use client";
+import { useState } from "react";
+import { useUserQueries } from "@/queries/user-query";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Lock, Mail, User, Building, Clock } from "lucide-react";
+import { ProfileBreadcrumb } from "./profile-breadcrumb";
 
 export const ProfilePage = () => {
-  const [activeTab, setActiveTab] = useState("profile")
-  const { useUserProfile } = useUserQueries()
+  const [activeTab, setActiveTab] = useState("profile");
+  const { useUserProfile } = useUserQueries();
 
-  const { data: profileData, isLoading, error } = useUserProfile()
+  const { data: profileData, isLoading, error } = useUserProfile();
 
   const handlePasswordReset = () => {
-    window.open("https://your-zitadel-instance.com/ui/login/reset", "_blank")
-  }
+    window.open("https://your-zitadel-instance.com/ui/login/reset", "_blank");
+  };
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value)
-  }
+    setActiveTab(value);
+  };
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-lg text-emerald-700 font-medium">Loading your profile...</p>
+        <p className="mt-4 text-lg text-emerald-700 font-medium">
+          Loading your profile...
+        </p>
       </div>
-    )
+    );
   }
 
   if (error && !profileData) {
@@ -39,21 +47,24 @@ export const ProfilePage = () => {
       <div className="flex flex-col items-center justify-center h-screen">
         <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-md">
           <p className="font-bold">Error</p>
-          <p>We couldn't load your profile information. Please try again later.</p>
+          <p>
+            We couldn&apos;t load your profile information. Please try again
+            later.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   const getInitials = (name: string | null) => {
-    if (!name) return "U"
+    if (!name) return "U";
     return name
       .split(" ")
       .map((part) => part[0])
       .join("")
       .toUpperCase()
-      .substring(0, 2)
-  }
+      .substring(0, 2);
+  };
 
   return (
     <div className="mx-auto p-4 animate-fade-in">
@@ -61,22 +72,16 @@ export const ProfilePage = () => {
         <ProfileBreadcrumb activeTab={activeTab} />
 
         <div className="border-slate-200 rounded-xl p-1">
-          <Tabs 
-            defaultValue="profile" 
+          <Tabs
+            defaultValue="profile"
             className="w-full"
             onValueChange={handleTabChange}
           >
             <TabsList className="grid w-full grid-cols-2 h-12">
-              <TabsTrigger
-                value="profile"
-                className="rounded-md"
-              >
+              <TabsTrigger value="profile" className="rounded-md">
                 <User className="w-4 h-4 mr-2" /> Profile
               </TabsTrigger>
-              <TabsTrigger
-                value="security"
-                className="rounded-md"
-              >
+              <TabsTrigger value="security" className="rounded-md">
                 <Lock className="w-4 h-4 mr-2" /> Security
               </TabsTrigger>
             </TabsList>
@@ -104,7 +109,9 @@ export const ProfilePage = () => {
                       <CardTitle className="text-2xl md:text-3xl font-bold text-primary">
                         {profileData?.name || "Unnamed User"}
                       </CardTitle>
-                      <CardDescription className="text-base mb-3">{profileData?.email}</CardDescription>
+                      <CardDescription className="text-base mb-3">
+                        {profileData?.email}
+                      </CardDescription>
                       <div className="flex flex-wrap gap-2">
                         <Badge
                           variant="outline"
@@ -113,7 +120,10 @@ export const ProfilePage = () => {
                           {profileData?.userType}
                         </Badge>
                         {profileData?.organizationName && (
-                          <Badge variant="secondary" className="bg-slate-100 text-primary py-1 px-3 rounded-full">
+                          <Badge
+                            variant="secondary"
+                            className="bg-slate-100 text-primary py-1 px-3 rounded-full"
+                          >
                             {profileData?.organizationName}
                           </Badge>
                         )}
@@ -131,8 +141,12 @@ export const ProfilePage = () => {
                         <Mail className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Email Address</h3>
-                        <p className="text-base font-medium">{profileData?.email}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Email Address
+                        </h3>
+                        <p className="text-base font-medium">
+                          {profileData?.email}
+                        </p>
                       </div>
                     </div>
 
@@ -141,8 +155,12 @@ export const ProfilePage = () => {
                         <User className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">User Type</h3>
-                        <p className="text-base font-medium">{profileData?.userType}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          User Type
+                        </h3>
+                        <p className="text-base font-medium">
+                          {profileData?.userType}
+                        </p>
                       </div>
                     </div>
 
@@ -151,8 +169,12 @@ export const ProfilePage = () => {
                         <Building className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Organization</h3>
-                        <p className="text-base font-medium">{profileData?.organizationName || "Not assigned"}</p>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Organization
+                        </h3>
+                        <p className="text-base font-medium">
+                          {profileData?.organizationName || "Not assigned"}
+                        </p>
                       </div>
                     </div>
 
@@ -161,10 +183,14 @@ export const ProfilePage = () => {
                         <Clock className="h-5 w-5 text-primary" />
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium text-gray-500">Member Since</h3>
+                        <h3 className="text-sm font-medium text-gray-500">
+                          Member Since
+                        </h3>
                         <p className="text-base font-medium">
                           {profileData?.createdAt
-                            ? new Date(profileData?.createdAt).toLocaleDateString("en-US", {
+                            ? new Date(
+                                profileData?.createdAt
+                              ).toLocaleDateString("en-US", {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
@@ -187,7 +213,9 @@ export const ProfilePage = () => {
                     </div>
                     <div>
                       <CardTitle>Security Settings</CardTitle>
-                      <CardDescription>Manage your account security settings</CardDescription>
+                      <CardDescription>
+                        Manage your account security settings
+                      </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
@@ -196,21 +224,26 @@ export const ProfilePage = () => {
 
                 <CardContent className="space-y-6">
                   <div className="p-4 rounded-lg border border-gray-100">
-                    <h3 className="text-base font-medium ">Password Management</h3>
+                    <h3 className="text-base font-medium ">
+                      Password Management
+                    </h3>
                     <p className="text-sm  mt-1 mb-3">
-                      We recommend changing your password regularly to maintain account security
+                      We recommend changing your password regularly to maintain
+                      account security
                     </p>
-                    <Button onClick={handlePasswordReset} className="bg-emerald-700 hover:bg-emerald-800 text-white">
+                    <Button
+                      onClick={handlePasswordReset}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white"
+                    >
                       <Lock className="mr-2 h-4 w-4" /> Reset Password
                     </Button>
                   </div>
-
                 </CardContent>
 
                 <CardFooter className="flex flex-col items-start pt-2 pb-6">
                   <p className="text-sm text-muted-foreground mb-4">
-                    Your account security is important to us. If you notice any suspicious activity, please contact
-                    support immediately.
+                    Your account security is important to us. If you notice any
+                    suspicious activity, please contact support immediately.
                   </p>
                   <Button variant="link" className="text-emerald-700 p-0">
                     View Recent Login Activity
@@ -222,7 +255,7 @@ export const ProfilePage = () => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ProfilePage
+export default ProfilePage;

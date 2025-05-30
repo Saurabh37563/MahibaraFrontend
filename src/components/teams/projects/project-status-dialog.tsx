@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useUpdateProjectStatus } from "@/queries/project-query";
-import { Project } from "@/types/project-types";
 import { Check, Info } from "lucide-react";
 import {
   Dialog,
@@ -15,14 +14,28 @@ import { cn } from "@/lib/utils";
 import { FiLoader } from "react-icons/fi";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+type ProjectStatusType =
+  | "completed"
+  | "in-progress"
+  | "pending"
+  | "draft"
+  | "error"
+  | "active"
+  | "archived";
+
 interface ProjectStatusDialogProps {
-  project: Project;
+  project: {
+    id: string;
+    name: string;
+    team_id: string;
+    status: ProjectStatusType;
+  };
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 type StatusOption = {
-  value: string;
+  value: ProjectStatusType;
   label: string;
   color: string;
   bgColor: string;
@@ -58,6 +71,28 @@ const statusOptions: StatusOption[] = [
     bgColor: "bg-slate-500/10",
     borderColor: "border-slate-500",
   },
+  // Optionally add the other statuses if you want them selectable:
+  // {
+  //   value: "error",
+  //   label: "Error",
+  //   color: "text-red-600",
+  //   bgColor: "bg-red-600/10",
+  //   borderColor: "border-red-600",
+  // },
+  // {
+  //   value: "active",
+  //   label: "Active",
+  //   color: "text-green-600",
+  //   bgColor: "bg-green-600/10",
+  //   borderColor: "border-green-600",
+  // },
+  // {
+  //   value: "archived",
+  //   label: "Archived",
+  //   color: "text-gray-600",
+  //   bgColor: "bg-gray-600/10",
+  //   borderColor: "border-gray-600",
+  // },
 ];
 
 export function ProjectStatusDialog({
@@ -65,7 +100,7 @@ export function ProjectStatusDialog({
   open,
   onOpenChange,
 }: ProjectStatusDialogProps) {
-  const [status, setStatus] = useState<string | any>(project.status);
+  const [status, setStatus] = useState<ProjectStatusType>(project.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatusMutation = useUpdateProjectStatus();
 
@@ -88,7 +123,7 @@ export function ProjectStatusDialog({
       await updateStatusMutation.mutateAsync({
         team_id: project.team_id,
         project_id: project.id,
-        status: { status },
+        status: { status }, // <-- Wrap status in an object to match UpdateProjectStatusRequest
       });
       onOpenChange(false);
     } catch (error) {

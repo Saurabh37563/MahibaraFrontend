@@ -88,6 +88,15 @@ interface TeamMemberSelectorProps {
   onMembersChange: (members: TeamMemberWithPermission[]) => void;
 }
 
+// Add a type for user objects returned by the API
+type UserApiType = {
+  id: string;
+  name: string;
+  email: string;
+  position: string;
+  image?: string | null;
+};
+
 // Mock users API (replace with your actual API)
 // const usersApi = {
 //   getUsers: async (search = "") => {
@@ -153,7 +162,7 @@ export function TeamMemberSelector({
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const triggerRef = React.useRef<HTMLButtonElement>(null);
-  const [users, setUsers] = React.useState<any[]>([]);
+  const [users, setUsers] = React.useState<UserApiType[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -181,7 +190,7 @@ export function TeamMemberSelector({
     return users.filter((user) => !selectedIds.has(user.id));
   }, [users, selectedMembers]);
 
-  const handleSelectUser = (user: any) => {
+  const handleSelectUser = (user: UserApiType) => {
     const newMember: TeamMemberWithPermission = {
       id: user.id,
       name: user.name,
@@ -282,7 +291,7 @@ export function TeamMemberSelector({
                   No users found
                 </p>
               ) : (
-                availableUsers.map((user) => (
+                availableUsers.map((user: UserApiType) => (
                   <div
                     key={user.id}
                     onClick={() => handleSelectUser(user)}

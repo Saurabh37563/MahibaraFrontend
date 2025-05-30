@@ -2,7 +2,6 @@ import { authApi } from "./api/auth-api";
 import { 
   AuthResponse, 
   LoginFormData, 
-  User 
 } from "@/types/auth-types";
 
 const authService = {
@@ -12,9 +11,6 @@ const authService = {
     return data;
   },
 
-  getCurrentUser: async (): Promise<User> => {
-    return await authApi.userData();
-  },
 
   logout: async (): Promise<void> => {
     await authApi.logout();

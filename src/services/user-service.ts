@@ -2,9 +2,9 @@ import { userApi } from './api/user-api';
 import { User, UserUpdateData } from '@/types/user-types';
 
 export class UserService {
-  static async getUserData(token: string): Promise<User> {
+  static async getUserData(): Promise<User> {
     try {
-      const response = await userApi.getUserData(token);
+      const response = await userApi.getUserData();
       return this.transformUserResponse(response.data.data);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -31,17 +31,24 @@ export class UserService {
     }
   }
 
-  private static transformUserResponse(userData: any): User {
+  private static transformUserResponse(userData: Record<string, unknown>): User {
+    // Ensure userType is one of the allowed values
+    const allowedUserTypes = ["USER", "ADMIN", "MANAGER"] as const;
+    const userTypeRaw = userData.userType as string;
+    const userType = allowedUserTypes.includes(userTypeRaw as (typeof allowedUserTypes)[number])
+      ? (userTypeRaw as typeof allowedUserTypes[number])
+      : "USER";
+
     return {
-      id: userData.id,
-      name: userData.name,
-      email: userData.email,
-      image: userData.image,
-      organizationId: userData.organizationId,
-      organizationName: userData.organizationName,
-      userType: userData.userType,
-      createdAt: userData.createdAt,
-      updatedAt: userData.updatedAt
+      id: userData.id as string,
+      name: userData.name as string | null,
+      email: userData.email as string,
+      image: userData.image as string | null,
+      organizationId: userData.organizationId as string | null,
+      organizationName: userData.organizationName as string | null,
+      userType,
+      createdAt: userData.createdAt as string | null,
+      updatedAt: userData.updatedAt as string | null
     };
   }
 }

@@ -97,10 +97,14 @@ const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
     const sizeClasses = getSizeClasses(size);
 
     // Clone and modify children to add size prop
-    const modifiedChildren = displayedAvatars.map((child, index) => {
+    const modifiedChildren = displayedAvatars.map((child) => {
       if (React.isValidElement(child)) {
-        return React.cloneElement(child, {
-          className: cn(child.props.className, sizeClasses.avatar),
+        // Type assertion to React.ReactElement<{ className?: string }>
+        const childWithProps = child as React.ReactElement<{
+          className?: string;
+        }>;
+        return React.cloneElement(childWithProps, {
+          className: cn(childWithProps.props?.className, sizeClasses.avatar),
         });
       }
       return child;
@@ -118,8 +122,8 @@ const AvatarGroup = React.forwardRef<HTMLDivElement, AvatarGroupProps>(
             key={index}
             className={cn(
               "relative inline-block border-2 border-background rounded-full",
-              index !== 0 ? spacingClass : "",
-              `z-[${30 - index}]` // Higher z-index for earlier avatars
+              spacingClass,
+              "z-10"
             )}
           >
             {child}

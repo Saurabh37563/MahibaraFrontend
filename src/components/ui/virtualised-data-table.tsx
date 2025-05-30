@@ -3,7 +3,6 @@
 import {
   ColumnDef,
   Row,
-  SortDirection,
   SortingState,
   flexRender,
   getCoreRowModel,
@@ -16,7 +15,7 @@ import { HTMLAttributes, forwardRef, useState } from "react";
 import { TableVirtuoso } from "react-virtuoso";
 import { cn } from "@/lib/utils";
 
-// Original Table is wrapped with a <div> (see https://ui.shadcn.com/docs/components/table#radix-:r24:-content-manual), 
+// Original Table is wrapped with a <div> (see https://ui.shadcn.com/docs/components/table#radix-:r24:-content-manual),
 // but here we don't want it, so let's use a new component with only <table> tag
 const TableComponent = forwardRef<
   HTMLTableElement,
@@ -115,9 +114,8 @@ export function DataTable<TData, TValue>({
                       >
                         {flexRender(
                           header.column.columnDef.header,
-                          header.getContext(),
+                          header.getContext()
                         )}
-                     
                       </div>
                     )}
                   </TableHead>

@@ -6,34 +6,43 @@ import { MdOutlineFileDownload } from "react-icons/md";
 import { Loader2 } from "lucide-react";
 import FileUploadMapping from "./file-upload";
 import { Button } from "@/components/ui/button";
-import { z } from "zod";
 import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
 // import axios from "axios";
 
-// Define Zod schemas
-const StatusEnum = z.enum([
-  "success",
-  "warning",
-  "danger",
-  "info",
-  "neutral",
-  "uploaded",
-]);
+// const StatusEnum = z.enum([
+//   "success",
+//   "warning",
+//   "danger",
+//   "info",
+//   "neutral",
+//   "uploaded",
+// ]);
 
-const ItemSchema = z.object({
-  name: z.string(),
-  status: StatusEnum,
-});
+type StatusEnum =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "uploaded";
 
-type Item = z.infer<typeof ItemSchema>;
+type Item = {
+  name: string;
+  status: StatusEnum;
+};
+
+interface SelectedItem {
+  index: number;
+  type: "sheet" | "analysis";
+}
 
 interface SheetsPanelProps {
   sheets: Item[];
-  selectedItem: any;
+  selectedItem: SelectedItem | null;
   onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
-  statusDotColors: Record<z.infer<typeof StatusEnum>, string>;
-  mapStatusToUI: (status: string) => z.infer<typeof StatusEnum>;
+  statusDotColors: Record<StatusEnum, string>;
+  mapStatusToUI: (status: string) => StatusEnum;
   isLoading?: boolean; // <-- add this
   refetchSheets?: () => void; // <-- add this
   clearSelectedSheet?: () => void; // <-- add this

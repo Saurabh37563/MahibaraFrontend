@@ -1,6 +1,4 @@
-import { APIResponse, SpreadsheetData } from '@/types/spreadsheet-types';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+import { SpreadsheetData } from '@/types/spreadsheet-types';
 
 export const fetchSpreadsheetData = async (projectId: string): Promise<SpreadsheetData> => {
   try {

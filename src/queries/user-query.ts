@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserService } from '@/services/user-service';
-import { User, UserUpdateData } from '@/types/user-types';
+import {  UserUpdateData } from '@/types/user-types';
 import { useAuth } from '@/contexts/auth-context';
 
 export const useUserQueries = () => {
@@ -10,7 +10,7 @@ export const useUserQueries = () => {
   const useUserProfile = () => {
     return useQuery({
       queryKey: ['user-profile'],
-      queryFn: () => token ? UserService.getUserData(token) : Promise.reject('No token'),
+      queryFn: () => token ? UserService.getUserData() : Promise.reject('No token'),
       enabled: !!token,
       initialData: user || undefined
     });

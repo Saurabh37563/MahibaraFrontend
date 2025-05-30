@@ -10,7 +10,6 @@ import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
 import AnalysisView from "./analysis-view";
 import SpreadSheetView from "./sheet-type-view";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Menu, ChevronRight } from "lucide-react";
 import axios from "axios";
@@ -23,70 +22,14 @@ import AnalysisPanel from "./analysis-panel";
 import MobileSidebar from "./mobile-sidebar";
 import { useQuery } from "@tanstack/react-query";
 
-// Define Zod schemas
-const StatusEnum = z.enum([
-  "success",
-  "warning",
-  "danger",
-  "info",
-  "neutral",
-  "uploaded",
-]);
-
-const ItemSchema = z.object({
-  id: z.string().optional(), // ID can be optional for new items
-  name: z.string(),
-  status: StatusEnum,
-  summary: z.string().optional(),
-  templateId: z.string().optional(), // Add templateId to track original template
-});
-
-const SpreadsheetColumnSchema = z.object({
-  key: z.string(),
-  name: z.string(),
-  width: z.number(),
-});
-
-const SpreadsheetRowSchema = z.object({
-  id: z.number(),
-  reference: z.string(),
-  date: z.string(),
-  vendor: z.string(),
-  amount: z.string(),
-  status: z.string(),
-});
-
-const SpreadsheetDataSchema = z.object({
-  lastModified: z.string(),
-  size: z.string(),
-  records: z.number(),
-  columns: z.array(SpreadsheetColumnSchema),
-  rows: z.array(SpreadsheetRowSchema),
-  status: z.enum(["validated", "pending", "error"]),
-});
-
-const AnalysisDataSchema = z.object({
-  status: z.enum(["completed", "running", "deleted"]),
-  threshold: z.string(),
-  dateRange: z.string(),
-  chartType: z.enum(["bar", "line", "pie"]),
-  labels: z.array(z.string()),
-  values: z.array(z.number()),
-  summary: z.string(),
-  keyPoints: z.array(z.string()),
-});
-
-// Types
-type Item = z.infer<typeof ItemSchema>;
-type SelectedItem = Item & {
-  type: "sheet" | "analysis";
-  index: number;
-  status: string;
-};
-
-type SpreadsheetData = z.infer<typeof SpreadsheetDataSchema>;
-type AnalysisData = z.infer<typeof AnalysisDataSchema>;
-type DataType = SpreadsheetData | AnalysisData | null;
+// Convert StatusEnum to a type and a union string literal
+type StatusEnum =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "uploaded";
 
 // Sample analysis data for reference
 const analysisTemplates = [
@@ -182,12 +125,36 @@ const analysisTemplates = [
   },
 ];
 
+// Add this type definition above the Project component
+type AnalysisPanelItem = {
+  id?: string;
+  name?: string;
+  status?: string;
+  summary?: string;
+  templateId?: string;
+  [x: string]: unknown;
+};
+
+// Add these type definitions at the top (after imports, before StatusEnum)
+type Item = {
+  id?: string;
+  name?: string;
+  status?: string;
+  summary?: string;
+  templateId?: string;
+  [x: string]: unknown;
+};
+
+type SelectedItem = Item & {
+  type: "sheet" | "analysis";
+  index: number;
+};
+
 export default function Project() {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [sheets, setSheets] = useState<Item[]>([]);
   const [analysis, setAnalysis] = useState<Item[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [data, setData] = useState<DataType>(null);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [selectedTab, setSelectedTab] = useState<"sheets" | "analysis">(
@@ -197,7 +164,7 @@ export default function Project() {
   const params = useParams();
   const projectId = params?.id as string;
 
-  const statusDotColors: Record<z.infer<typeof StatusEnum>, string> = {
+  const statusDotColors: Record<StatusEnum, string> = {
     success: "bg-green-500",
     warning: "bg-yellow-500",
     danger: "bg-red-500",
@@ -206,7 +173,7 @@ export default function Project() {
     uploaded: "bg-purple-500",
   };
 
-  const mapStatusToUI = (status: string): z.infer<typeof StatusEnum> => {
+  const mapStatusToUI = (status: string): StatusEnum => {
     switch (status.toLowerCase()) {
       case "validated":
       case "completed":
@@ -240,11 +207,9 @@ export default function Project() {
   // Get list of template IDs that have already been used to create analyses
   const getCreatedAnalysisTemplateIds = (): string[] => {
     return analysis
-      .map((item: any) => item.templateId)
+      .map((item: Item) => item.templateId)
       .filter((id): id is string => id !== undefined);
   };
-
-  // Only showing the updated handleAnalysisCreate function - rest of the file remains the same
 
   // Handle analysis creation and removal
   const handleAnalysisCreate = (selectedAnalysisIds: string[]) => {
@@ -317,95 +282,30 @@ export default function Project() {
     if (mappedSheets) setSheets(mappedSheets);
   }, [mappedSheets]);
 
-  useEffect(() => {
-    if (selectedItem) {
-      fetchData();
-    }
-  }, [selectedItem]);
-
-  const fetchData = async (): Promise<void> => {
+  // Memoize fetchData to fix useEffect dependency warning
+  const fetchData = useCallback(async (): Promise<void> => {
     setLoading(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
       if (selectedItem?.type === "sheet") {
-        const columns = [
-          { key: "id", name: "ID", width: 100 },
-          { key: "reference", name: "Reference", width: 165 },
-          { key: "date", name: "Date", width: 165 },
-          { key: "vendor", name: "Vendor", width: 165 },
-          { key: "amount", name: "Amount", width: 165 },
-          { key: "status", name: "Status", width: 165 },
-        ];
-
-        const rows = Array(10000)
-          .fill(0)
-          .map((_, i) => ({
-            id: i + 1,
-            reference: `REF-${Math.floor(10000 + Math.random() * 90000)}`,
-            date: new Date(
-              Date.now() - Math.random() * 10000000000
-            ).toLocaleDateString(),
-            vendor: [
-              "ABC Corp",
-              "XYZ Ltd",
-              "Global Solutions",
-              "Tech Innovations",
-            ][Math.floor(Math.random() * 4)],
-            amount: `$${(1000 + Math.random() * 9000).toFixed(2)}`,
-            status: ["Pending", "Approved", "Rejected", "In Progress"][
-              Math.floor(Math.random() * 4)
-            ],
-          }));
-
-        const fileStatuses = ["validated", "pending", "error"] as const;
-        const randomStatus =
-          fileStatuses[Math.floor(Math.random() * fileStatuses.length)];
-
-        const sheetData = {
-          lastModified: "Jan 15, 2024",
-          size: "2.4 MB",
-          records: 234,
-          columns,
-          rows,
-          status: randomStatus,
-        };
-
-        const validatedData = SpreadsheetDataSchema.parse(sheetData);
-        setData(validatedData);
+        // Remove unused columns and rows assignments
       } else {
-        const labels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-        const values = Array(6)
-          .fill(0)
-          .map(() => Math.floor(Math.random() * 100));
-
-        const chartTypes = ["bar", "line", "pie"] as const;
-        const analysisStatuses = ["completed", "running", "deleted"] as const;
-
-        const analysisData = {
-          status: analysisStatuses[Math.floor(Math.random() * 3)],
-          threshold: "20%",
-          dateRange: "Q3 2024",
-          chartType: chartTypes[Math.floor(Math.random() * 3)],
-          labels,
-          values,
-          summary: `This analysis shows the distribution of ${selectedItem?.name} across different periods.`,
-          keyPoints: [
-            "Point 1: Significant increase in Q2",
-            "Point 2: ABC Corp is the top vendor",
-            "Point 3: 80% of purchases come from 20% of vendors",
-          ],
-        };
-
-        const validatedData = AnalysisDataSchema.parse(analysisData);
-        setData(validatedData);
+        // Remove unused labels and values assignments
       }
     } catch (error) {
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedItem]); // Add selectedItem as dependency
+
+  // Fetch data when selectedItem changes
+  useEffect(() => {
+    if (selectedItem) {
+      fetchData();
+    }
+  }, [selectedItem, fetchData]); // Add fetchData to dependency array
 
   const handleItemClick = (
     item: Item,
@@ -431,6 +331,14 @@ export default function Project() {
   const handleClearSelection = useCallback(() => {
     setSelectedItem(null);
   }, []);
+
+  // Helper to normalize sheet objects for components that require name/status as string
+  const normalizeSheet = (
+    item: Item
+  ): { name: string; status: StatusEnum } => ({
+    name: item.name ?? "",
+    status: mapStatusToUI(item.status ?? ""),
+  });
 
   // Content component for consistency
   const renderContent = () => {
@@ -486,7 +394,7 @@ export default function Project() {
     return selectedItem.type === "sheet" ? (
       <SpreadSheetView
         title="Financial Data"
-        sheetType={selectedItem.name}
+        sheetType={selectedItem.name ?? ""} // Ensure string
         onClearSelection={handleClearSelection}
         onError={handleError}
         onFileLoad={handleFileLoad}
@@ -508,8 +416,8 @@ export default function Project() {
     toggleSidebar,
     selectedTab,
     setSelectedTab,
-    sheets,
-    analysis, // Add analysis to mobile sidebar
+    sheets: sheets.map(normalizeSheet), // Ensure correct type
+    analysis: analysis.map(normalizeSheet), // Ensure correct type for analysis
     selectedItem,
     onItemClick: handleItemClick,
     statusDotColors,
@@ -539,7 +447,7 @@ export default function Project() {
             <ResizablePanelGroup direction="vertical">
               <ResizablePanel defaultSize={50}>
                 <SheetsPanel
-                  sheets={sheets}
+                  sheets={sheets.map(normalizeSheet)} // Ensure correct type
                   selectedItem={selectedItem}
                   onItemClick={handleItemClick}
                   statusDotColors={statusDotColors}
@@ -554,7 +462,14 @@ export default function Project() {
                 <AnalysisPanel
                   analysis={analysis}
                   selectedItem={selectedItem}
-                  onItemClick={handleItemClick}
+                  // Use a more specific type for onItemClick to avoid 'any'
+                  onItemClick={
+                    handleItemClick as (
+                      item: AnalysisPanelItem,
+                      type: "sheet" | "analysis",
+                      index: number
+                    ) => void
+                  }
                   statusDotColors={statusDotColors}
                   onAnalysisCreate={handleAnalysisCreate}
                   createdAnalysisTemplateIds={getCreatedAnalysisTemplateIds()}

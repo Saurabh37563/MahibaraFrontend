@@ -31,7 +31,9 @@ export const useCreateTeam = () => {
   });
 };
 
-export default {
+const teamsQueryExports = {
   useGetTeamsByOrganization,
   useCreateTeam,
 };
+
+export default teamsQueryExports;

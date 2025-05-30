@@ -72,7 +72,7 @@ export function CreateTeamForm({
     form.setValue(
       "members",
       members.map((member) => ({
-        id: member.id,
+        id: typeof member.id === "string" ? parseInt(member.id, 10) : member.id,
         permission: member.permission,
         modulePermissions: member.modulePermissions || {
           projects: "view",
