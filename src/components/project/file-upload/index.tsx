@@ -54,6 +54,8 @@ function FileUploadMapping({
     mappings,
     setMappings,
     error: contextError,
+    setError,
+    setUploadedFiles,
   } = useFileUpload();
   const params = useParams();
   const projectId = params?.id as string;
@@ -96,6 +98,15 @@ function FileUploadMapping({
     setStep(1);
   };
 
+  const clearAllStates = () => {
+    form.reset({ mappings: [] }); // Reset form
+    setMappings([]); // Reset mappings in context
+    setStep(1); // Reset step
+    setIsLoading(false); // Reset loading state
+    setUploadedFiles([]); // Clear uploaded files from context
+    setError(null); // Clear any errors in context
+  };
+
   const onSubmit = async (data: FormValues) => {
     try {
       setIsLoading(true);
@@ -125,9 +136,7 @@ function FileUploadMapping({
       });
 
       if (response.data.success) {
-        form.reset();
-        setMappings([]);
-        setStep(1);
+        clearAllStates();
         setIsOpen(false);
         toast.success("Sheet mappings submitted successfully!");
         if (refetchSheets) refetchSheets(); // Invalidate mapped sheets
@@ -149,20 +158,17 @@ function FileUploadMapping({
   };
 
   const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
     if (!open) {
-      form.reset({ mappings: [] });
-      setMappings([]);
-      setStep(1);
+      clearAllStates();
     }
+    setIsOpen(open);
   };
 
-  // Only enable "Process" if all files are either completed or error
-  const allFilesProcessed =
-    uploadedFiles.length > 0 &&
-    uploadedFiles.every(
-      (file) => file.status === "completed" || file.status === "error"
-    );
+  useEffect(() => {
+    return () => {
+      clearAllStates(); // Cleanup on component unmount
+    };
+  }, []);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -201,7 +207,7 @@ function FileUploadMapping({
                 type="button"
                 onClick={nextStep}
                 className="bg-green-900 hover:bg-green-800"
-                disabled={!allFilesProcessed}
+                disabled={uploadedFiles.length === 0}
               >
                 Process
               </Button>

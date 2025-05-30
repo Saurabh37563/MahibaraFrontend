@@ -20,6 +20,7 @@ import { useParams } from "next/navigation";
 
 interface FileUploadContextType {
   uploadedFiles: UploadedFileInfo[];
+  setUploadedFiles: (files: UploadedFileInfo[]) => void;
   sheetTypes: SheetType[];
   mappings: SheetMapping[];
   addFiles: (files: UploadedFileInfo[]) => void;
@@ -39,6 +40,7 @@ interface FileUploadContextType {
   isSheetTypeValidated: (sheetType: string) => boolean;
   loading: boolean;
   error: string | null;
+  setError: (error: string | null) => void;
 }
 
 const FileUploadContext = createContext<FileUploadContextType | undefined>(
@@ -187,6 +189,7 @@ export function FileUploadProvider({
     <FileUploadContext.Provider
       value={{
         uploadedFiles,
+        setUploadedFiles,
         sheetTypes,
         mappings,
         addFiles,
@@ -203,6 +206,7 @@ export function FileUploadProvider({
         isSheetTypeValidated,
         loading,
         error,
+        setError,
       }}
     >
       {children}
