@@ -31,7 +31,7 @@ export const ORGANIZATION_ENDPOINTS = {
 };
 
 export const TEAM_ENDPOINTS = {
-  getOrganizationTeams: BASE_TEAMS_URL,
+  getOrganizationTeams: BASE_TEAMS_URL + '/organization',
   postCreateTeam: BASE_TEAMS_URL,
   getAllUserOrganizations: BASE_ORG_URL + "/get-all-org",
   getOrganizationDetails: BASE_ORG_URL + "/details",
@@ -47,7 +47,7 @@ export const PROJECT_ENDPOINTS = {
 export const FILE_UPLOAD_ENDPOINTS = {
   // Endpoints to get sheet types and validated sheet types
   getSheetTypes: `${BASE_SHEET_UPLOAD_URL}/get_sheet_types`,
-  getValidatedSheetTypes: `${BASE_SHEET_UPLOAD_URL}/file_mapping/38`,
+  getValidatedSheetTypes: `${BASE_SHEET_UPLOAD_URL}/file_mapping`,
 
   // Endpoint to upload files to Digital Ocean
   uploadToSpaces: `${BASE_FILE_UPLOAD_URL}/files/upload`,

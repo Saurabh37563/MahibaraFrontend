@@ -16,6 +16,7 @@ import type {
 } from "@/types/project-types";
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
+import { useParams } from "next/navigation";
 
 interface FileUploadContextType {
   uploadedFiles: UploadedFileInfo[];
@@ -25,7 +26,7 @@ interface FileUploadContextType {
   updateFileProgress: (fileId: string, progress: number) => void;
   updateFileStatus: (
     fileId: string,
-    status: "uploading" | "completed" | "error",
+    status: "uploading" | "completed" | "error"
   ) => void;
   updateFileSheets: (fileId: string, sheets: Sheet[]) => void;
   updateFileMetadata: (fileId: string, metadata: FileMetadata) => void;
@@ -41,10 +42,18 @@ interface FileUploadContextType {
 }
 
 const FileUploadContext = createContext<FileUploadContextType | undefined>(
-  undefined,
+  undefined
 );
 
-export function FileUploadProvider({ children }: { children: ReactNode }) {
+interface FileUploadProviderProps {
+  children: ReactNode;
+  projectId: string;
+}
+
+export function FileUploadProvider({
+  children,
+  projectId,
+}: FileUploadProviderProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
   const [sheetTypes, setSheetTypes] = useState<SheetType[]>([]);
   const [mappings, setMappings] = useState<SheetMapping[]>([]);
@@ -57,19 +66,22 @@ export function FileUploadProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         setError(null);
 
-        const response = await axios.get(FILE_UPLOAD_ENDPOINTS?.getSheetTypes, {
-          headers: {
-            Authorization: `Bearer test-token`,
-          },
-        });
-        const dummySheetTypes = response?.data?.data;
-        const reponseValidatedTypes = await axios.get(
-          FILE_UPLOAD_ENDPOINTS?.getValidatedSheetTypes,
+        const response = await axios.get(
+          FILE_UPLOAD_ENDPOINTS?.getSheetTypes, // use projectId
           {
             headers: {
               Authorization: `Bearer test-token`,
             },
-          },
+          }
+        );
+        const dummySheetTypes = response?.data?.data;
+        const reponseValidatedTypes = await axios.get(
+          FILE_UPLOAD_ENDPOINTS?.getValidatedSheetTypes + "/" + projectId, // use projectId
+          {
+            headers: {
+              Authorization: `Bearer test-token`,
+            },
+          }
         );
 
         const dummyValidatedSheets = reponseValidatedTypes?.data?.data;
@@ -91,8 +103,10 @@ export function FileUploadProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    fetchSheetTypes();
-  }, []);
+    if (projectId) {
+      fetchSheetTypes();
+    }
+  }, [projectId]);
 
   const addFiles = (files: UploadedFileInfo[]) => {
     setUploadedFiles((prev) => [...prev, ...files]);
@@ -100,22 +114,22 @@ export function FileUploadProvider({ children }: { children: ReactNode }) {
 
   const updateFileProgress = (fileId: string, progress: number) => {
     setUploadedFiles((prev) =>
-      prev.map((file) => (file.id === fileId ? { ...file, progress } : file)),
+      prev.map((file) => (file.id === fileId ? { ...file, progress } : file))
     );
   };
 
   const updateFileStatus = (
     fileId: string,
-    status: "uploading" | "completed" | "error",
+    status: "uploading" | "completed" | "error"
   ) => {
     setUploadedFiles((prev) =>
-      prev.map((file) => (file.id === fileId ? { ...file, status } : file)),
+      prev.map((file) => (file.id === fileId ? { ...file, status } : file))
     );
   };
 
   const updateFileSheets = (fileId: string, sheets: Sheet[]) => {
     setUploadedFiles((prev) =>
-      prev.map((file) => (file.id === fileId ? { ...file, sheets } : file)),
+      prev.map((file) => (file.id === fileId ? { ...file, sheets } : file))
     );
   };
 
@@ -130,8 +144,8 @@ export function FileUploadProvider({ children }: { children: ReactNode }) {
               file_name: metadata.file_name,
               status: metadata.status,
             }
-          : file,
-      ),
+          : file
+      )
     );
   };
 

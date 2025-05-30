@@ -12,6 +12,7 @@ import { uploadToDigitalOcean } from "@/utils/storage-utils";
 import { useFileUpload } from "@/contexts/file-upload-context";
 import { toast } from "sonner";
 import type { Sheet } from "@/types/project-types";
+import { useParams } from "next/navigation";
 
 const extractSheetsFromExcel = async (file: File): Promise<Sheet[]> => {
   return new Promise((resolve, reject) => {
@@ -52,6 +53,8 @@ export function FileUploader() {
     updateFileMetadata,
   } = useFileUpload();
 
+  const params = useParams();
+  const projectId = params?.id as string;
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,7 +96,7 @@ export function FileUploader() {
       ];
 
       const invalidFiles = files.filter(
-        (file) => !validFileTypes.includes(file.type),
+        (file) => !validFileTypes.includes(file.type)
       );
 
       if (invalidFiles.length > 0) {
@@ -137,12 +140,14 @@ export function FileUploader() {
           updateFileSheets(fileInfo.id, sheets);
 
           // Upload to Digital Ocean
+          // Always send hardcoded project id 38
           const uploadResult = await uploadToDigitalOcean(
             file,
             fileInfo.id,
             ({ fileId, progress }) => {
               updateFileProgress(fileId, progress);
             },
+            projectId ? parseInt(projectId) : 38
           );
 
           if (!uploadResult.success) {
@@ -181,7 +186,7 @@ export function FileUploader() {
           isDragging
             ? "border-primary bg-primary/5"
             : "border-muted-foreground/25",
-          "hover:border-green-800/50",
+          "hover:border-green-800/50"
         )}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -233,8 +238,8 @@ export function FileUploader() {
                         {file.status === "completed"
                           ? "Uploaded"
                           : file.status === "error"
-                            ? "Error"
-                            : "Uploading..."}
+                          ? "Error"
+                          : "Uploading..."}
                       </p>
                     </div>
                   </div>
@@ -256,8 +261,8 @@ export function FileUploader() {
                     {file.status === "uploading"
                       ? `${file.progress}%`
                       : file.status === "completed"
-                        ? "Uploaded"
-                        : "Failed"}
+                      ? "Uploaded"
+                      : "Failed"}
                   </p>
                 </div>
               </div>

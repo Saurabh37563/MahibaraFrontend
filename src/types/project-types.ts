@@ -49,6 +49,7 @@ export interface FilterState {
   sortField: SortField;
   sortOrder: SortOrder;
   dateRange: DateRange;
+  page?: number; // Optional for pagination
   search: string;
 }
 

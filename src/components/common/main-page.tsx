@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -10,14 +10,15 @@ export default function RootPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.push('/agents');
+      router.push("/agents");
     } else if (status === "unauthenticated") {
-      router.push('/login');
+      router.push("/login");
     }
   }, [status, router]);
 
-
-  return <div className="min-h-screen flex items-center justify-center">
-    {status === "loading" ? "Authenticating..." : "Redirecting..."}
-  </div>;
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      {status === "loading" ? "Authenticating..." : "Redirecting..."}
+    </div>
+  );
 }

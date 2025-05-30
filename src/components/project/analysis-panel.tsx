@@ -17,7 +17,7 @@ const StatusEnum = z.enum([
 ]);
 
 const ItemSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(),
   name: z.string(),
   status: StatusEnum,
   summary: z.string().optional(),

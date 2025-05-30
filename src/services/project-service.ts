@@ -1,4 +1,4 @@
-import { projectApi } from './api/project-api';
+import { projectApi, PaginatedProjectsResponse } from './api/project-api';
 import { 
   Project, 
   CreateProjectRequest, 
@@ -7,7 +7,7 @@ import {
 } from '@/types/project-types';
 
 interface ProjectService {
-  getTeamProjects: (team_id: string, filters?: FilterState) => Promise<Project[]>;
+  getTeamProjects: (team_id: string, filters?: FilterState) => Promise<PaginatedProjectsResponse>;
   createProject: (projectData: CreateProjectRequest) => Promise<Project>;
   updateProjectStatus: (
     team_id: string,
@@ -18,7 +18,7 @@ interface ProjectService {
 }
 
 const projectService: ProjectService = {
-  getTeamProjects: async (team_id: string, filters?: FilterState): Promise<Project[]> => {
+  getTeamProjects: async (team_id: string, filters?: FilterState): Promise<PaginatedProjectsResponse> => {
     try {
       // Validate filters before passing them to the API
       const validatedFilters: FilterState = {
@@ -27,6 +27,7 @@ const projectService: ProjectService = {
         sortOrder: filters?.sortOrder || 'desc',
         dateRange: filters?.dateRange || 'all',
         search: filters?.search || '',
+        page: filters?.page || 1,
       };
 
       // Log for debugging
@@ -57,6 +58,8 @@ const projectService: ProjectService = {
   ): Promise<Project> => {
     try {
       const response = await projectApi.updateProjectStatus(team_id, project_id, status);
+
+      console.log("Project status updated successfully:", response);
       return response;
     } catch (error) {
       console.error("Error updating project status:", error);

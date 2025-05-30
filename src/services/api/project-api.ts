@@ -7,6 +7,22 @@ import type {
   FilterState 
 } from '@/types/project-types';
 
+// Add paginated response type
+export interface PaginatedProjectsResponse {
+  success: boolean;
+  message: string;
+  data: Project[];
+  error: any;
+  metadata: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
 const axiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
@@ -15,7 +31,7 @@ const axiosInstance = axios.create({
 });
 
 export const projectApi = {
-  getTeamProjects: async (team_id: string, filters?: FilterState): Promise<Project[]> => {
+  getTeamProjects: async (team_id: string, filters?: FilterState): Promise<PaginatedProjectsResponse> => {
     try {
       // Build query parameters
       const queryParams = new URLSearchParams();
@@ -46,6 +62,9 @@ export const projectApi = {
         if (filters.search) {
           queryParams.append('search', filters.search.trim());
         }
+        if (filters.page) {
+          queryParams.append('page', String(filters.page));
+        }
       }
 
       // Construct the URL with query parameters
@@ -54,7 +73,7 @@ export const projectApi = {
       }`;
 
       const response = await axiosInstance.get<any>(url);
-      return response?.data?.data || [];
+      return response?.data || { data: [], metadata: {}, success: false, message: '', error: null };
     } catch (error) {
       if (axios.isAxiosError(error)) {
         throw new Error(
@@ -109,7 +128,7 @@ export const projectApi = {
   deleteProject: async (team_id: string, project_id: string): Promise<void> => {
     try {
       await axiosInstance.delete(
-        `${PROJECT_ENDPOINTS.deleteProject}/${team_id}/projects/${project_id}`
+        `${BASE_TEMP_BACKEND_URL}/api/v1/projects/${project_id}`
       );
     } catch (error) {
       if (axios.isAxiosError(error)) {

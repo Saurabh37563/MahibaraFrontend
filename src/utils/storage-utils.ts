@@ -10,11 +10,12 @@ export async function uploadToDigitalOcean(
   file: File,
   fileId: string,
   onProgress?: (progress: UploadProgress) => void,
+  projectId?: number, // <-- add projectId param
 ): Promise<UploadResponse> {
   try {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("project_id", "38");
+    formData.append("project_id", String(projectId ?? 38)); // use param, fallback to 38
 
     const response = await axios.post<FileUploadResponse>(
       `${FILE_UPLOAD_ENDPOINTS?.uploadToSpaces}`,

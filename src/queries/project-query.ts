@@ -1,18 +1,18 @@
 import { useQuery, useMutation, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
 import projectService from '@/services/project-service';
 import { Project, CreateProjectRequest, UpdateProjectStatusRequest, FilterState } from '@/types/project-types';
+import { PaginatedProjectsResponse } from '@/services/api/project-api';
 import { queryClient } from '@/providers/query-provider';
 
 // Get all projects for a team with filters
 export function useGetTeamProjects(
   team_id: string,
   filters?: FilterState
-): UseQueryResult<Project[], Error> {
+): UseQueryResult<PaginatedProjectsResponse, Error> {
   return useQuery({
     queryKey: ['projects', team_id, filters],
     queryFn: () => projectService.getTeamProjects(team_id, filters),
     enabled: !!team_id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 // Create project
@@ -23,9 +23,9 @@ export function useCreateProject(): UseMutationResult<
 > {
   return useMutation({
     mutationFn: (projectData) => projectService.createProject(projectData),
-    onSuccess: (newProject) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', newProject.team_id] 
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === 'projects',
       });
     },
   });
@@ -40,9 +40,9 @@ export function useUpdateProjectStatus(): UseMutationResult<
   return useMutation({
     mutationFn: ({ team_id, project_id, status }) =>
       projectService.updateProjectStatus(team_id, project_id, status),
-    onSuccess: (updatedProject) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', updatedProject.team_id] 
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === 'projects',
       });
     },
   });
@@ -57,9 +57,9 @@ export function useDeleteProject(): UseMutationResult<
   return useMutation({
     mutationFn: ({ team_id, project_id }) =>
       projectService.deleteProject(team_id, project_id),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['projects', variables.team_id] 
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        predicate: (query) => query.queryKey[0] === 'projects',
       });
     },
   });

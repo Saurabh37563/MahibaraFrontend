@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -15,11 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Menu, ChevronRight } from "lucide-react";
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
+import { useParams } from "next/navigation";
 
 // Import the new components
 import SheetsPanel from "./sheets-panel";
 import AnalysisPanel from "./analysis-panel";
 import MobileSidebar from "./mobile-sidebar";
+import { useQuery } from "@tanstack/react-query";
 
 // Define Zod schemas
 const StatusEnum = z.enum([
@@ -32,8 +34,11 @@ const StatusEnum = z.enum([
 ]);
 
 const ItemSchema = z.object({
+  id: z.string().optional(), // ID can be optional for new items
   name: z.string(),
   status: StatusEnum,
+  summary: z.string().optional(),
+  templateId: z.string().optional(), // Add templateId to track original template
 });
 
 const SpreadsheetColumnSchema = z.object({
@@ -189,6 +194,9 @@ export default function Project() {
     "sheets"
   );
 
+  const params = useParams();
+  const projectId = params?.id as string;
+
   const statusDotColors: Record<z.infer<typeof StatusEnum>, string> = {
     success: "bg-green-500",
     warning: "bg-yellow-500",
@@ -232,7 +240,7 @@ export default function Project() {
   // Get list of template IDs that have already been used to create analyses
   const getCreatedAnalysisTemplateIds = (): string[] => {
     return analysis
-      .map((item) => item.templateId)
+      .map((item: any) => item.templateId)
       .filter((id): id is string => id !== undefined);
   };
 
@@ -288,23 +296,26 @@ export default function Project() {
     return () => window.removeEventListener("resize", checkIfMobile);
   }, []);
 
-  // Fetch mapped sheets
-  const getMappedSheetForProject = async () => {
-    try {
+  // React Query for mapped sheets
+  const {
+    data: mappedSheets,
+    isLoading: isSheetsLoading,
+    refetch: refetchSheets,
+  } = useQuery<Item[]>({
+    queryKey: ["mappedSheets", projectId], // use projectId from params
+    queryFn: async () => {
       const response = await axios.get(
-        FILE_UPLOAD_ENDPOINTS?.getMappedSheetTypes + "/38"
+        FILE_UPLOAD_ENDPOINTS?.getMappedSheetTypes + "/" + projectId // use projectId from params
       );
-      const sheetsData = response?.data?.data?.sheet_types as Item[];
-      setSheets(sheetsData);
-    } catch (error) {
-      console.error("Error fetching mapped sheets:", error);
-      setSheets([]);
-    }
-  };
+      return (response?.data?.data?.sheet_types as Item[]) || [];
+    },
+    enabled: !!projectId,
+  });
 
+  // Update sheets state when query data changes
   useEffect(() => {
-    getMappedSheetForProject();
-  }, []);
+    if (mappedSheets) setSheets(mappedSheets);
+  }, [mappedSheets]);
 
   useEffect(() => {
     if (selectedItem) {
@@ -416,6 +427,11 @@ export default function Project() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  // Handler to clear selected item (sheet)
+  const handleClearSelection = useCallback(() => {
+    setSelectedItem(null);
+  }, []);
+
   // Content component for consistency
   const renderContent = () => {
     if (!selectedItem) {
@@ -470,7 +486,8 @@ export default function Project() {
     return selectedItem.type === "sheet" ? (
       <SpreadSheetView
         title="Financial Data"
-        sheetType="financial-data"
+        sheetType={selectedItem.name}
+        onClearSelection={handleClearSelection}
         onError={handleError}
         onFileLoad={handleFileLoad}
         onDelete={handleDelete}
@@ -527,6 +544,9 @@ export default function Project() {
                   onItemClick={handleItemClick}
                   statusDotColors={statusDotColors}
                   mapStatusToUI={mapStatusToUI}
+                  isLoading={isSheetsLoading}
+                  refetchSheets={refetchSheets}
+                  clearSelectedSheet={handleClearSelection}
                 />
               </ResizablePanel>
               <ResizableHandle />

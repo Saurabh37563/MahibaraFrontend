@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 interface ProjectDeleteDialogProps {
-  project: Project;
+  project: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -40,6 +40,7 @@ export function ProjectDeleteDialog({
 
     setIsDeleting(true);
     try {
+      console.log("Deleting project:", project);
       await deleteProjectMutation.mutateAsync({
         team_id: project.team_id,
         project_id: project.id,

@@ -8,6 +8,7 @@ import FileUploadMapping from "./file-upload";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { LuFileSpreadsheet } from "react-icons/lu";
+import { Skeleton } from "@/components/ui/skeleton";
 // import axios from "axios";
 
 // Define Zod schemas
@@ -33,6 +34,9 @@ interface SheetsPanelProps {
   onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
   statusDotColors: Record<z.infer<typeof StatusEnum>, string>;
   mapStatusToUI: (status: string) => z.infer<typeof StatusEnum>;
+  isLoading?: boolean; // <-- add this
+  refetchSheets?: () => void; // <-- add this
+  clearSelectedSheet?: () => void; // <-- add this
 }
 
 export default function SheetsPanel({
@@ -41,6 +45,9 @@ export default function SheetsPanel({
   onItemClick,
   statusDotColors,
   mapStatusToUI,
+  isLoading,
+  refetchSheets,
+  clearSelectedSheet,
 }: SheetsPanelProps) {
   const params = useParams();
   const { id: projectId } = params as { id: string };
@@ -212,7 +219,10 @@ export default function SheetsPanel({
           </span>
         </div>
         <div className="flex gap-2 items-center">
-          <FileUploadMapping />
+          <FileUploadMapping
+            refetchSheets={refetchSheets}
+            clearSelectedSheet={clearSelectedSheet}
+          />
 
           {/* Download Button with Loading State */}
           <Button
@@ -244,7 +254,13 @@ export default function SheetsPanel({
 
       {/* Content */}
       <div className="overflow-y-auto py-4 px-2 flex-1">
-        {sheets.length === 0 ? (
+        {isLoading ? (
+          <div className="flex flex-col gap-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full rounded" />
+            ))}
+          </div>
+        ) : sheets.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-32 text-gray-400">
             <LuFileSpreadsheet size={24} className="mb-2" />
             <span className="text-xs">No sheets available</span>

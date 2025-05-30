@@ -65,7 +65,7 @@ export function ProjectStatusDialog({
   open,
   onOpenChange,
 }: ProjectStatusDialogProps) {
-  const [status, setStatus] = useState(project.status);
+  const [status, setStatus] = useState<string | any>(project.status);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const updateStatusMutation = useUpdateProjectStatus();
 
@@ -119,7 +119,7 @@ export function ProjectStatusDialog({
             {statusOptions.map((option) => (
               <Button
                 key={option.value}
-                onClick={() => setStatus(option.value)}
+                onClick={() => setStatus(option?.value)}
                 disabled={isSubmitting || project?.status === "completed"}
                 variant={"ghost"}
                 className={cn(
@@ -128,7 +128,7 @@ export function ProjectStatusDialog({
                     ? `${option.borderColor} ${option.bgColor} shadow-sm`
                     : "border-transparent hover:border-gray-200 bg-gray-100 hover:bg-gray-50 dark:hover:border-gray-700 dark:hover:bg-gray-800",
                   // Removed all focus:ring classes
-                  "focus:outline-none focus:ring-0 focus:ring-offset-0",
+                  "focus:outline-none focus:ring-0 focus:ring-offset-0"
                 )}
               >
                 <span
@@ -136,7 +136,7 @@ export function ProjectStatusDialog({
                     "font-medium",
                     status === option.value
                       ? option.color
-                      : "text-gray-700 dark:text-gray-300",
+                      : "text-gray-700 dark:text-gray-300"
                   )}
                 >
                   {option.label}

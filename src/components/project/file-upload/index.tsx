@@ -25,16 +25,27 @@ import {
 } from "@/contexts/file-upload-context";
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
+import { useParams } from "next/navigation";
 
-export function FileUploadMappingWrapper() {
+type FileUploadMappingProps = {
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
+};
+
+export function FileUploadMappingWrapper(props: FileUploadMappingProps) {
+  const params = useParams();
+  const projectId = params?.id as string;
   return (
-    <FileUploadProvider>
-      <FileUploadMapping />
+    <FileUploadProvider projectId={projectId}>
+      <FileUploadMapping {...props} />
     </FileUploadProvider>
   );
 }
 
-function FileUploadMapping() {
+function FileUploadMapping({
+  refetchSheets,
+  clearSelectedSheet,
+}: FileUploadMappingProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [isLoading, setIsLoading] = useState(false);
@@ -44,6 +55,8 @@ function FileUploadMapping() {
     setMappings,
     error: contextError,
   } = useFileUpload();
+  const params = useParams();
+  const projectId = params?.id as string;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -96,7 +109,7 @@ function FileUploadMapping() {
       }
 
       const response = await axios.post(FILE_UPLOAD_ENDPOINTS.submitMappings, {
-        project_id: "38",
+        project_id: projectId, // use dynamic projectId from params
         mappings: data.mappings.map((mapping) => {
           const file = uploadedFiles.find((f) => f.id === mapping.fileId);
           if (!file)
@@ -117,6 +130,8 @@ function FileUploadMapping() {
         setStep(1);
         setIsOpen(false);
         toast.success("Sheet mappings submitted successfully!");
+        if (refetchSheets) refetchSheets(); // Invalidate mapped sheets
+        if (clearSelectedSheet) clearSelectedSheet(); // Clear selected sheet
       } else {
         throw new Error(response.data.message || "Failed to submit mappings");
       }
@@ -141,6 +156,13 @@ function FileUploadMapping() {
       setStep(1);
     }
   };
+
+  // Only enable "Process" if all files are either completed or error
+  const allFilesProcessed =
+    uploadedFiles.length > 0 &&
+    uploadedFiles.every(
+      (file) => file.status === "completed" || file.status === "error"
+    );
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -179,7 +201,7 @@ function FileUploadMapping() {
                 type="button"
                 onClick={nextStep}
                 className="bg-green-900 hover:bg-green-800"
-                disabled={uploadedFiles.length === 0}
+                disabled={!allFilesProcessed}
               >
                 Process
               </Button>
