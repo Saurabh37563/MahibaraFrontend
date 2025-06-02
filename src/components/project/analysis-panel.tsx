@@ -28,7 +28,7 @@ interface AnalysisPanelProps {
   selectedItem: { index: number; type: "sheet" | "analysis" } | null;
   onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
   statusDotColors: Record<StatusEnum, string>;
-  onAnalysisCreate: (selectedAnalysisIds: string[]) => void;
+  onAnalysisCreate: (selectedAnalyses: Item[]) => void; // <-- change here
   createdAnalysisTemplateIds: string[]; // Track which template IDs have been used
 }
 
@@ -73,7 +73,7 @@ export default function AnalysisPanel({
         ) : (
           analysis.map((item, index) => (
             <div
-              key={`analysis-${item.id}`}
+              key={`analysis-${item.id ?? index}`}
               className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
                 selectedItem?.index === index &&
                 selectedItem?.type === "analysis"

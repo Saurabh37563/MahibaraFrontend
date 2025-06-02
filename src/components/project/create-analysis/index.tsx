@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,6 +15,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { IoMdAdd } from "react-icons/io";
 import { FiSearch } from "react-icons/fi";
 import { Label } from "@/components/ui/label";
+import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
+import { useParams } from "next/navigation";
+import axios from "axios";
+import { toast } from "sonner";
 
 // Define our data types
 interface Analysis {
@@ -36,158 +40,11 @@ interface Section {
 }
 
 interface AnalysisSelectionModalProps {
-  onAnalysisCreate: (selectedAnalysisIds: string[]) => void;
-  createdAnalysisTemplateIds: string[]; // IDs of analyses that have already been created
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // <-- change here
+  createdAnalysisTemplateIds: string[];
 }
 
 // Sample data - In real app, this would come from API
-const sampleData: Section[] = [
-  {
-    id: "s1",
-    name: "Financial Analysis",
-    subSections: [
-      {
-        id: "ss1",
-        name: "Risk Assessment",
-        analyses: [
-          {
-            id: "a1",
-            name: "Credit Risk",
-            summary: "Assess credit risk exposure across portfolio",
-          },
-          {
-            id: "a2",
-            name: "Market Risk",
-            summary: "Analyze market volatility and potential impacts",
-          },
-          {
-            id: "a3",
-            name: "Operational Risk",
-            summary: "Evaluate operational processes and risk factors",
-          },
-        ],
-      },
-      {
-        id: "ss2",
-        name: "Performance Metrics",
-        analyses: [
-          {
-            id: "a4",
-            name: "ROI Analysis",
-            summary: "Calculate return on investment across projects",
-          },
-          {
-            id: "a5",
-            name: "Profit Margin Analysis",
-            summary: "Track profit margins by product and service",
-          },
-          {
-            id: "a6",
-            name: "Liquidity Analysis",
-            summary: "Monitor cash flow and liquidity positions",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "s2",
-    name: "Market Analysis",
-    subSections: [
-      {
-        id: "ss3",
-        name: "Competitor Analysis",
-        analyses: [
-          {
-            id: "a7",
-            name: "SWOT Analysis",
-            summary:
-              "Strengths, weaknesses, opportunities, and threats assessment",
-          },
-          {
-            id: "a8",
-            name: "Porter's Five Forces",
-            summary: "Industry competitiveness analysis framework",
-          },
-          {
-            id: "a9",
-            name: "Market Share Analysis",
-            summary: "Track market positioning and share trends",
-          },
-        ],
-      },
-      {
-        id: "ss4",
-        name: "Customer Analysis",
-        analyses: [
-          {
-            id: "a10",
-            name: "Demographic Analysis",
-            summary: "Customer demographic patterns and trends",
-          },
-          {
-            id: "a11",
-            name: "Behavior Analysis",
-            summary: "Customer behavior and purchasing patterns",
-          },
-          {
-            id: "a12",
-            name: "Satisfaction Survey",
-            summary: "Customer satisfaction metrics and feedback",
-          },
-        ],
-      },
-    ],
-  },
-  {
-    id: "s3",
-    name: "Business Development",
-    subSections: [
-      {
-        id: "ss5",
-        name: "Strategic Planning",
-        analyses: [
-          {
-            id: "a13",
-            name: "Growth Opportunities",
-            summary: "Identify and evaluate growth opportunities",
-          },
-          {
-            id: "a14",
-            name: "Partnership Analysis",
-            summary: "Assess potential partnerships and alliances",
-          },
-          {
-            id: "a15",
-            name: "Expansion Strategy",
-            summary: "Geographic and market expansion planning",
-          },
-        ],
-      },
-      {
-        id: "ss6",
-        name: "Resource Allocation",
-        analyses: [
-          {
-            id: "a16",
-            name: "Budget Analysis",
-            summary: "Budget allocation and optimization analysis",
-          },
-          {
-            id: "a17",
-            name: "Personnel Distribution",
-            summary: "Human resource allocation and planning",
-          },
-          {
-            id: "a18",
-            name: "Asset Utilization",
-            summary: "Asset efficiency and utilization metrics",
-          },
-        ],
-      },
-    ],
-  },
-];
 
 export function AnalysisSelectionModal({
   onAnalysisCreate,
@@ -198,22 +55,19 @@ export function AnalysisSelectionModal({
   const [selectedAnalyses, setSelectedAnalyses] = useState<string[]>([]);
   const [analysisData, setAnalysisData] = useState<Section[]>([]);
   const [loading, setLoading] = useState(false);
-
+  const { id } = useParams();
   // Fetch analysis data (API call would go here)
+
   const fetchAnalysisData = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/analysis-templates')
-      // const data = await response.json()
-      // setAnalysisData(data)
-
-      // For now, use dummy data
-      await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API delay
-      setAnalysisData(sampleData);
+      const response = await axios.get(
+        `${BASE_TEMP_BACKEND_URL}/api/v1/projects/working-types/hierarchy`
+      );
+      setAnalysisData(response.data?.data);
     } catch (error) {
       console.error("Error fetching analysis data:", error);
-      setAnalysisData(sampleData); // Fallback to dummy data
+      toast.error("Failed to load analysis templates. Please try again later.");
     } finally {
       setLoading(false);
     }
@@ -241,9 +95,14 @@ export function AnalysisSelectionModal({
   };
 
   const handleCreate = () => {
-    // Pass all selected analyses (including ones that might be removed)
-    console.log("Selected analyses:", selectedAnalyses);
-    onAnalysisCreate(selectedAnalyses);
+    // Find all analysis objects for selected IDs
+    const allAnalyses: Analysis[] = analysisData.flatMap((section) =>
+      section.subSections.flatMap((subSection) => subSection.analyses)
+    );
+    const selectedAnalysisObjects = allAnalyses.filter((a) =>
+      selectedAnalyses.includes(a.id)
+    );
+    onAnalysisCreate(selectedAnalysisObjects);
     setSelectedAnalyses([]);
     setSearchQuery("");
     setOpen(false);

@@ -32,98 +32,6 @@ type StatusEnum =
   | "uploaded";
 
 // Sample analysis data for reference
-const analysisTemplates = [
-  {
-    id: "a1",
-    name: "Credit Risk",
-    summary: "Assess credit risk exposure across portfolio",
-  },
-  {
-    id: "a2",
-    name: "Market Risk",
-    summary: "Analyze market volatility and potential impacts",
-  },
-  {
-    id: "a3",
-    name: "Operational Risk",
-    summary: "Evaluate operational processes and risk factors",
-  },
-  {
-    id: "a4",
-    name: "ROI Analysis",
-    summary: "Calculate return on investment across projects",
-  },
-  {
-    id: "a5",
-    name: "Profit Margin Analysis",
-    summary: "Track profit margins by product and service",
-  },
-  {
-    id: "a6",
-    name: "Liquidity Analysis",
-    summary: "Monitor cash flow and liquidity positions",
-  },
-  {
-    id: "a7",
-    name: "SWOT Analysis",
-    summary: "Strengths, weaknesses, opportunities, and threats assessment",
-  },
-  {
-    id: "a8",
-    name: "Porter's Five Forces",
-    summary: "Industry competitiveness analysis framework",
-  },
-  {
-    id: "a9",
-    name: "Market Share Analysis",
-    summary: "Track market positioning and share trends",
-  },
-  {
-    id: "a10",
-    name: "Demographic Analysis",
-    summary: "Customer demographic patterns and trends",
-  },
-  {
-    id: "a11",
-    name: "Behavior Analysis",
-    summary: "Customer behavior and purchasing patterns",
-  },
-  {
-    id: "a12",
-    name: "Satisfaction Survey",
-    summary: "Customer satisfaction metrics and feedback",
-  },
-  {
-    id: "a13",
-    name: "Growth Opportunities",
-    summary: "Identify and evaluate growth opportunities",
-  },
-  {
-    id: "a14",
-    name: "Partnership Analysis",
-    summary: "Assess potential partnerships and alliances",
-  },
-  {
-    id: "a15",
-    name: "Expansion Strategy",
-    summary: "Geographic and market expansion planning",
-  },
-  {
-    id: "a16",
-    name: "Budget Analysis",
-    summary: "Budget allocation and optimization analysis",
-  },
-  {
-    id: "a17",
-    name: "Personnel Distribution",
-    summary: "Human resource allocation and planning",
-  },
-  {
-    id: "a18",
-    name: "Asset Utilization",
-    summary: "Asset efficiency and utilization metrics",
-  },
-];
 
 // Add this type definition above the Project component
 type AnalysisPanelItem = {
@@ -207,41 +115,16 @@ export default function Project() {
   // Get list of template IDs that have already been used to create analyses
   const getCreatedAnalysisTemplateIds = (): string[] => {
     return analysis
-      .map((item: Item) => item.templateId)
-      .filter((id): id is string => id !== undefined);
+      .map((item: Item) => item.id)
+      .filter((id): id is string => !!id);
   };
 
   // Handle analysis creation and removal
-  const handleAnalysisCreate = (selectedAnalysisIds: string[]) => {
-    console.log("Updating analyses with IDs:", selectedAnalysisIds);
-
-    // Get the analysis details from the templates for new analyses
-    const newAnalyses: Item[] = selectedAnalysisIds.map((id) => {
-      const template = analysisTemplates.find((t) => t.id === id);
-      if (template) {
-        return {
-          id: `user-${id}-${Date.now()}`, // Create unique ID for user's analysis
-          name: template.name,
-          status: "info" as const, // New analysis starts as "info" (pending)
-          summary: template.summary,
-          templateId: id, // Store the original template ID
-        };
-      }
-      return {
-        id: `unknown-${Date.now()}`,
-        name: "Unknown Analysis",
-        status: "neutral" as const,
-        summary: "Analysis template not found",
-        templateId: id,
-      };
-    });
-
-    // Replace the entire analysis list with the new selection
-    // This handles both adding new analyses and removing unselected ones
-    setAnalysis(newAnalyses);
-
+  const handleAnalysisCreate = (selectedAnalyses: Item[]) => {
+    // Directly set the selected analyses as the new analysis state
+    setAnalysis(selectedAnalyses);
     console.log(
-      `Successfully updated analysis list with ${newAnalyses.length} items`
+      `Successfully updated analysis list with ${selectedAnalyses.length} items`
     );
   };
 
