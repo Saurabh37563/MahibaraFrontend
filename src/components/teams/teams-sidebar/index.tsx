@@ -40,7 +40,8 @@ export default function FunctionsSidebar() {
   // Use the correct type for teams
   type TeamType = ReturnType<typeof TeamSchema.parse>;
   const teams = React.useMemo(
-    () => rawTeams.map((team: unknown) => TeamSchema.parse(team)),
+    // () => rawTeams.map((team: unknown) => TeamSchema.parse(team)),
+    () => rawTeams.map((team: unknown) => team as TeamType),
     [rawTeams]
   );
 
