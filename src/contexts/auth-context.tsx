@@ -40,22 +40,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         // Create a user object from session data
         try {
-          // Build user object from session data
+          // Merge session.user with extra fields
+          const userWithExtras = session.user as typeof session.user &
+            SessionUserExtra;
           const sessionUser = {
-            id: session.user?.id || "unknown",
-            name: session.user?.name,
-            email: session.user?.email || "unknown@example.com",
-            image: session.user?.image,
+            id: userWithExtras.id || "unknown",
+            name: userWithExtras.name ?? "",
+            firstName: userWithExtras.firstName ?? "",
+            lastName: userWithExtras.lastName ?? "",
+            email: userWithExtras.email ?? "unknown@example.com",
+            loginName: userWithExtras.loginName ?? "",
+            image: userWithExtras.image ?? "",
             // Additional fields with default values
             organizationId: null,
             organizationName: null,
-            userType: "USER", // Default value
+            userType: userWithExtras.userType ?? "USER", // Default value
             createdAt: null,
             updatedAt: null,
           };
 
           // Validate with Zod schema
-          const validatedUser = UserSchema.parse(sessionUser);
+          const validatedUser = sessionUser as User;
           setUser(validatedUser);
 
           // Optionally store in localStorage as backup
@@ -119,3 +124,12 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// Add this interface for extra fields possibly present in session.user
+interface SessionUserExtra {
+  id?: string;
+  firstName?: string;
+  lastName?: string;
+  loginName?: string;
+  userType?: string;
+}

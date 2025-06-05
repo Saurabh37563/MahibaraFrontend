@@ -1,24 +1,23 @@
 import axios from 'axios'
-import { USER_DATA_URL, ORGANIZATION_ENDPOINTS } from '@/constants/endpoints-constant'
+import {  ORGANIZATION_ENDPOINTS } from '@/constants/endpoints-constant'
 import { User, CreateOrganizationRequest, Organization } from '@/types/organization-types' 
 
 
 export const organizationApi = {
-  searchUsers: async (query: string): Promise<User[]> => {
-    const response = await axios.get(USER_DATA_URL?.searchUsers, {
-      params: { query },
+  searchUsers: async (): Promise<User[]> => {
+    const response = await axios.get(ORGANIZATION_ENDPOINTS?.getAllUserOrganizations, {
       headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
       },
     })
-    return response.data
+    return response.data?.data
   },
 
   getAllUserOrganizations: async (user_id: number): Promise<Organization[]> => {
     const response = await axios.get(ORGANIZATION_ENDPOINTS?.getAllUserOrganizations, {
       params: { user_id }, 
       headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
       },
     })
     return response.data?.data
@@ -27,7 +26,7 @@ export const organizationApi = {
   createOrganization: async (data: CreateOrganizationRequest): Promise<Organization> => {
     const response = await axios.post(ORGANIZATION_ENDPOINTS?.postCreateOrganization, data, {
       headers: {
-        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`,
+        Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
       },
     })
     return response.data?.data

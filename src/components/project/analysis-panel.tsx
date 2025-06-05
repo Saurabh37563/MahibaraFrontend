@@ -2,7 +2,7 @@
 
 import { LuChartPie } from "react-icons/lu";
 import { AnalysisSelectionModal } from "./create-analysis";
-import { z } from "zod";
+import type { Analysis } from "./create-analysis";
 
 type StatusEnum =
   | "success"
@@ -12,24 +12,22 @@ type StatusEnum =
   | "neutral"
   | "uploaded";
 
-// Use ItemSchema only for type inference, do not assign it if not used elsewhere
-type Item = z.infer<
-  ReturnType<typeof z.object> & {
-    id: z.ZodOptional<z.ZodString>;
-    name: z.ZodString;
-    status: StatusEnum;
-    summary: z.ZodOptional<z.ZodString>;
-    templateId: z.ZodOptional<z.ZodString>;
-  }
->;
+interface SelectedItem {
+  index: number;
+  type: "sheet" | "analysis";
+}
 
 interface AnalysisPanelProps {
-  analysis: Item[];
-  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
-  onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
+  analysis: Analysis[]; // Use unified Analysis type
+  selectedItem: SelectedItem | null;
+  onItemClick: (
+    item: Analysis,
+    type: "sheet" | "analysis",
+    index: number
+  ) => void;
   statusDotColors: Record<StatusEnum, string>;
-  onAnalysisCreate: (selectedAnalyses: Item[]) => void; // <-- change here
-  createdAnalysisTemplateIds: string[]; // Track which template IDs have been used
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
+  createdAnalysisTemplateIds: string[];
 }
 
 export default function AnalysisPanel({
@@ -73,7 +71,7 @@ export default function AnalysisPanel({
         ) : (
           analysis.map((item, index) => (
             <div
-              key={`analysis-${item.id ?? index}`}
+              key={`analysis-${item.working_id ?? index}`}
               className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
                 selectedItem?.index === index &&
                 selectedItem?.type === "analysis"
@@ -84,11 +82,12 @@ export default function AnalysisPanel({
             >
               <div className="text-xs flex items-center gap-2">
                 <LuChartPie className="text-gray-400" />
-                <span className="text-gray-950">{item.name}</span>
+                <span className="text-gray-950">{item.working_name}</span>
                 <span
                   className={`size-[6px] rounded-full ${
                     statusDotColors[
-                      item.status as keyof typeof statusDotColors
+                      (item.status?.toLowerCase?.() as keyof typeof statusDotColors) ||
+                        "neutral"
                     ] || "bg-gray-300"
                   }`}
                 />

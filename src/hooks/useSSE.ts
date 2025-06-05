@@ -6,6 +6,7 @@ interface UseSSEOptions {
   autoReconnect?: boolean;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
+  onError?: (err: Event) => void; // <-- specify type instead of any
 }
 
 interface SSEHook {
@@ -21,6 +22,7 @@ export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
     autoReconnect = true,
     reconnectInterval = 3000,
     maxReconnectAttempts = 5,
+    onError, // <-- add this line
   } = options;
 
   const [isConnected, setIsConnected] = useState(false);
@@ -75,6 +77,11 @@ export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
       eventSource.onerror = (event) => {
         console.error('[SSE] Connection error:', event);
         setIsConnected(false);
+
+        // Call user-provided onError handler if present
+        if (typeof onError === "function") {
+          onError(event);
+        }
         
         // Don't reconnect if manually disconnected
         if (isDisconnectedRef.current) {
@@ -118,7 +125,7 @@ export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
       console.error('[SSE] Failed to create connection:', err);
       setError(err instanceof Error ? err : new Error('Unknown SSE error'));
     }
-  }, [enabled, url, autoReconnect, maxReconnectAttempts, reconnectInterval]);
+  }, [enabled, url, autoReconnect, maxReconnectAttempts, reconnectInterval, onError]); // <-- add onError
 
   const addEventListener = useCallback((eventType: string, handler: (event: MessageEvent) => void) => {
     console.log(`[SSE] Adding event listener for: ${eventType}`);

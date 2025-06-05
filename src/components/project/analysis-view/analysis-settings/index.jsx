@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import { FiInfo, FiCheck } from "react-icons/fi";
 import { PiMagicWand } from "react-icons/pi";
 import { Loader2, Settings, Trash2, CheckCircle2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -34,49 +36,35 @@ import {
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
+import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 
-export default function ColumnMappingDialog() {
+export default function ColumnMappingDialog({
+  projectId,
+  analysisType,
+  open: controlledOpen,
+  setOpen: setControlledOpen,
+  children, // custom trigger
+}) {
+  const queryClient = useQueryClient();
+
   // Dialog open state
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] =
+    typeof controlledOpen === "boolean"
+      ? [controlledOpen, setControlledOpen]
+      : useState(false);
 
-  // Mock data and state for demonstration
+  // State for loading column mapping data
   const [isLoading, setIsLoading] = useState(false);
-  const [sourceColumns, setSourceColumns] = useState([
-    {
-      id: "1",
-      name: "First Name",
-      summary: "Customer's first name",
-      required: true,
-    },
-    {
-      id: "2",
-      name: "Last Name",
-      summary: "Customer's last name",
-      required: true,
-    },
-    {
-      id: "3",
-      name: "Email",
-      summary: "Customer's email address",
-      required: true,
-    },
-  ]);
 
-  const [targetColumns, setTargetColumns] = useState([
-    { id: "a", name: "First Name", required: true },
-    { id: "b", name: "Last Name", required: true },
-    { id: "c", name: "Email Address", required: true },
-  ]);
+  // States for column mapping data
+  const [sourceColumns, setSourceColumns] = useState([]);
+  const [targetColumns, setTargetColumns] = useState([]);
+  const [columnMappingQuery, setColumnMappingQuery] = useState({ data: {} });
 
-  const [columnMappingQuery, setColumnMappingQuery] = useState({
-    data: { 1: "a", 2: "b", 3: "c" },
-  });
+  // State to track approved mappings
+  const [approvedMappings, setApprovedMappings] = useState(new Set());
 
   // New state to track approved mappings
-  const [approvedMappings, setApprovedMappings] = useState(
-    new Set(["1", "2", "3"]),
-  );
-
   const [saveMapping, setSaveMapping] = useState({ isLoading: false });
   const [isApproveAllLoading, setIsApproveAllLoading] = useState(false);
 
@@ -162,15 +150,92 @@ export default function ColumnMappingDialog() {
     setColumnMappingQuery({ data: newData });
   };
 
-  const handleSubmit = (callback) => {
+  const handleSubmit = async (callback) => {
     setSaveMapping({ isLoading: true });
-    setTimeout(() => {
-      setSaveMapping({ isLoading: false });
+    try {
+      await axios.post(
+        BASE_TEMP_BACKEND_URL +
+          `/api/v1/sheet/sheet/column_mapping/${projectId}/${analysisType}/save`,
+        {
+          sheet_types: {
+            PO: {
+              status: "success",
+              mapped_columns: Object.entries(columnMappingQuery.data).map(
+                ([sourceColumn, targetColumn]) => ({
+                  source_column: sourceColumn,
+                  target_column: targetColumn,
+                })
+              ),
+              source_columns: sourceColumns.map((col) => col.id),
+              target_columns: targetColumns.map((col) => col.id),
+            },
+          },
+        }
+      );
+      queryClient.invalidateQueries({
+        queryKey: ["analysisData", projectId, analysisType],
+      }); // Reload analysis data
       callback();
-    }, 1000);
+    } catch (error) {
+      console.error("Failed to save column mappings:", error);
+    } finally {
+      setSaveMapping({ isLoading: false });
+    }
   };
 
   const canComplete = isAllRequiredMapped && isAllRequiredApproved;
+
+  // Fetch column mapping data when dialog opens
+  useEffect(() => {
+    if (!open || !projectId || !analysisType) return;
+
+    const fetchColumnMappingData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await axios.get(
+          BASE_TEMP_BACKEND_URL +
+            `/api/v1/sheet/sheet/column_mapping/${projectId}/${analysisType}`
+        );
+        const mappingData = response.data?.data?.sheet_types?.PO;
+
+        if (mappingData) {
+          // Populate source columns (mark all as required)
+          setSourceColumns(
+            mappingData.source_columns.map((sourceColumn) => ({
+              id: sourceColumn,
+              name: sourceColumn,
+              required: true, // Only source columns are required
+            }))
+          );
+
+          // Populate target columns
+          setTargetColumns(
+            mappingData.target_columns.map((targetColumn) => ({
+              id: targetColumn,
+              name: targetColumn,
+              required: false, // Target columns are not required
+            }))
+          );
+
+          // Populate column mapping query
+          const mappedColumns = {};
+          mappingData.mapped_columns.forEach((mapping) => {
+            mappedColumns[mapping.source_column] = mapping.target_column;
+          });
+          setColumnMappingQuery({ data: mappedColumns });
+
+          // Approve all mapped columns by default
+          setApprovedMappings(new Set(Object.keys(mappedColumns)));
+        }
+      } catch (error) {
+        console.error("Failed to fetch column mapping data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchColumnMappingData();
+  }, [open, projectId, analysisType]);
 
   return (
     <>
@@ -199,10 +264,15 @@ export default function ColumnMappingDialog() {
       `}</style>
 
       <Dialog open={open} onOpenChange={setOpen}>
+        {/* Allow custom trigger via children, fallback to settings icon */}
         <DialogTrigger asChild>
-          <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
-            <Settings className="size-4" />
-          </Button>
+          {children ? (
+            children
+          ) : (
+            <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
+              <Settings className="size-4" />
+            </Button>
+          )}
         </DialogTrigger>
         <DialogContent className="max-w-full sm:max-w-[95%] md:max-w-[85%] lg:max-w-[75%] h-[90vh] p-3 sm:p-4 md:p-6 overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">

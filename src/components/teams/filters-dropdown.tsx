@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,12 +22,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  CalendarIcon, 
-  FilterIcon, 
-  SortAscIcon, 
-  SortDescIcon, 
-  XIcon 
+import {
+  CalendarIcon,
+  FilterIcon,
+  SortAscIcon,
+  SortDescIcon,
+  XIcon,
 } from "lucide-react";
 
 import {
@@ -40,17 +40,12 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { useDebounce } from "@/hooks/use-debounce";
-export type StatusOption =
-  | "all"
-  | "draft"
-  | "in-progress"
-  | "completed"
-  | "pending";
-  export type SortField = "title" | "date" | "status" | "none"; // Added "none"
-  export type SortOrder = "asc" | "desc" | "none"; // Added "none"
-export type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
+type StatusOption = "all" | "draft" | "in-progress" | "completed" | "pending";
+ type SortField = "title" | "date" | "status" | "none"; // Added "none"
+ type SortOrder = "asc" | "desc" | "none"; // Added "none"
+ type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
 
-export interface FilterState {
+interface FilterState {
   status: StatusOption;
   sortField: SortField;
   sortOrder: SortOrder;
@@ -66,7 +61,6 @@ const STATUS_OPTIONS: { value: StatusOption; label: string }[] = [
   { value: "pending", label: "Pending" },
 ];
 
-
 const SORT_FIELD_OPTIONS: { value: SortField; label: string }[] = [
   { value: "none", label: "No Sort" },
   { value: "title", label: "Title" },
@@ -80,7 +74,7 @@ const DATE_RANGE_OPTIONS: { value: DateRange; label: string }[] = [
   { value: "week", label: "This Week" },
   { value: "month", label: "This Month" },
   { value: "quarter", label: "This Quarter" },
-  { value: "year", label: "This Year" }
+  { value: "year", label: "This Year" },
 ];
 
 const DEFAULT_FILTERS: FilterState = {
@@ -98,10 +92,17 @@ export default function Filters() {
 
   const [filters, setFilters] = useState<FilterState>(() => {
     return {
-      status: (searchParams.get("status") as StatusOption) || DEFAULT_FILTERS.status,
-      sortField: (searchParams.get("sortField") as SortField) || DEFAULT_FILTERS.sortField,
-      sortOrder: (searchParams.get("sortOrder") as SortOrder) || DEFAULT_FILTERS.sortOrder,
-      dateRange: (searchParams.get("dateRange") as DateRange) || DEFAULT_FILTERS.dateRange,
+      status:
+        (searchParams.get("status") as StatusOption) || DEFAULT_FILTERS.status,
+      sortField:
+        (searchParams.get("sortField") as SortField) ||
+        DEFAULT_FILTERS.sortField,
+      sortOrder:
+        (searchParams.get("sortOrder") as SortOrder) ||
+        DEFAULT_FILTERS.sortOrder,
+      dateRange:
+        (searchParams.get("dateRange") as DateRange) ||
+        DEFAULT_FILTERS.dateRange,
       search: searchParams.get("search") || DEFAULT_FILTERS.search,
     };
   });
@@ -136,7 +137,6 @@ export default function Filters() {
       : pathname;
     router.push(newUrl, { scroll: false });
   }, [debouncedFilters, pathname, router]);
-
 
   const updateFilter = <K extends keyof FilterState>(
     key: K,

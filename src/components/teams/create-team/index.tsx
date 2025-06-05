@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -59,7 +58,7 @@ export default function CreateTeam() {
 
       await createTeamMutation.mutateAsync({
         org_id: activeOrg.id,
-        team: teamData,   
+        team: teamData,
       });
 
       toast.success("Team created successfully.");
@@ -69,7 +68,7 @@ export default function CreateTeam() {
       console.error("Failed to create team:", error);
     }
   };
-  
+
   const handleCancel = () => setOpen(false);
 
   if (isDesktop) {
@@ -81,23 +80,32 @@ export default function CreateTeam() {
             <span className="sr-only">Create Team</span>
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[90vh] max-w-[800px] w-full overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="max-h-screen !rounded-none !max-w-screen h-full w-full flex flex-col overflow-hidden p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="border-b p-4 shrink-0">
             <DialogTitle>Create New Team</DialogTitle>
-            <DialogDescription>
-              Create a new team and add members to collaborate with.
-            </DialogDescription>
           </DialogHeader>
+
+          {/* Close button (optional positioning tweak) */}
           <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
-          <CreateTeamForm
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isDesktop={isDesktop}
-            isPending={createTeamMutation.isPending}
-          />
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto px-4 py-6">
+            <CreateTeamForm
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isDesktop={isDesktop}
+              isPending={createTeamMutation.isPending}
+            />
+          </div>
+
+          {/* Optional Footer (if you plan to add actions later) */}
+          {/* <div className="shrink-0 border-t px-4 py-2">
+    <Button type="submit">Submit</Button>
+  </div> */}
         </DialogContent>
       </Dialog>
     );

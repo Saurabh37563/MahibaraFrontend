@@ -12,7 +12,7 @@ export function useSearchUsers(query: string): UseQueryResult<User[], Error> {
   })
 }
 
-export interface CreateOrganizationParams {
+ interface CreateOrganizationParams {
   name: string
   description?: string
   owner_id: number

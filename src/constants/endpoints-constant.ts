@@ -1,6 +1,7 @@
 // API URL Constants
 export const BASE_BACKEND_URL = "http://localhost:8000/api/v1";
 export const BASE_TEMP_BACKEND_URL = "http://192.168.1.63:8000"
+// export const BASE_TEMP_BACKEND_URL = "http://localhost:8000"
 const BASE_AUTH_URL = BASE_BACKEND_URL + "/auth";
 const BASE_ORG_URL = BASE_BACKEND_URL + "/organization";
 const BASE_USER_DATA = BASE_BACKEND_URL + "/users";

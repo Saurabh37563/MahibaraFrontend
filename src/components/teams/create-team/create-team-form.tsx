@@ -87,108 +87,114 @@ export function CreateTeamForm({
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-6 overflow-x-hidden"
+        className="flex flex-col h-full"
       >
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Team Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter team name" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto space-y-6 pr-1">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Team Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter team name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea
-                  placeholder="Enter team description"
-                  className="resize-none min-h-[100px]"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Enter team description"
+                    className="resize-none min-h-[100px]"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <FormField
-          control={form.control}
-          name="members"
-          render={() => (
-            <FormItem className="w-full">
-              <FormLabel>Team Members</FormLabel>
-              <FormControl>
-                <TeamMemberSelector
-                  selectedMembers={selectedMembers}
-                  onMembersChange={handleMembersChange}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="members"
+            render={() => (
+              <FormItem className="w-full">
+                <FormLabel>Team Members</FormLabel>
+                <FormControl>
+                  <TeamMemberSelector
+                    selectedMembers={selectedMembers}
+                    onMembersChange={handleMembersChange}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-        {isDesktop ? (
-          <div className="flex justify-end gap-2 mt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              className="bg-green-900 hover:bg-green-800"
-              disabled={isPending}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Team"
-              )}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <Button
-              type="submit"
-              className="bg-green-900 hover:bg-green-800"
-              disabled={isPending}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                "Create Team"
-              )}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isPending}
-            >
-              Cancel
-            </Button>
-          </div>
-        )}
+        {/* Sticky footer actions */}
+        <div className="shrink-0 mt-4 border-t pt-4 bg-background sticky bottom-0 z-10">
+          {isDesktop ? (
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                className="bg-green-900 hover:bg-green-800"
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Team"
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Button
+                type="submit"
+                className="bg-green-900 hover:bg-green-800"
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Team"
+                )}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isPending}
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+        </div>
       </form>
     </Form>
   );

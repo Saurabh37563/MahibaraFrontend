@@ -1,7 +1,26 @@
 import { useCallback, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { FilterState } from '@/types/project-types';
-import { DEFAULT_FILTERS } from '@/constants/project-filter-constants';
+
+// Types and constants inlined from deleted files
+export type StatusOption = "all" | "active" | "completed" | "archived" | "pending" | "error";
+export type SortField = "title" | "date" | "priority" | "status";
+export type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
+
+export type FilterState = {
+  status: StatusOption;
+  sortField: SortField;
+  sortOrder: "asc" | "desc";
+  dateRange: DateRange;
+  search: string;
+};
+
+export const DEFAULT_FILTERS: FilterState = {
+  status: "all",
+  sortField: "date",
+  sortOrder: "desc",
+  dateRange: "all",
+  search: "",
+};
 
 export function useFilterParams(filters: FilterState, setFilters: (filters: FilterState) => void) {
   const router = useRouter();

@@ -1,7 +1,7 @@
 // auth/zitadel.ts
 import type { OAuthConfig, OAuthUserConfig } from "next-auth/providers";
 
-export interface ZitadelProfile {
+ interface ZitadelProfile {
   sub: string;
   name?: string;
   given_name?: string;
@@ -18,20 +18,19 @@ export default function Zitadel(options: OAuthUserConfig<ZitadelProfile>): OAuth
     id: "zitadel",
     name: "Zitadel",
     type: "oauth",
-    issuer: "https://mab-learn-0arqdk.us1.zitadel.cloud",
-    wellKnown: "https://mab-learn-0arqdk.us1.zitadel.cloud/.well-known/openid-configuration",
+    issuer: "https://auth.southguild.tech",
+    wellKnown: "https://auth.southguild.tech/.well-known/openid-configuration",
     authorization: {
-      url: "https://mab-learn-0arqdk.us1.zitadel.cloud/oauth/v2/authorize",
+      url: "https://auth.southguild.tech/oauth/v2/authorize",
       params: {
         scope: "openid email profile",
-        instance_id: "318212027426337769"
       }
     },
     token: {
-      url: "https://mab-learn-0arqdk.us1.zitadel.cloud/oauth/v2/token",
+      url: "https://auth.southguild.tech/oauth/v2/token",
     },
     userinfo: {
-      url: "https://mab-learn-0arqdk.us1.zitadel.cloud/oidc/v1/userinfo",
+      url: "https://auth.southguild.tech/oauth/v2/token",
     },
     profile(profile) {
       return {

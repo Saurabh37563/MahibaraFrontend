@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, createContext, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -57,11 +57,25 @@ function useDebounce<T>(value: T, delay = 500): T {
 interface UserData {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   avatar?: string;
   image?: string;
-  // Optional image field for Avatar
-  role: string;
+  loginName?: string;
+  role?: string;
+}
+
+// Add a type for the auth context user
+interface AuthUser {
+  id: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  image?: string;
+  loginName?: string;
+  userType?: string;
 }
 
 interface SearchResult {
@@ -76,23 +90,6 @@ interface SearchResponse {
   results: SearchResult[];
   nextCursor: string | null;
   totalCount: number;
-}
-
-// User Context
-const UserContext = createContext<UserData | null>(null);
-
-export function UserProvider({ children }: { children: React.ReactNode }) {
-  const userData: UserData = {
-    id: "user-1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    avatar: "https://github.com/shadcn.png",
-    role: "Admin",
-  };
-
-  return (
-    <UserContext.Provider value={userData}>{children}</UserContext.Provider>
-  );
 }
 
 // Routes that should display the search bar
@@ -261,15 +258,20 @@ const HeaderContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Map auth.user to UserData shape
-  const user: UserData | null = auth.user
+  // Map auth.user to UserData shape, fallback only if missing
+  const rawUser = auth.user as AuthUser | null | undefined;
+
+  const user: UserData | null = rawUser
     ? {
-        id: auth.user.id,
-        name: auth.user.name ?? "",
-        email: auth.user.email,
-        avatar: auth.user.image ?? undefined,
-        image: auth.user.image ?? undefined,
-        role: auth.user.userType ?? "User",
+        id: rawUser.id,
+        name: rawUser.name ?? "",
+        firstName: rawUser.firstName ?? "",
+        lastName: rawUser.lastName ?? "",
+        email: rawUser.email ?? "",
+        avatar: rawUser.image ?? undefined,
+        image: rawUser.image ?? undefined,
+        loginName: rawUser.loginName ?? "",
+        role: rawUser.userType ?? "User",
       }
     : null;
 
@@ -334,13 +336,22 @@ const HeaderContent = () => {
   }, []);
 
   const getUserInitials = () => {
-    if (!user || !user.name) return "U";
-
-    return user.name
-      .split(" ")
-      .map((n: string) => n[0])
-      .join("")
-      .toUpperCase();
+    if (!user) return "U";
+    if (user.firstName || user.lastName) {
+      return (
+        (
+          (user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")
+        ).toUpperCase() || "U"
+      );
+    }
+    if (user.name) {
+      return user.name
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase();
+    }
+    return "U";
   };
 
   const isFunctionsPage = pathname === "/functions";
@@ -406,7 +417,7 @@ const HeaderContent = () => {
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={user?.image}
+                        src={user?.image || undefined}
                         alt={user?.name || "User"}
                       />
                       <AvatarFallback>{getUserInitials()}</AvatarFallback>
@@ -419,10 +430,14 @@ const HeaderContent = () => {
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
                       <p className="text-sm font-medium leading-none">
-                        {user?.name}
+                        {user?.firstName || user?.lastName
+                          ? `${user?.firstName ?? ""} ${
+                              user?.lastName ?? ""
+                            }`.trim()
+                          : user?.name || "User"}
                       </p>
                       <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email}
+                        {user?.email || ""}
                       </p>
                     </div>
                   </DropdownMenuLabel>
@@ -531,11 +546,4 @@ const Header = () => {
   );
 };
 
-// Wrap the header in the UserProvider when exporting
-export default function HeaderWithUserContext() {
-  return (
-    <UserProvider>
-      <Header />
-    </UserProvider>
-  );
-}
+export default Header;

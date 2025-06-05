@@ -7,11 +7,12 @@ export const TEAMS_QUERY_KEYS = {
   byOrganization: (organizationId: number) => [...TEAMS_QUERY_KEYS.all, 'organization', organizationId] as const,
 };
 
-export const useGetTeamsByOrganization = (organizationId: number | null) => {
+export const useGetTeamsByOrganization = (organizationId: number | string | null) => {
+  const orgId = Number(organizationId); // Convert to number
   return useQuery<Team[], Error>({
-    queryKey: TEAMS_QUERY_KEYS.byOrganization(organizationId as number),
-    queryFn: () => TeamsService.getTeamsByOrganization(organizationId!),
-    enabled: !!organizationId,
+    queryKey: TEAMS_QUERY_KEYS.byOrganization(orgId),
+    queryFn: () => TeamsService.getTeamsByOrganization(orgId),
+    enabled: !!orgId,
   });
 };
 

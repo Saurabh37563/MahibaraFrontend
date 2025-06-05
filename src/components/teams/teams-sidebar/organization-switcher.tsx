@@ -10,9 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -27,12 +24,14 @@ interface OrganizationSwitcherProps {
   activeOrg: Organization | null;
   setActiveOrg: (org: Organization) => void;
   setActiveTeam: (team: Team | null) => void;
+  setProjectName?: (name: string | null) => void; // <-- add this prop
 }
 
 export function OrganizationSwitcher({
   activeOrg,
   setActiveOrg,
   setActiveTeam,
+  setProjectName, // <-- add this
 }: OrganizationSwitcherProps) {
   const { data: organizations = [], isLoading } = useGetAllUserOrganizations(
     10 // TODO : Change this to the actual user ID
@@ -46,8 +45,17 @@ export function OrganizationSwitcher({
   useEffect(() => {
     if (!isLoading && organizations.length > 0 && !activeOrg) {
       setActiveOrg(organizations[0]);
+      setActiveTeam(null);
+      if (setProjectName) setProjectName(null);
     }
-  }, [organizations, isLoading, activeOrg, setActiveOrg]);
+  }, [
+    organizations,
+    isLoading,
+    activeOrg,
+    setActiveOrg,
+    setActiveTeam,
+    setProjectName,
+  ]);
 
   if (isLoading) {
     return (
@@ -58,7 +66,7 @@ export function OrganizationSwitcher({
   }
 
   return (
-    <div className="flex-1 ">
+    <div className="flex-1">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu>
@@ -99,37 +107,45 @@ export function OrganizationSwitcher({
                   ? `${triggerRef.current?.clientWidth}px`
                   : undefined,
               }}
-              className="min-w-[200px] rounded-lg"
+              className="w-[var(--radix-dropdown-menu-trigger-width)] rounded-lg flex flex-col max-h-[70vh]"
               align="start"
               side={isMobile ? "bottom" : "right"}
               sideOffset={4}
             >
-              <DropdownMenuLabel className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground px-2 py-1.5">
                 Organizations
-              </DropdownMenuLabel>
-              {organizations.map((org, index) => (
-                <DropdownMenuItem
-                  key={org.id}
-                  onClick={() => {
-                    setActiveOrg(org);
-                    setActiveTeam(null); // Reset team
-                  }}
-                  className="gap-2 p-2"
-                >
-                  <div className="flex size-6 items-center justify-center rounded-sm border">
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={org?.image ?? "Test"} alt={org.name} />
-                      <AvatarFallback>
-                        {org.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                  </div>
-                  {org.name}
-                  <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
-                </DropdownMenuItem>
-              ))}
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5">
+              </div>
+
+              {/* Scrollable org list */}
+              <div className="overflow-y-auto flex-1">
+                {organizations.map((org) => (
+                  <DropdownMenuItem
+                    key={org.id}
+                    onClick={() => {
+                      setActiveOrg(org);
+                      setActiveTeam(null);
+                      if (setProjectName) setProjectName(null);
+                    }}
+                    className="gap-2 p-2"
+                  >
+                    <div className="flex size-6 items-center justify-center rounded-sm border">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage
+                          src={org?.image ?? "Test"}
+                          alt={org.name}
+                        />
+                        <AvatarFallback>
+                          {org.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <span className="truncate max-w-[150px]">{org.name}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+
+              {/* Sticky footer */}
+              <div className="border-t px-2 py-2 bg-background">
                 <CreateOrganization />
               </div>
             </DropdownMenuContent>

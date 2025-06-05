@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,12 +19,15 @@ import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 import { useParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
-
+import { queryClient } from "@/providers/query-provider";
 // Define our data types
-interface Analysis {
-  id: string;
-  name: string;
+export interface Analysis {
+  working_id: string;
+  working_name: string;
+  status: string;
   summary?: string;
+  id?: string; // optional, for compatibility
+  name?: string; // optional, for compatibility
 }
 
 interface SubSection {
@@ -43,6 +46,25 @@ interface AnalysisSelectionModalProps {
   onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // <-- change here
   createdAnalysisTemplateIds: string[];
 }
+
+// Add types for API response mapping
+type ApiAnalysis = {
+  id?: string;
+  name?: string;
+  summary?: string;
+};
+
+type ApiSubSection = {
+  id?: string;
+  name?: string;
+  analyses?: ApiAnalysis[];
+};
+
+type ApiSection = {
+  id?: string;
+  name?: string;
+  subSections?: ApiSubSection[];
+};
 
 // Sample data - In real app, this would come from API
 
@@ -64,7 +86,28 @@ export function AnalysisSelectionModal({
       const response = await axios.get(
         `${BASE_TEMP_BACKEND_URL}/api/v1/projects/working-types/hierarchy`
       );
-      setAnalysisData(response.data?.data);
+      // Map all analyses to have working_id, working_name, and status, ensuring no undefined
+      const mappedData: Section[] = (response.data?.data as ApiSection[]).map(
+        (section) => ({
+          id: section.id ?? "",
+          name: section.name ?? "",
+          subSections: (section.subSections ?? []).map(
+            (subSection: ApiSubSection) => ({
+              id: subSection.id ?? "",
+              name: subSection.name ?? "",
+              analyses: (subSection.analyses ?? []).map((a: ApiAnalysis) => ({
+                working_id: a.id ?? "",
+                working_name: a.name ?? "",
+                status: "neutral", // or set from API if available
+                summary: a.summary ?? "",
+                id: a.id ?? "",
+                name: a.name ?? "",
+              })),
+            })
+          ),
+        })
+      );
+      setAnalysisData(mappedData);
     } catch (error) {
       console.error("Error fetching analysis data:", error);
       toast.error("Failed to load analysis templates. Please try again later.");
@@ -99,10 +142,18 @@ export function AnalysisSelectionModal({
     const allAnalyses: Analysis[] = analysisData.flatMap((section) =>
       section.subSections.flatMap((subSection) => subSection.analyses)
     );
-    const selectedAnalysisObjects = allAnalyses.filter((a) =>
-      selectedAnalyses.includes(a.id)
-    );
+    // Ensure all returned objects have working_id, working_name, and status
+    const selectedAnalysisObjects = allAnalyses
+      .filter((a) => selectedAnalyses.includes(a.working_id))
+      .map((a) => ({
+        ...a,
+        working_id: a.working_id,
+        working_name: a.working_name,
+        status: a.status || "neutral",
+      }));
     onAnalysisCreate(selectedAnalysisObjects);
+    // Invalidate the query to refetch analyses after update
+    queryClient.invalidateQueries({ queryKey: ["projectAnalyses", id] });
     setSelectedAnalyses([]);
     setSearchQuery("");
     setOpen(false);
@@ -126,11 +177,11 @@ export function AnalysisSelectionModal({
                 ...subSection,
                 analyses: subSection.analyses.filter(
                   (analysis) =>
-                    analysis.name
+                    (analysis.name ?? "")
                       .toLowerCase()
                       .includes(searchQuery.toLowerCase()) ||
-                    analysis.summary
-                      ?.toLowerCase()
+                    (analysis.summary ?? "")
+                      .toLowerCase()
                       .includes(searchQuery.toLowerCase())
                 ),
               }))
@@ -141,26 +192,27 @@ export function AnalysisSelectionModal({
   const handleSelectSection = (section: Section) => {
     // Get all analysis IDs from this section
     const sectionAnalysisIds = section.subSections.flatMap((subSection) =>
-      subSection.analyses.map((analysis) => analysis.id)
+      subSection.analyses.map((analysis) => analysis.id ?? "")
     );
 
     // Check if all analyses in this section are already selected
     const allSelected = sectionAnalysisIds.every((id) =>
-      selectedAnalyses.includes(id)
+      selectedAnalyses.includes(id ?? "")
     );
 
     if (allSelected) {
       // If all are selected, deselect them
       setSelectedAnalyses((prev) =>
-        prev.filter((id) => !sectionAnalysisIds.includes(id))
+        prev.filter((id) => !sectionAnalysisIds.includes(id ?? ""))
       );
     } else {
       // Otherwise, add all missing analyses
       const newSelectedAnalyses = [...selectedAnalyses];
 
       sectionAnalysisIds.forEach((id) => {
-        if (!newSelectedAnalyses.includes(id)) {
-          newSelectedAnalyses.push(id);
+        const safeId = id ?? "";
+        if (!newSelectedAnalyses.includes(safeId)) {
+          newSelectedAnalyses.push(safeId);
         }
       });
 
@@ -175,7 +227,7 @@ export function AnalysisSelectionModal({
           <IoMdAdd className="text-muted-foreground cursor-pointer" size={16} />
         </Button>
       </DialogTrigger>
-      <DialogContent className="[&>button:last-child]:hidden sm:max-w-[65dvw] bg-slate-50 p-0 gap-y-0 border-0 ring-0 outline-0 flex flex-col h-[80dvh] max-h-[80dvh] overflow-hidden">
+      <DialogContent className="[&>button:last-child]:hidden  bg-slate-50 p-0 gap-y-0 border-0 ring-0 outline-0 flex flex-col max-h-screen !rounded-none !max-w-screen h-full w-full overflow-y-auto">
         {/* Header - Fixed at top */}
         <DialogHeader className="bg-primary text-white p-[18px] flex-shrink-0">
           <DialogTitle>Add Analysis</DialogTitle>
@@ -211,7 +263,7 @@ export function AnalysisSelectionModal({
               {filteredData.map((section) => {
                 // Calculate if all analyses in this section are selected
                 const sectionAnalysisIds = section.subSections.flatMap((sub) =>
-                  sub.analyses.map((analysis) => analysis.id)
+                  sub.analyses.map((analysis) => analysis.id ?? "")
                 );
                 const allSectionSelected =
                   sectionAnalysisIds.length > 0 &&
@@ -246,14 +298,13 @@ export function AnalysisSelectionModal({
                         <div className="mt-4 flex items-center gap-2 flex-wrap space-y-2 w-full">
                           {subSection.analyses.map((analysis) => {
                             const isSelected = selectedAnalyses.includes(
-                              analysis.id
+                              analysis.id ?? ""
                             );
-
                             return (
                               <div
-                                key={analysis?.id}
+                                key={analysis.id ?? ""}
                                 onClick={() =>
-                                  handleToggleAnalysis(analysis.id)
+                                  handleToggleAnalysis(analysis.id ?? "")
                                 }
                                 className={`flex flex-col gap-1 border items-start min-w-[350px] rounded-md w-fit bg-white p-4 
                                   ${
@@ -265,24 +316,24 @@ export function AnalysisSelectionModal({
                               >
                                 <div className="flex justify-between w-full items-center space-x-2">
                                   <Label
-                                    htmlFor={analysis.id}
+                                    htmlFor={analysis.id ?? ""}
                                     className="cursor-pointer font-medium"
                                   >
-                                    {analysis.name}
+                                    {analysis.name ?? ""}
                                   </Label>
                                   <Checkbox
-                                    id={analysis.id}
+                                    id={analysis.id ?? ""}
                                     checked={isSelected}
                                     onClick={(e) => e.stopPropagation()}
                                     onChange={(e) => {
                                       e.stopPropagation();
-                                      handleToggleAnalysis(analysis.id);
+                                      handleToggleAnalysis(analysis.id ?? "");
                                     }}
                                     className="peer cursor-pointer"
                                   />
                                 </div>
                                 <Label className="text-gray-600 font-normal text-[14px] cursor-pointer">
-                                  {analysis?.summary}
+                                  {analysis?.summary ?? ""}
                                 </Label>
                               </div>
                             );

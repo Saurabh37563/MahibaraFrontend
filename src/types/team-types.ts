@@ -48,7 +48,6 @@ export const TeamSchema = TeamCreateSchema.extend({
 });
 
 // Inferred Types
-export type TeamMemberType = z.infer<typeof TeamMemberSchema>;
 export type TeamMemberWithPermission = z.infer<typeof TeamMemberWithPermissionSchema>;
 export type TeamCreate = z.infer<typeof TeamCreateSchema>;
 export type Team = z.infer<typeof TeamSchema>;
@@ -74,8 +73,6 @@ export const TeamFormSchema = z.object({
     message: "Please select at least one team member.",
   }),
 });
-
-export type TeamFormValues = z.infer<typeof TeamFormSchema>;
 
 // Default Values
 export const defaultTeamMember: TeamMemberWithPermission = {

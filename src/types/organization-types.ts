@@ -25,8 +25,3 @@ export interface CreateOrganizationRequest {
   description?: string
   organisation_admin: number
 }
-
-// For query parameters (example)
-export interface GetAllUserOrganizationsParams {
-  user_id: string
-}

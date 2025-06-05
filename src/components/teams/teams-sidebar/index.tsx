@@ -22,7 +22,7 @@ import { TeamSchema } from "@/contexts/team-context";
 import type { Organization } from "@/contexts/team-context";
 
 export default function FunctionsSidebar() {
-  const { activeOrg, setActiveOrg, activeTeam, setActiveTeam } =
+  const { activeOrg, setActiveOrg, activeTeam, setActiveTeam, setProjectName } =
     useTeamContext();
 
   const sidebarContext = useSidebar();
@@ -48,6 +48,8 @@ export default function FunctionsSidebar() {
   // Helper to wrap setActiveOrg to accept Organization (id as string)
   const handleSetActiveOrg = (org: Organization) => {
     setActiveOrg(org);
+    setActiveTeam(null);
+    setProjectName(null);
   };
 
   return (
@@ -64,6 +66,7 @@ export default function FunctionsSidebar() {
               activeOrg={activeOrg}
               setActiveOrg={handleSetActiveOrg}
               setActiveTeam={setActiveTeam}
+              setProjectName={setProjectName}
             />
 
             <Separator />
@@ -71,7 +74,7 @@ export default function FunctionsSidebar() {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-500">
-                  Teams
+                  Functions
                 </label>
                 {activeOrg && <CreateTeam />}
               </div>
@@ -94,13 +97,13 @@ export default function FunctionsSidebar() {
                           activeTeam?.id === team.id ? "default" : "ghost"
                         }
                         className={cn(
-                          "w-full flex justify-between capitalize  text-left font-normal",
+                          "w-full flex justify-between capitalize text-left font-normal",
                           activeTeam?.id === team.id &&
                             "bg-green-400/20 text-green-950 hover:bg-green-400/30"
                         )}
                         onClick={() => {
-                          console.log("Selected team:", team);
                           setActiveTeam(team);
+                          setProjectName(team.name); // Use team name as project name
                           if (isMobile) {
                             setIsOpen(false);
                           }

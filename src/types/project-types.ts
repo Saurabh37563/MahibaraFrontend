@@ -21,7 +21,7 @@ export const ProjectStatusSchema = z.enum([
   ProjectStatusEnum.ERROR,
 ]);
 
-export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
+ type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
 
 // Project Schema
 export const ProjectSchema = z.object({
@@ -70,7 +70,7 @@ export interface UploadedFileInfo {
   status: FileStatus;
 }
 
-export type FileStatus = "uploading" | "completed" | "error";
+ type FileStatus = "uploading" | "completed" | "error";
 
 export interface UploadProgress {
   fileId: string;
@@ -106,18 +106,6 @@ export interface FileUploadResponse {
 export interface SheetType {
   name: string;
   isValidated: boolean;
-}
-
-export interface SheetData {
-  name: string;
-  headers: string[];
-  rows: Record<string, unknown>[];
-}
-
-export interface StandardSheet {
-  id: string;
-  name: string;
-  fields: string[];
 }
 
 // Sheet Mapping Types
@@ -156,7 +144,7 @@ export const MappingSchema = z.object({
   mappings: z.record(z.string(), z.string()),
 });
 
-export type MappingType = z.infer<typeof MappingSchema>;
+ type MappingType = z.infer<typeof MappingSchema>;
 
 // API Types
 export interface Project {
@@ -181,28 +169,9 @@ export interface UpdateProjectStatusRequest {
   status: ProjectStatus;
 }
 
-export interface ProcessFilesRequest {
+ interface ProcessFilesRequest {
   files: UploadedFileInfo[];
   mappings: MappingType[];
-}
-
-export interface FileProcessingResult {
-  success: boolean;
-  fileId: string;
-  processedRecords: number;
-  errors?: string[];
-}
-
-export interface SheetMappingSubmitRequest {
-  project_id: string;
-  mappings: Array<{
-    file_id: number;
-    file_name: string;
-    sheet_id: string;
-    sheet_name: string;
-    sheet_type: string;
-    sheet_index: number; // Add this line
-  }>;
 }
 
 // Helper Functions

@@ -13,15 +13,18 @@ import SpreadSheetView from "./sheet-type-view";
 import { Button } from "@/components/ui/button";
 import { Menu, ChevronRight } from "lucide-react";
 import axios from "axios";
-import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
+import {
+  BASE_TEMP_BACKEND_URL,
+  FILE_UPLOAD_ENDPOINTS,
+} from "@/constants/endpoints-constant";
 import { useParams } from "next/navigation";
 
 // Import the new components
 import SheetsPanel from "./sheets-panel";
 import AnalysisPanel from "./analysis-panel";
 import MobileSidebar from "./mobile-sidebar";
-import { useQuery } from "@tanstack/react-query";
-
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient } from "@/providers/query-provider";
 // Convert StatusEnum to a type and a union string literal
 type StatusEnum =
   | "success"
@@ -58,10 +61,33 @@ type SelectedItem = Item & {
   index: number;
 };
 
+// Add this type for fetched analysis
+type AnalysisAPIItem = {
+  working_id: string;
+  working_name: string;
+  status: string;
+};
+
+// import type { Analysis } from "./create-analysis";
+import type { Analysis } from "./create-analysis";
+
+// Define a union type for all possible analysis-like objects
+type AnalysisLike = Analysis | AnalysisPanelItem | AnalysisAPIItem;
+
+// Helper to convert AnalysisPanelItem/AnalysisAPIItem to AnalysisItem (for AnalysisPanel)
+const toAnalysisItem = (item: AnalysisLike): Analysis => ({
+  working_id:
+    (item as Analysis).working_id ?? (item as AnalysisPanelItem).id ?? "",
+  working_name:
+    (item as Analysis).working_name ?? (item as AnalysisPanelItem).name ?? "",
+  status: item.status ?? "",
+  // Add other fields if needed
+});
+
 export default function Project() {
   const [selectedItem, setSelectedItem] = useState<SelectedItem | null>(null);
   const [sheets, setSheets] = useState<Item[]>([]);
-  const [analysis, setAnalysis] = useState<Item[]>([]);
+  const [analysis, setAnalysis] = useState<AnalysisAPIItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [isMobile, setIsMobile] = useState<boolean>(false);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
@@ -112,20 +138,60 @@ export default function Project() {
     console.log("Delete requested");
   };
 
-  // Get list of template IDs that have already been used to create analyses
-  const getCreatedAnalysisTemplateIds = (): string[] => {
-    return analysis
-      .map((item: Item) => item.id)
-      .filter((id): id is string => !!id);
-  };
+  // Fetch created analyses using react-query
+  const { data: analysisData, isLoading: isAnalysisLoading } = useQuery<
+    AnalysisAPIItem[]
+  >({
+    queryKey: ["projectAnalyses", projectId],
+    queryFn: async () => {
+      const response = await axios.get(
+        BASE_TEMP_BACKEND_URL + `/api/v1/projects/get_analysis/${projectId}`
+      );
+      // Expecting response.data?.data to be AnalysisAPIItem[]
+      return response.data?.data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Keep local state in sync with react-query data
+  useEffect(() => {
+    if (Array.isArray(analysisData)) setAnalysis(analysisData);
+  }, [analysisData]);
+
+  // Mutation for updating analyses
+  const saveProjectAnalyses = useMutation({
+    mutationFn: async (selectedAnalyses: string[]) => {
+      await axios.post(
+        BASE_TEMP_BACKEND_URL + `/api/v1/projects/create_analysis/`,
+        {
+          project_id: projectId,
+          working_id: selectedAnalyses, // array of analysis IDs
+        }
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["projectAnalyses", projectId],
+      });
+    },
+  });
 
   // Handle analysis creation and removal
-  const handleAnalysisCreate = (selectedAnalyses: Item[]) => {
-    // Directly set the selected analyses as the new analysis state
-    setAnalysis(selectedAnalyses);
-    console.log(
-      `Successfully updated analysis list with ${selectedAnalyses.length} items`
-    );
+  const handleAnalysisCreate = (selectedAnalyses: Analysis[]): void => {
+    // Only send array of IDs
+    const analysisIds = selectedAnalyses
+      .map((item) => item.working_id)
+      .filter(Boolean) as string[];
+    saveProjectAnalyses
+      .mutateAsync(analysisIds)
+      .then(() => {
+        console.log(
+          `Successfully updated analysis list with ${analysisIds.length} items`
+        );
+      })
+      .catch((e) => {
+        console.error("Failed to update analyses", e);
+      });
   };
 
   // Mobile detection
@@ -223,6 +289,16 @@ export default function Project() {
     status: mapStatusToUI(item.status ?? ""),
   });
 
+  // Type guard for objects with working_id
+  function hasWorkingId(obj: unknown): obj is { working_id: string } {
+    return (
+      typeof obj === "object" &&
+      obj !== null &&
+      "working_id" in obj &&
+      typeof (obj as { working_id: unknown }).working_id === "string"
+    );
+  }
+
   // Content component for consistency
   const renderContent = () => {
     if (!selectedItem) {
@@ -247,7 +323,7 @@ export default function Project() {
       );
     }
 
-    if (loading) {
+    if (loading || isAnalysisLoading) {
       return (
         <div className={`${isMobile ? "p-4" : "p-6"} h-full`}>
           <Skeleton className="h-8 w-1/2 mb-6" />
@@ -285,12 +361,21 @@ export default function Project() {
       />
     ) : (
       <AnalysisView
-        title="Financial Analysis"
-        analysisType="financial-analysis"
+        title={selectedItem.name ?? "Analysis"}
+        analysisType={
+          hasWorkingId(selectedItem)
+            ? selectedItem.working_id
+            : selectedItem.id ?? ""
+        }
         onError={(error) => console.error(error)}
         onAnalysisComplete={() => console.log("Analysis completed")}
       />
     );
+  };
+
+  // Add this function inside the Project component
+  const getCreatedAnalysisTemplateIds = (): string[] => {
+    return analysis.map((a) => a.working_id);
   };
 
   // Update mobile sidebar props to include analysis
@@ -300,7 +385,7 @@ export default function Project() {
     selectedTab,
     setSelectedTab,
     sheets: sheets.map(normalizeSheet), // Ensure correct type
-    analysis: analysis.map(normalizeSheet), // Ensure correct type for analysis
+    analysis: [], // TODO: Map analysis to Item[] if you want to show analysis in mobile sidebar
     selectedItem,
     onItemClick: handleItemClick,
     statusDotColors,
@@ -321,7 +406,12 @@ export default function Project() {
       )}
 
       {/* Mobile sidebar */}
-      {isMobile && <MobileSidebar {...mobileSidebarProps} />}
+      {isMobile && (
+        <MobileSidebar
+          {...mobileSidebarProps}
+          onAnalysisCreate={handleAnalysisCreate}
+        />
+      )}
 
       {/* Desktop layout */}
       {!isMobile ? (
@@ -343,16 +433,35 @@ export default function Project() {
               <ResizableHandle />
               <ResizablePanel defaultSize={50}>
                 <AnalysisPanel
-                  analysis={analysis}
-                  selectedItem={selectedItem}
-                  // Use a more specific type for onItemClick to avoid 'any'
-                  onItemClick={
-                    handleItemClick as (
-                      item: AnalysisPanelItem,
-                      type: "sheet" | "analysis",
-                      index: number
-                    ) => void
+                  analysis={analysis.map(toAnalysisItem)} // now Analysis[]
+                  selectedItem={
+                    selectedItem?.type === "analysis"
+                      ? {
+                          index: selectedItem.index,
+                          type: "analysis",
+                        }
+                      : null
                   }
+                  onItemClick={(
+                    item: Analysis,
+                    type: "sheet" | "analysis",
+                    index: number
+                  ) => {
+                    if (type === "analysis") {
+                      setSelectedItem({
+                        ...item,
+                        id: item.working_id,
+                        name: item.working_name,
+                        type,
+                        index,
+                        status: item.status,
+                      });
+                      if (isMobile) {
+                        setSidebarOpen(false);
+                      }
+                    }
+                    // If type is "sheet", do nothing (AnalysisPanel should never call with "sheet")
+                  }}
                   statusDotColors={statusDotColors}
                   onAnalysisCreate={handleAnalysisCreate}
                   createdAnalysisTemplateIds={getCreatedAnalysisTemplateIds()}

@@ -179,29 +179,34 @@ function FileUploadMapping({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-3xl max-h-dvh px-0">
-        <DialogHeader className="border-b pb-2 px-2">
+      <DialogContent className="max-h-screen !rounded-none !max-w-screen h-full w-full flex flex-col overflow-hidden p-0 gap-0">
+        {/* Header */}
+        <DialogHeader className="border-b p-4 shrink-0">
           <DialogTitle>
             {step === 1 ? "Upload Files" : "Map Sheets"}
           </DialogTitle>
         </DialogHeader>
-        <Card className="w-full border-0 px-0 shadow-none">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent>
-                {form.formState.errors.root && (
-                  <div className="text-sm font-medium text-destructive">
-                    {form.formState.errors.root.message}
-                  </div>
-                )}
 
-                {step === 1 ? <FileUploader /> : <SheetMapper form={form} />}
-              </CardContent>
-            </form>
-          </Form>
-        </Card>
+        {/* Main Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <Card className="w-full border-0 shadow-none">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)}>
+                <CardContent className="p-0">
+                  {form.formState.errors.root && (
+                    <div className="text-sm font-medium text-destructive mb-2">
+                      {form.formState.errors.root.message}
+                    </div>
+                  )}
+                  {step === 1 ? <FileUploader /> : <SheetMapper form={form} />}
+                </CardContent>
+              </form>
+            </Form>
+          </Card>
+        </div>
 
-        <DialogFooter className="flex px-2 justify-between">
+        {/* Footer - fixed at bottom */}
+        <DialogFooter className="border-t px-4 py-2 shrink-0 flex justify-between">
           {step === 1 ? (
             <div className="flex justify-end w-full">
               <Button

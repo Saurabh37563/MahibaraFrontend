@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FiHome } from "react-icons/fi";
 import { HiOutlineChevronRight } from "react-icons/hi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +21,7 @@ import {
 } from "../ui/dropdown-menu";
 import { signOut } from "next-auth/react";
 import { useAuth } from "@/contexts/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function FunctionHeader({
   selectedItem = null,
@@ -28,9 +29,9 @@ export default function FunctionHeader({
   selectedItem?: { name?: string } | null;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const auth = useAuth();
-  // Map auth.user to expected shape, ensuring name/email/image are string or undefined
+  const { activeOrg, activeTeam, projectName } = useTeamContext();
+
   const user =
     auth.user && typeof auth.user === "object"
       ? {
@@ -39,15 +40,12 @@ export default function FunctionHeader({
           image: auth.user.image ?? undefined,
         }
       : null;
-  // Removed unused 'token'
-  const orgName = searchParams.get("orgName") || "Unknown Org";
-  const functionName = searchParams.get("projectName") || "Unknown Function";
 
-  const { activeTeam } = useTeamContext();
+  const orgName = activeOrg?.name || null;
+  const functionName = projectName || null;
 
   const getUserInitials = () => {
     if (!user || !user.name) return "U";
-
     return user.name
       .split(" ")
       .map((n: string) => n[0])
@@ -72,86 +70,123 @@ export default function FunctionHeader({
       </div>
 
       {/* Middle section: Org name / Function name */}
-      <div className="text-sm h-fit font-medium flex gap-1 items-center">
-        <span>{orgName}</span>
+      <div className="text-sm h-fit font-medium flex gap-1 items-center min-w-[120px]">
+        {orgName ? (
+          <span>{orgName}</span>
+        ) : (
+          <Skeleton className="h-5 w-24 rounded" />
+        )}
         <span>/</span>
-        <span className="text-gray-600">{functionName}</span>
+        {functionName ? (
+          <span className="text-gray-600">{functionName}</span>
+        ) : (
+          <Skeleton className="h-5 w-20 rounded" />
+        )}
       </div>
 
       {/* Right section: Avatar group */}
       <div className="flex items-center gap-2">
-        <AvatarGroup className=" text-xs" max={2} spacing={-1} size="sm">
-          {activeTeam?.members?.map((member) => {
-            // Accept both string and number for id, and handle missing name
-            const memberId = String(member.id);
-            const memberName = member.name ?? "U";
-            return (
-              <Avatar key={memberId}>
-                <AvatarImage
-                  src={member?.image || ""}
-                  alt={memberName}
-                  onError={(e) =>
-                    ((e.currentTarget as HTMLImageElement).style.display =
-                      "none")
-                  }
-                />
-                <AvatarFallback>
-                  {memberName
-                    .split(" ")
-                    .map((n: string) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            );
-          })}
-        </AvatarGroup>
+        {activeTeam?.members && activeTeam.members.length > 0 ? (
+          <AvatarGroup className=" text-xs" max={2} spacing={-1} size="sm">
+            {activeTeam.members.map((member) => {
+              // Accept both string and number for id, and handle missing name
+              const memberId = String(member.id);
+              const memberName = member.name ?? "U";
+              return (
+                <Avatar key={memberId}>
+                  <AvatarImage
+                    src={member?.image || ""}
+                    alt={memberName}
+                    onError={(e) =>
+                      ((e.currentTarget as HTMLImageElement).style.display =
+                        "none")
+                    }
+                  />
+                  <AvatarFallback>
+                    {memberName
+                      .split(" ")
+                      .map((n: string) => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              );
+            })}
+          </AvatarGroup>
+        ) : (
+          <div className="flex gap-1">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               className="flex items-center border border-gray-100 gap-2 px-2 h-10"
+              disabled={!user}
             >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={user?.image} alt={user?.name || "User"} />
-                <AvatarFallback>{getUserInitials()}</AvatarFallback>
-              </Avatar>
-
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              {user ? (
+                <>
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user?.image} alt={user?.name || "User"} />
+                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                  </Avatar>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                </>
+              ) : (
+                <>
+                  <Skeleton className="h-8 w-8 rounded-full" />
+                  <Skeleton className="h-4 w-4 rounded" />
+                </>
+              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel className="font-normal">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">{user?.name}</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  {user?.email}
-                </p>
+            {user ? (
+              <>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">
+                      {user?.name}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {user?.email}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>Profile</span>
+                </DropdownMenuItem>
+                {/* <DropdownMenuItem>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Settings</span>
+                      </DropdownMenuItem> */}
+                <DropdownMenuItem
+                  onClick={() => router.push("/help-and-support")}
+                >
+                  <HelpCircle className="mr-2 h-4 w-4" />
+                  <span>Help & Support</span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => {
+                    signOut({ callbackUrl: "/login" });
+                  }}
+                  className="text-red-600"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </>
+            ) : (
+              <div className="p-4 flex flex-col gap-2">
+                <Skeleton className="h-4 w-32 rounded" />
+                <Skeleton className="h-3 w-20 rounded" />
               </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push("/profile")}>
-              <User className="mr-2 h-4 w-4" />
-              <span>Profile</span>
-            </DropdownMenuItem>
-            {/* <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem> */}
-            <DropdownMenuItem onClick={() => router.push("/help-and-support")}>
-              <HelpCircle className="mr-2 h-4 w-4" />
-              <span>Help & Support</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => {
-                signOut({ callbackUrl: "/login" });
-              }}
-              className="text-red-600"
-            >
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

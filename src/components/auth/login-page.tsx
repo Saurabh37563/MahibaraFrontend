@@ -1,6 +1,6 @@
 "use client";
-import React from "react";
 import { signIn } from "next-auth/react";
+import React from "react";
 import { SiZoho } from "react-icons/si";
 
 const LoginPage = () => {
@@ -8,11 +8,11 @@ const LoginPage = () => {
     <div className="flex min-h-screen flex-col md:flex-row">
       <div className="flex flex-1 items-center justify-center bg-white px-6 py-12 lg:px-8">
         <div className="w-full max-w-sm">
-          <div className="mb-8">
+          <div className="mb- text-center flex flex-col items-center">
             <h1 className="text-2xl font-bold text-gray-900">
               M&A Intelligence
             </h1>
-            <p className="mt-2 text-sm text-gray-600">
+            <p className="mt-2 text-sm mb-6 text-gray-600">
               Welcome back! Please sign in with your Zoho account
             </p>
           </div>
@@ -24,7 +24,7 @@ const LoginPage = () => {
           */}
 
           <div className="space-y-6">
-            <div className="relative">
+            {/* <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300"></div>
               </div>
@@ -33,12 +33,16 @@ const LoginPage = () => {
                   Sign in with
                 </span>
               </div>
-            </div>
+            </div> */}
 
             <button
               type="button"
               onClick={() =>
-                signIn("zoho", {
+                // signIn("zoho", {
+                //   callbackUrl: "/agents",
+                //   redirect: true,
+                // })
+                signIn("zitadel", {
                   callbackUrl: "/agents",
                   redirect: true,
                 })

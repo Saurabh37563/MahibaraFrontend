@@ -1,16 +1,26 @@
 "use client";
 
 import * as React from "react";
-import { ChevronsUpDown, Loader2, X } from "lucide-react";
+import { Check, ChevronsUpDown, X, Plus, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -88,55 +98,13 @@ interface TeamMemberSelectorProps {
   onMembersChange: (members: TeamMemberWithPermission[]) => void;
 }
 
-// Add a type for user objects returned by the API
 type UserApiType = {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  position: string;
+  designation: string | null;
   image?: string | null;
 };
-
-// Mock users API (replace with your actual API)
-// const usersApi = {
-//   getUsers: async (search = "") => {
-//     await new Promise((resolve) => setTimeout(resolve, 500));
-//     const users = [
-//       {
-//         id: "1",
-//         name: "Saurabh Kumar",
-//         email: "saurabh@email.com",
-//         position: "Frontend Developer",
-//         image: "https://github.com/shadcn.png",
-//       },
-//       {
-//         id: "2",
-//         name: "John Doe",
-//         email: "john@email.com",
-//         position: "Backend Developer",
-//         image: "https://github.com/shadcn.png",
-//       },
-//       {
-//         id: "3",
-//         name: "Jane Smith",
-//         email: "jane@email.com",
-//         position: "UI Designer",
-//         image: null,
-//       },
-//     ];
-
-//     if (search) {
-//       const searchLower = search.toLowerCase();
-//       return users.filter(
-//         (user) =>
-//           user.name.toLowerCase().includes(searchLower) ||
-//           user.email.toLowerCase().includes(searchLower) ||
-//           user.position.toLowerCase().includes(searchLower)
-//       );
-//     }
-//     return users;
-//   },
-// };
 
 const usersApi = {
   getUsers: async (search = "") => {
@@ -147,7 +115,7 @@ const usersApi = {
           params: { search },
         }
       );
-      return response.data?.data; // Assuming the API returns a list of users
+      return response.data?.data;
     } catch (error) {
       console.error("Failed to fetch users:", error);
       throw new Error("Could not load users");
@@ -160,17 +128,17 @@ export function TeamMemberSelector({
   onMembersChange,
 }: TeamMemberSelectorProps) {
   const [open, setOpen] = React.useState(false);
-  const [search, setSearch] = React.useState("");
-  const triggerRef = React.useRef<HTMLButtonElement>(null);
   const [users, setUsers] = React.useState<UserApiType[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [tempSelectedUsers, setTempSelectedUsers] = React.useState<UserApiType[]>([]);
 
   React.useEffect(() => {
     const fetchUsers = async () => {
       setIsLoading(true);
       try {
-        const result = await usersApi.getUsers(search);
-        setUsers(result);
+        const result = await usersApi.getUsers(searchQuery);
+        setUsers(result || []);
       } catch (error) {
         console.error("Failed to fetch users:", error);
         setUsers([]);
@@ -178,8 +146,11 @@ export function TeamMemberSelector({
         setIsLoading(false);
       }
     };
-    fetchUsers();
-  }, [search]);
+
+    if (open) {
+      fetchUsers();
+    }
+  }, [searchQuery, open]);
 
   const availableUsers = React.useMemo(() => {
     if (!users || !Array.isArray(users)) return [];
@@ -187,15 +158,26 @@ export function TeamMemberSelector({
     const selectedIds = new Set(
       selectedMembers.map((m) => m?.id).filter(Boolean)
     );
-    return users.filter((user) => !selectedIds.has(user.id));
+    return users.filter((user) => !selectedIds.has(user.id.toString()));
   }, [users, selectedMembers]);
 
-  const handleSelectUser = (user: UserApiType) => {
-    const newMember: TeamMemberWithPermission = {
-      id: user.id,
+  const handleToggleUser = (user: UserApiType) => {
+    setTempSelectedUsers(prev => {
+      const isSelected = prev.some(u => u.id === user.id);
+      if (isSelected) {
+        return prev.filter(u => u.id !== user.id);
+      } else {
+        return [...prev, user];
+      }
+    });
+  };
+
+  const handleAddSelectedUsers = () => {
+    const newMembers: TeamMemberWithPermission[] = tempSelectedUsers.map(user => ({
+      id: user.id.toString(),
       name: user.name,
       email: user.email,
-      position: user.position,
+      position: user.designation || "No designation",
       avatarUrl: user.image,
       permission: "view",
       modulePermissions: {
@@ -203,10 +185,15 @@ export function TeamMemberSelector({
         analytics: "view",
         file_processing: "no_access",
       },
-    };
-    onMembersChange([...selectedMembers, newMember]);
+    }));
+    onMembersChange([...selectedMembers, ...newMembers]);
+    setTempSelectedUsers([]);
     setOpen(false);
-    setSearch("");
+  };
+
+  const handleCancel = () => {
+    setTempSelectedUsers([]);
+    setOpen(false);
   };
 
   const handleModulePermissionChange = (
@@ -251,81 +238,130 @@ export function TeamMemberSelector({
   };
 
   return (
-    <div className="space-y-4 w-full overflow-x-hidden">
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
+    <div className="space-y-4 w-full">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
           <Button
-            ref={triggerRef}
             variant="outline"
             role="combobox"
             aria-expanded={open}
             className="w-full justify-between"
           >
-            <span className="text-left font-normal truncate">
-              {search || "Search team members..."}
-            </span>
+            <div className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              <span className="text-left font-normal">
+                Add team members...
+              </span>
+            </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
-        </PopoverTrigger>
-        <PopoverContent
-          className="p-2 h-full overflow-y-scroll   w-[var(--radix-popover-trigger-width)]"
-          align="start"
-          side="bottom"
-          sideOffset={4}
-        >
-          <Input
-            placeholder="Search users..."
-            className="mb-2"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <ScrollArea className="rounded-md max-h-72 ">
-            <div className="p-2 space-y-2">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Loading...</span>
-                </div>
-              ) : availableUsers.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No users found
-                </p>
-              ) : (
-                availableUsers.map((user: UserApiType) => (
-                  <div
-                    key={user.id}
-                    onClick={() => handleSelectUser(user)}
-                    className="flex items-center space-x-3 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer"
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={user.image || "/placeholder.svg"}
-                        alt={user.name}
-                      />
-                      <AvatarFallback>
-                        {user.name
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium leading-none truncate">
-                        {user.name}
-                      </p>
-                      <div className="flex flex-col sm:flex-row text-xs text-muted-foreground gap-x-1">
-                        <span className="truncate">{user.email}</span>
-                        <span className="hidden sm:inline">•</span>
-                        <span className="truncate">{user.position}</span>
-                      </div>
+        </DialogTrigger>
+        <DialogContent className="max-w-2xl max-h-[80vh] p-0">
+          <DialogHeader className="p-6 pb-4">
+            <DialogTitle>Add Team Members</DialogTitle>
+            <DialogDescription>
+              Search and select multiple team members to add to your team.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col h-full">
+            <Command className="rounded-lg border-0 shadow-none flex-1">
+              <CommandInput
+                placeholder="Search users..."
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+              />
+              <CommandList className="max-h-[400px]">
+                <CommandEmpty>
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span>Loading...</span>
                     </div>
-                  </div>
-                ))
-              )}
+                  ) : (
+                    "No users found."
+                  )}
+                </CommandEmpty>
+                <CommandGroup>
+                  {availableUsers.map((user) => {
+                    const isSelected = tempSelectedUsers.some(u => u.id === user.id);
+                    return (
+                      <CommandItem
+                        key={user.id}
+                        value={`${user.name} ${user.email}`}
+                        onSelect={() => handleToggleUser(user)}
+                        className="flex items-center space-x-3 p-3"
+                      >
+                        <div className="flex items-center space-x-3 flex-1">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage
+                              src={user.image || "/placeholder.svg"}
+                              alt={user.name}
+                            />
+                            <AvatarFallback>
+                              {user.name
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium leading-none truncate">
+                              {user.name}
+                            </p>
+                            <div className="flex flex-col text-xs text-muted-foreground mt-1">
+                              <span className="truncate">{user.email}</span>
+                              <span className="truncate">{user.designation || "No designation"}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+            {tempSelectedUsers.length > 0 && (
+              <div className="border-t p-4 bg-muted/30">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium">
+                    {tempSelectedUsers.length} user{tempSelectedUsers.length > 1 ? 's' : ''} selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setTempSelectedUsers([])}
+                  >
+                    Clear
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {tempSelectedUsers.map(user => (
+                    <Badge key={user.id} variant="secondary" className="flex items-center gap-1">
+                      {user.name}
+                      <X 
+                        className="h-3 w-3 cursor-pointer" 
+                        onClick={() => handleToggleUser(user)}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <Button variant="outline" onClick={handleCancel}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAddSelectedUsers}
+                disabled={tempSelectedUsers.length === 0}
+              >
+                Add {tempSelectedUsers.length > 0 ? `${tempSelectedUsers.length} ` : ''}Member{tempSelectedUsers.length > 1 ? 's' : ''}
+              </Button>
             </div>
-          </ScrollArea>
-        </PopoverContent>
-      </Popover>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {selectedMembers.length > 0 && (
         <>
@@ -343,24 +379,24 @@ export function TeamMemberSelector({
               </Button>
             )}
           </div>
-          <ScrollArea className="w-full overflow-x-auto">
-            <div className="w-full border rounded-md inline-block">
-              <Table className="w-full rounded-md">
+          <div className="border rounded-md overflow-hidden">
+            <ScrollArea className="w-full overflow-x-auto">
+              <Table className="w-full min-w-[800px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Member</TableHead>
+                    <TableHead className="min-w-[200px] sticky left-0 bg-background z-10 border-r">Member</TableHead>
                     {MODULES.map((module) => (
-                      <TableHead key={module.value} className="text-center">
+                      <TableHead key={module.value} className="text-center min-w-[130px]">
                         {module.label}
                       </TableHead>
                     ))}
-                    <TableHead className="w-[80px]">Actions</TableHead>
+                    <TableHead className="w-[60px] sticky right-0 bg-background z-10 border-l">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selectedMembers.map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell>
+                      <TableCell className="sticky left-0 bg-background z-10 border-r">
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-8 w-8 flex-shrink-0">
                             <AvatarImage
@@ -399,7 +435,7 @@ export function TeamMemberSelector({
                               )
                             }
                           >
-                            <SelectTrigger className="w-32 mx-auto">
+                            <SelectTrigger className="w-[120px] mx-auto">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -408,27 +444,26 @@ export function TeamMemberSelector({
                                   key={level.value}
                                   value={level.value}
                                 >
-                                  <div className="flex items-center w-full">
-                                    <Badge
-                                      variant="outline"
-                                      className={getPermissionBadgeVariant(
-                                        level.value
-                                      )}
-                                    >
-                                      {level.label}
-                                    </Badge>
-                                  </div>
+                                  <Badge
+                                    variant="outline"
+                                    className={`${getPermissionBadgeVariant(
+                                      level.value
+                                    )} border-0`}
+                                  >
+                                    {level.label}
+                                  </Badge>
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </TableCell>
                       ))}
-                      <TableCell>
+                      <TableCell className="sticky right-0 bg-background z-10 border-l">
                         <Button
                           variant="ghost"
                           size="icon"
                           onClick={() => handleRemoveMember(member.id)}
+                          className="h-8 w-8"
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -437,9 +472,9 @@ export function TeamMemberSelector({
                   ))}
                 </TableBody>
               </Table>
-            </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+              <ScrollBar orientation="horizontal" />
+            </ScrollArea>
+          </div>
         </>
       )}
     </div>

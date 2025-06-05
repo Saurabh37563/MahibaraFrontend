@@ -46,7 +46,7 @@ const TeamSchema = z
   }));
 
 // Make sure Team type always has organizationId as string
-type Team = z.infer<typeof TeamSchema> & { organizationId: string };
+export type Team = z.infer<typeof TeamSchema> & { organizationId: string };
 
 const ProjectStatusSchema = z.enum([
   "completed",
@@ -70,11 +70,11 @@ const ProjectSchema = z.object({
 });
 
 // Types
-type Organization = z.infer<typeof OrganizationSchema>;
+export type Organization = z.infer<typeof OrganizationSchema>;
 type Project = z.infer<typeof ProjectSchema>;
-type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
 
 // Context type
+// Add projectName to context
 interface TeamContextType {
   activeOrg: Organization | null;
   setActiveOrg: (org: Organization | null) => void;
@@ -82,6 +82,8 @@ interface TeamContextType {
   setActiveTeam: (team: Team | null) => void;
   projects: Project[];
   setProjects: (projects: Project[]) => void;
+  projectName: string | null;
+  setProjectName: (name: string | null) => void;
 }
 
 const TeamContext = createContext<TeamContextType | undefined>(undefined);
@@ -91,9 +93,55 @@ interface TeamProviderProps {
 }
 
 export const TeamProvider: React.FC<TeamProviderProps> = ({ children }) => {
-  const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
-  const [activeTeam, setActiveTeam] = useState<Team | null>(null);
+  // Initialize with safe defaults (no localStorage access here)
+  const [activeOrg, setActiveOrgState] = useState<Organization | null>(null);
+  const [activeTeam, setActiveTeamState] = useState<Team | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectName, setProjectNameState] = useState<string | null>(null);
+
+  // On mount, sync state with localStorage (client only)
+  React.useEffect(() => {
+    if (typeof window !== "undefined" && window.localStorage) {
+      const storedOrg = localStorage.getItem("activeOrg");
+      if (storedOrg) setActiveOrgState(JSON.parse(storedOrg));
+      const storedTeam = localStorage.getItem("activeTeam");
+      if (storedTeam) setActiveTeamState(JSON.parse(storedTeam));
+      const storedProjectName = localStorage.getItem("projectName");
+      if (storedProjectName) setProjectNameState(storedProjectName);
+    }
+  }, []);
+
+  // Persist to localStorage on change (client only)
+  const setActiveOrg = (org: Organization | null) => {
+    setActiveOrgState(org);
+    if (typeof window !== "undefined" && window.localStorage) {
+      if (org) {
+        localStorage.setItem("activeOrg", JSON.stringify(org));
+      } else {
+        localStorage.removeItem("activeOrg");
+      }
+    }
+  };
+  const setActiveTeam = (team: Team | null) => {
+    setActiveTeamState(team);
+    if (typeof window !== "undefined" && window.localStorage) {
+      if (team) {
+        localStorage.setItem("activeTeam", JSON.stringify(team));
+      } else {
+        localStorage.removeItem("activeTeam");
+      }
+    }
+  };
+  const setProjectName = (name: string | null) => {
+    setProjectNameState(name);
+    if (typeof window !== "undefined" && window.localStorage) {
+      if (name) {
+        localStorage.setItem("projectName", name);
+      } else {
+        localStorage.removeItem("projectName");
+      }
+    }
+  };
 
   const contextValue: TeamContextType = {
     activeOrg,
@@ -102,12 +150,14 @@ export const TeamProvider: React.FC<TeamProviderProps> = ({ children }) => {
     setActiveTeam,
     projects,
     setProjects,
+    projectName,
+    setProjectName,
   };
 
   return (
     <TeamContext.Provider value={contextValue}>{children}</TeamContext.Provider>
   );
-};
+}; 
 
 export const useTeamContext = () => {
   const context = useContext(TeamContext);
@@ -124,8 +174,6 @@ export const TeamContextProvider: React.FC<TeamProviderProps> = ({
 };
 
 // Export types for use in other components
-export type { Organization, Team, Project, ProjectStatus };
-
 // Export schemas for validation in other components
 export {
   OrganizationSchema,
