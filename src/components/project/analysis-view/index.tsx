@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Info } from "lucide-react"; // Changed icon to Info for neutral state
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import AnalysisHeader from "./analysis-header";
 import AnalysisStatusView from "./analysis-status-view";
 import ExcelViewer from "@/components/common/excel-file-viewer";
+import { useSSE } from "@/hooks/useSSE";
+import { queryClient } from "@/providers/query-provider";
 
 // Types
 export interface AnalysisApiResponse {
@@ -70,6 +72,8 @@ interface AnalysisViewProps {
   onClose?: () => void; // Add onClose prop for closing the error view
 }
 
+const FINAL_STATUSES = ["completed", "failed"];
+
 const AnalysisView: React.FC<AnalysisViewProps> = ({
   title = "Analysis",
   analysisType,
@@ -86,6 +90,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const [excelViewerBlobUrl, setExcelViewerBlobUrl] = useState<string | null>(
     null
   );
+  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
 
   // Fetch analysis data
   const {
@@ -173,6 +178,139 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     },
   });
 
+  // SSE logic for analysis status
+  const shouldConnectSSE = useMemo(() => {
+    if (!projectId || !analysisData) return false;
+    return !FINAL_STATUSES.includes(analysisData.status);
+  }, [projectId, analysisData]);
+
+  const sseUrl = useMemo(() => {
+    if (!projectId || !analysisData?.analysisId) return "";
+    // Use correct backend SSE endpoint
+    return `${BASE_TEMP_BACKEND_URL}/api/v1/projects/${projectId}/analysis/${analysisData.analysisId}/stream`;
+  }, [projectId, analysisData?.analysisId]);
+
+  const { addEventListener, disconnect: disconnectSSE } = useSSE(sseUrl, {
+    enabled: shouldConnectSSE,
+    autoReconnect: true,
+    reconnectInterval: 3000,
+    maxReconnectAttempts: 5,
+  });
+
+  useEffect(() => {
+    if (!shouldConnectSSE || !analysisData) return;
+
+    // Listen for 'update' events (progress updates)
+    const unsubscribeUpdate = addEventListener("update", (event) => {
+      try {
+        const eventData =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        if (eventData.analysisId === analysisData.analysisId) {
+          queryClient.setQueryData<AnalysisApiResponse>(
+            ["analysisData", projectId, analysisType],
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: eventData.status,
+                    message: eventData.message,
+                    progress: eventData.progress,
+                    fileUrl: eventData.fileUrl || prev.fileUrl,
+                    lastAnalysisDate:
+                      eventData.lastAnalysisDate || prev.lastAnalysisDate,
+                    metadata: { ...prev.metadata, ...eventData.metadata },
+                  }
+                : prev
+          );
+          setLastUpdate(Date.now());
+
+          if (FINAL_STATUSES.includes(eventData.status)) {
+            setTimeout(() => {
+              disconnectSSE();
+              refetchAnalysis();
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error("Error parsing SSE update event:", error);
+      }
+    });
+
+    // Listen for 'final' events (task completion)
+    const unsubscribeFinal = addEventListener("final", (event) => {
+      try {
+        const eventData =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        if (eventData.analysisId === analysisData.analysisId) {
+          queryClient.setQueryData<AnalysisApiResponse>(
+            ["analysisData", projectId, analysisType],
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: eventData.status,
+                    progress: 100,
+                    message: eventData.message || "Task completed successfully",
+                    lastAnalysisDate:
+                      eventData.lastAnalysisDate || prev.lastAnalysisDate,
+                    fileUrl: eventData.fileUrl || prev.fileUrl,
+                  }
+                : prev
+          );
+          setLastUpdate(Date.now());
+
+          setTimeout(() => {
+            disconnectSSE();
+            refetchAnalysis();
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Error parsing SSE final event:", error);
+      }
+    });
+
+    // Listen for 'error' events
+    const unsubscribeError = addEventListener("error", (event) => {
+      try {
+        const eventData =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        if (eventData.analysisId === analysisData.analysisId) {
+          queryClient.setQueryData<AnalysisApiResponse>(
+            ["analysisData", projectId, analysisType],
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: "failed",
+                    message: eventData.message || "Processing failed",
+                  }
+                : prev
+          );
+          setLastUpdate(Date.now());
+        }
+      } catch (error) {
+        console.error("Error parsing SSE error event:", error);
+      }
+    });
+
+    return () => {
+      unsubscribeUpdate();
+      unsubscribeFinal();
+      unsubscribeError();
+    };
+  }, [
+    shouldConnectSSE,
+    addEventListener,
+    projectId,
+    analysisType,
+    disconnectSSE,
+    analysisData,
+    refetchAnalysis,
+  ]);
+
   // Computed values
   const hasResults = useMemo(
     () => analysisData?.status === "completed" && !!analysisData?.fileUrl,
@@ -234,6 +372,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     );
   }
 
+  // Only show ExcelViewer when status is "completed" and fileUrl is present
+  const showExcelViewer =
+    analysisData?.status === "completed" &&
+    !!(excelViewerBlobUrl || analysisData?.fileUrl);
+
   return (
     <div className="h-full max-md:h-[95%] flex flex-col">
       <AnalysisHeader
@@ -276,24 +419,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           <div className="h-full flex items-center justify-center">
             <p className="text-gray-500">No analysis data available</p>
           </div>
-        ) : isProcessing || hasResults || analysisData.status === "failed" ? (
-          hasResults ? (
-            <ExcelViewer
-              key={excelViewerBlobUrl || analysisData.fileUrl}
-              fileUrl={excelViewerBlobUrl || analysisData.fileUrl}
-            />
-          ) : (
-            <AnalysisStatusView
-              analysisData={analysisData}
-              projectId={projectId}
-              analysisType={analysisType}
-              onTriggerAnalysis={() => {
-                setIsTriggering(true);
-                triggerAnalysisMutation.mutate();
-              }}
-              isTriggering={isTriggering || triggerAnalysisMutation.isPending}
-            />
-          )
+        ) : showExcelViewer ? (
+          <ExcelViewer
+            key={excelViewerBlobUrl || analysisData.fileUrl}
+            fileUrl={excelViewerBlobUrl || analysisData.fileUrl}
+          />
         ) : (
           <AnalysisStatusView
             analysisData={analysisData}

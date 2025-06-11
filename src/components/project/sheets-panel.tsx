@@ -8,16 +8,6 @@ import FileUploadMapping from "./file-upload";
 import { Button } from "@/components/ui/button";
 import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
-// import axios from "axios";
-
-// const StatusEnum = z.enum([
-//   "success",
-//   "warning",
-//   "danger",
-//   "info",
-//   "neutral",
-//   "uploaded",
-// ]);
 
 type StatusEnum =
   | "success"
@@ -43,9 +33,9 @@ interface SheetsPanelProps {
   onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
   statusDotColors: Record<StatusEnum, string>;
   mapStatusToUI: (status: string) => StatusEnum;
-  isLoading?: boolean; // <-- add this
-  refetchSheets?: () => void; // <-- add this
-  clearSelectedSheet?: () => void; // <-- add this
+  isLoading?: boolean;
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
 }
 
 export default function SheetsPanel({
@@ -64,15 +54,13 @@ export default function SheetsPanel({
 
   // Dummy download function
   const handleDownload = async () => {
-    if (isDownloading) return; // Prevent multiple downloads
+    if (isDownloading) return;
 
     setIsDownloading(true);
 
     try {
-      // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      // Create a dummy zip file content
       const dummyContent =
         "PK\x03\x04\x14\x00\x00\x00\x08\x00dummy zip file content";
       const blob = new Blob([dummyContent], {
@@ -86,12 +74,10 @@ export default function SheetsPanel({
       link.href = url;
       link.setAttribute("download", filename);
 
-      // Append to body, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      // Clean up the URL object
       window.URL.revokeObjectURL(url);
 
       console.log("Dummy download completed");
@@ -102,120 +88,6 @@ export default function SheetsPanel({
       setIsDownloading(false);
     }
   };
-
-  /* COMMENTED OUT - REAL API DOWNLOAD FUNCTION
-  const handleDownload = async () => {
-    if (isDownloading) return; // Prevent multiple downloads
-
-    setIsDownloading(true);
-
-    try {
-      // For production: Use actual backend endpoint
-      const response = await axios.get(
-        `/api/projects/${projectId}/files/export`,
-        {
-          responseType: "blob",
-          // Optional: Add progress tracking
-          onDownloadProgress: (progressEvent) => {
-            if (progressEvent.total) {
-              const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / progressEvent.total
-              );
-              console.log(`Download progress: ${percentCompleted}%`);
-            }
-          },
-          // Add timeout to prevent hanging
-          timeout: 300000, // 5 minutes
-        }
-      );
-
-      // Create blob and download
-      const blob = new Blob([response.data], {
-        type: response.headers["content-type"] || "application/zip",
-      });
-
-      // Get filename from response headers or use default
-      const contentDisposition = response.headers["content-disposition"];
-      let filename = `project_${projectId}_sheets.zip`;
-
-      if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
-        if (filenameMatch) {
-          filename = filenameMatch[1];
-        }
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", filename);
-
-      // Append to body, click, and remove
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up the URL object
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download failed:", error);
-
-      // Handle different error types
-      if (axios.isAxiosError(error)) {
-        if (error.code === "ECONNABORTED") {
-          alert("Download timeout. Please try again.");
-        } else if (error.response?.status === 404) {
-          alert("File not found. Please check if the project exists.");
-        } else if (error.response?.status === 403) {
-          alert("You don't have permission to download this file.");
-        } else {
-          alert(
-            `Download failed: ${error.response?.data?.message || error.message}`
-          );
-        }
-      } else {
-        alert("An unexpected error occurred during download.");
-      }
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-  */
-
-  /* COMMENTED OUT - ALTERNATIVE DIRECT DOWNLOAD METHOD
-  // Alternative method for direct file URL download (if backend provides direct links)
-  const handleDirectDownload = async () => {
-    if (isDownloading) return;
-
-    setIsDownloading(true);
-
-    try {
-      // Get download URL from backend
-      const response = await axios.get(
-        `/api/projects/${projectId}/files/download-url`
-      );
-      const { downloadUrl, filename } = response.data;
-
-      // Create hidden link and trigger download
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.setAttribute(
-        "download",
-        filename || `project_${projectId}_sheets.zip`
-      );
-      link.target = "_blank"; // Open in new tab for direct URLs
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Direct download failed:", error);
-      alert("Failed to get download link.");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-  */
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -233,7 +105,6 @@ export default function SheetsPanel({
             clearSelectedSheet={clearSelectedSheet}
           />
 
-          {/* Download Button with Loading State */}
           <Button
             variant="ghost"
             size="icon"

@@ -2,6 +2,7 @@
 
 import { LuChartPie } from "react-icons/lu";
 import { AnalysisSelectionModal } from "./create-analysis";
+import { useProject } from "@/contexts/project-context";
 import type { Analysis } from "./create-analysis";
 
 type StatusEnum =
@@ -18,7 +19,7 @@ interface SelectedItem {
 }
 
 interface AnalysisPanelProps {
-  analysis: Analysis[]; // Use unified Analysis type
+  analysis: Analysis[];
   selectedItem: SelectedItem | null;
   onItemClick: (
     item: Analysis,
@@ -38,6 +39,8 @@ export default function AnalysisPanel({
   onAnalysisCreate,
   createdAnalysisTemplateIds,
 }: AnalysisPanelProps) {
+  const { isAnalysisLoading } = useProject();
+
   return (
     <div className="flex flex-col w-full h-full">
       {/* Header */}
@@ -58,7 +61,16 @@ export default function AnalysisPanel({
 
       {/* Content */}
       <div className="overflow-y-auto py-4 px-2 flex-1">
-        {analysis.length === 0 ? (
+        {isAnalysisLoading ? (
+          <div className="flex flex-col gap-2">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="animate-pulse bg-gray-200 h-8 w-full rounded"
+              />
+            ))}
+          </div>
+        ) : analysis.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <LuChartPie className="text-gray-300 mb-4" size={48} />
             <p className="text-gray-500 text-sm mb-2">

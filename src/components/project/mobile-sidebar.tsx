@@ -5,6 +5,7 @@ import { X, Plus } from "lucide-react";
 import React from "react";
 import FileUploadMapping from "./file-upload";
 import { AnalysisSelectionModal } from "./create-analysis";
+import { useProject } from "@/contexts/project-context";
 
 // Status types and color mapping
 type StatusEnum =
@@ -65,6 +66,8 @@ function SheetsPanel({
   refetchSheets?: () => void;
   clearSelectedSheet?: () => void;
 }) {
+  const { isSheetsLoading } = useProject();
+
   return (
     <div className="overflow-y-auto h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b">
@@ -76,7 +79,16 @@ function SheetsPanel({
           />
         </div>
       </div>
-      {sheets.length === 0 ? (
+      {isSheetsLoading ? (
+        <div className="p-4">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse bg-gray-200 h-8 w-full rounded mb-2"
+            />
+          ))}
+        </div>
+      ) : sheets.length === 0 ? (
         <div className="text-xs text-gray-400 p-4">No sheets found.</div>
       ) : (
         <ul>
@@ -120,6 +132,8 @@ function AnalysisPanel({
   onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // Remove optional
   createdAnalysisTemplateIds: string[]; // Remove optional
 }) {
+  const { isAnalysisLoading } = useProject();
+
   return (
     <div className="overflow-y-auto h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b">
@@ -131,7 +145,16 @@ function AnalysisPanel({
           />
         </div>
       </div>
-      {analysis.length === 0 ? (
+      {isAnalysisLoading ? (
+        <div className="p-4">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="animate-pulse bg-gray-200 h-8 w-full rounded mb-2"
+            />
+          ))}
+        </div>
+      ) : analysis.length === 0 ? (
         <div className="text-xs text-gray-400 p-4">No analysis found.</div>
       ) : (
         <ul>
