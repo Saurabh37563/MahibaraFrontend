@@ -227,7 +227,7 @@ export function AnalysisSelectionModal({
           <IoMdAdd className="text-muted-foreground cursor-pointer" size={16} />
         </Button>
       </DialogTrigger>
-      <DialogContent className="[&>button:last-child]:hidden  bg-slate-50 p-0 gap-y-0 border-0 ring-0 outline-0 flex flex-col max-h-screen !rounded-none !max-w-screen h-full w-full overflow-y-auto">
+      <DialogContent className="[&>button:last-child]:hidden  bg-slate-50 p-0 gap-y-0 border-0 ring-0 outline-0 flex flex-col max-h-screen  !max-sm:max-w-screen sm:h-full w-full sm:max-w-[70dvw] overflow-y-auto">
         {/* Header - Fixed at top */}
         <DialogHeader className="bg-primary text-white p-[18px] flex-shrink-0">
           <DialogTitle>Add Analysis</DialogTitle>
@@ -312,7 +312,7 @@ export function AnalysisSelectionModal({
                                       ? "border-primary ring-2 ring-primary/20"
                                       : "border-gray-200"
                                   }
-                                  cursor-pointer hover:bg-gray-50 transition-colors max-md:flex-grow max-md:min-w-[250px] max-md:bg-green-200`}
+                                  cursor-pointer hover:bg-gray-50 transition-colors max-md:flex-grow max-md:min-w-[250px] `}
                               >
                                 <div className="flex justify-between w-full items-center space-x-2">
                                   <Label

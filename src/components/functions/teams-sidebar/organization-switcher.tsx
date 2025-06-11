@@ -168,7 +168,7 @@ export function OrganizationSwitcher({
                   <>
                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                       <Avatar className="size-8">
-                        <AvatarFallback>
+                        <AvatarFallback className="bg-emerald-800/20 text-green-900">
                           {activeOrg.name.substring(0, 2).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
@@ -221,7 +221,7 @@ export function OrganizationSwitcher({
                             src={org?.image ?? "Test"}
                             alt={org.name}
                           />
-                          <AvatarFallback className="bg-emerald-800/20 text-green-900">
+                          <AvatarFallback className="">
                             {org.name.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -308,8 +308,8 @@ export function OrganizationSwitcher({
                             }}
                           >
                             <DropdownMenuItem
+                              variant="destructive"
                               onSelect={(e) => e.preventDefault()}
-                              className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-700"
                             >
                               <RiDeleteBinLine className="mr-2 h-4 w-4" />
                               Delete

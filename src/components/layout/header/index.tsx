@@ -29,7 +29,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { signOut } from "next-auth/react";
-import { useAuth } from "@/contexts/auth-context";
+import { useSession } from "next-auth/react";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { FiSidebar } from "react-icons/fi";
 
@@ -51,29 +51,15 @@ function useDebounce<T>(value: T, delay = 500): T {
   return debouncedValue;
 }
 
-// Types
-interface UserData {
-  id: string;
-  name: string;
-  firstName?: string;
-  lastName?: string;
-  email: string;
-  avatar?: string;
-  image?: string;
-  loginName?: string;
-  role?: string;
-}
-
-// Add a type for the auth context user
+// Update AuthUser interface to match session data
 interface AuthUser {
   id: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  email?: string;
-  image?: string;
-  loginName?: string;
-  userType?: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  loginName: string;
+  image: string;
 }
 
 interface SearchResult {
@@ -246,7 +232,7 @@ const HeaderContent = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { ref: loadMoreRef, inView } = useInView();
-  const auth = useAuth();
+  const { data: session } = useSession();
   const sidebarContext = useSidebar();
   const { isOpen = false, isMobile = false } = (sidebarContext || {}) as {
     isOpen?: boolean;
@@ -256,22 +242,16 @@ const HeaderContent = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Map auth.user to UserData shape, fallback only if missing
-  const rawUser = auth.user as AuthUser | null | undefined;
+  // Replace auth.user with session?.user
+  const user = session?.user as AuthUser | undefined;
 
-  const user: UserData | null = rawUser
-    ? {
-        id: rawUser.id,
-        name: rawUser.name ?? "",
-        firstName: rawUser.firstName ?? "",
-        lastName: rawUser.lastName ?? "",
-        email: rawUser.email ?? "",
-        avatar: rawUser.image ?? undefined,
-        image: rawUser.image ?? undefined,
-        loginName: rawUser.loginName ?? "",
-        role: rawUser.userType ?? "User",
-      }
-    : null;
+  const getUserInitials = () => {
+    if (!user) return "U";
+    if (user.firstName && user.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    return user.name[0].toUpperCase();
+  };
 
   // const shouldShowSearch = SEARCHABLE_ROUTES.some(
   //   (route) => pathname?.startsWith(route) || false
@@ -333,27 +313,6 @@ const HeaderContent = () => {
     setSearchQuery("");
   }, []);
 
-  const getUserInitials = () => {
-    if (!user) return "U";
-    if (user.firstName || user.lastName) {
-      return (
-        (
-          (user.firstName?.[0] ?? "") + (user.lastName?.[0] ?? "")
-        ).toUpperCase() || "U"
-      );
-    }
-    if (user.name) {
-      return user.name
-        .split(" ")
-        .map((n: string) => n[0])
-        .join("")
-        .toUpperCase();
-    }
-    return "U";
-  };
-
-  const isFunctionsPage = pathname === "/functions";
-
   return (
     <>
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
@@ -361,7 +320,7 @@ const HeaderContent = () => {
           <div className="relative flex items-center h-16">
             {/* Left section - Logo */}
             <div className="flex items-center flex-shrink-0 absolute left-0 top-1/2 -translate-y-1/2">
-              {isMobile && !isOpen && isFunctionsPage && (
+              {isMobile && !isOpen && pathname === "/functions" && (
                 <SidebarTrigger className="size-10">
                   <FiSidebar size={40} />
                 </SidebarTrigger>
@@ -417,8 +376,8 @@ const HeaderContent = () => {
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
-                        src={user?.image || undefined}
-                        alt={user?.name || "User"}
+                        src={user?.image}
+                        alt={`${user?.firstName || ""} ${user?.lastName || ""}`}
                       />
                       <AvatarFallback className="bg-emerald-800/20 text-emerald-800">
                         {getUserInitials()}
@@ -429,32 +388,29 @@ const HeaderContent = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-72 max-w-xs p-0 overflow-hidden shadow-lg"
+                  className="w-64 p-0 overflow-hidden shadow-lg"
                 >
                   {/* Profile Card */}
-                  <div className="flex flex-col items-center px-4 py-4 bg-gradient-to-b from-slate-50 to-white border-b border-gray-100">
-                    <Avatar className="h-14 w-14 mb-2">
+                  <div className="flex items-center gap-3 p-3 bg-gradient-to-b from-slate-50 to-white border-b border-gray-100">
+                    <Avatar className="h-10 w-10 flex-shrink-0">
                       <AvatarImage
-                        src={user?.image || undefined}
-                        alt={user?.name || "User"}
+                        src={user?.image}
+                        alt={`${user?.firstName || ""} ${user?.lastName || ""}`}
                       />
-                      <AvatarFallback className="text-lg">
+                      <AvatarFallback className="text-base">
                         {getUserInitials()}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="font-semibold text-base text-gray-900 text-center w-full truncate">
-                      {user?.firstName || user?.lastName
-                        ? `${user?.firstName ?? ""} ${
-                            user?.lastName ?? ""
-                          }`.trim()
-                        : user?.name || "User"}
-                    </span>
-                    <span
-                      className="text-xs text-gray-500 text-center w-full max-w-[200px] truncate"
-                      title={user?.email || ""}
-                    >
-                      {user?.email || ""}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">
+                        {user
+                          ? `${user.firstName || ""} ${user.lastName || ""}`
+                          : "User"}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {user?.email}
+                      </p>
+                    </div>
                   </div>
                   <DropdownMenuItem
                     onClick={() => router.push("/profile")}
@@ -471,10 +427,11 @@ const HeaderContent = () => {
                     <span>Help & Support</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    variant="destructive"
                     onClick={() => {
                       signOut({ callbackUrl: "/login" });
                     }}
-                    className="flex items-center gap-2 text-red-600 focus:bg-red-50 focus:text-red-700"
+                    className="flex items-center gap-2  focus:bg-red-50 focus:text-red-700"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>Sign out</span>

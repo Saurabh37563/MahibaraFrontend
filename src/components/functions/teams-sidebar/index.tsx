@@ -254,12 +254,12 @@ export default function FunctionsSidebar() {
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  variant="destructive"
                                   onSelect={(e) => {
                                     e.preventDefault();
                                     setSelectedTeam(team);
                                     setDeleteModalOpen(true);
                                   }}
-                                  className="cursor-pointer flex items-center gap-2 text-red-600 focus:text-red-700"
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Delete

@@ -378,20 +378,20 @@ export default function Project() {
     return analysis.map((a) => a.working_id);
   };
 
-  // Update mobile sidebar props to include analysis
+  // Update mobile sidebar props to include correct analysis data
   const mobileSidebarProps = {
     sidebarOpen,
     toggleSidebar,
     selectedTab,
     setSelectedTab,
-    sheets: sheets.map(normalizeSheet), // Ensure correct type
-    analysis: [], // TODO: Map analysis to Item[] if you want to show analysis in mobile sidebar
+    sheets: sheets.map(normalizeSheet),
+    analysis: analysis.map(toAnalysisItem), // Map to correct format
     selectedItem,
     onItemClick: handleItemClick,
     statusDotColors,
     mapStatusToUI,
-    onAnalysisCreate: handleAnalysisCreate, // Add analysis creation handler
-    createdAnalysisTemplateIds: getCreatedAnalysisTemplateIds(), // Add created template IDs
+    onAnalysisCreate: handleAnalysisCreate, // Required prop
+    createdAnalysisTemplateIds: getCreatedAnalysisTemplateIds(), // Required prop
   };
 
   // Main render
@@ -410,6 +410,8 @@ export default function Project() {
         <MobileSidebar
           {...mobileSidebarProps}
           onAnalysisCreate={handleAnalysisCreate}
+          refetchSheets={refetchSheets}
+          clearSelectedSheet={handleClearSelection}
         />
       )}
 

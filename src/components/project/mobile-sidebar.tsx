@@ -3,6 +3,8 @@
 import { Button } from "@/components/ui/button";
 import { X, Plus } from "lucide-react";
 import React from "react";
+import FileUploadMapping from "./file-upload";
+import { AnalysisSelectionModal } from "./create-analysis";
 
 // Status types and color mapping
 type StatusEnum =
@@ -41,8 +43,8 @@ interface MobileSidebarProps {
   ) => void;
   statusDotColors: Record<StatusEnum, string>;
   mapStatusToUI: (status: string) => StatusEnum;
-  onAnalysisCreate?: (selectedAnalyses: Analysis[]) => void; // changed from Record<string, unknown>[]
-  createdAnalysisTemplateIds?: string[];
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // Remove optional flag
+  createdAnalysisTemplateIds: string[]; // Remove optional flag
 }
 
 // SheetsPanel component
@@ -52,15 +54,28 @@ function SheetsPanel({
   onItemClick,
   statusDotColors,
   mapStatusToUI,
+  refetchSheets,
+  clearSelectedSheet,
 }: {
   sheets: Item[];
   selectedItem: { index: number; type: "sheet" | "analysis" } | null;
   onItemClick: (item: Item, type: "sheet", index: number) => void;
   statusDotColors: Record<StatusEnum, string>;
   mapStatusToUI: (status: string) => StatusEnum;
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
 }) {
   return (
     <div className="overflow-y-auto h-full">
+      <div className="flex items-center justify-between px-4 py-2 border-b">
+        <span className="text-xs font-medium">Source Files</span>
+        <div className="flex gap-2">
+          <FileUploadMapping
+            refetchSheets={refetchSheets}
+            clearSelectedSheet={clearSelectedSheet}
+          />
+        </div>
+      </div>
       {sheets.length === 0 ? (
         <div className="text-xs text-gray-400 p-4">No sheets found.</div>
       ) : (
@@ -96,30 +111,25 @@ function AnalysisPanel({
   onItemClick,
   statusDotColors,
   onAnalysisCreate,
-  createdAnalysisTemplateIds,
+  createdAnalysisTemplateIds = [], // Provide default empty array
 }: {
-  analysis: Analysis[]; // changed from Record<string, unknown>[]
+  analysis: Analysis[];
   selectedItem: { index: number; type: "sheet" | "analysis" } | null;
   onItemClick: (item: Analysis, type: "analysis", index: number) => void;
   statusDotColors: Record<StatusEnum, string>;
-  onAnalysisCreate?: (selectedAnalyses: Analysis[]) => void; // changed from Record<string, unknown>[]
-  createdAnalysisTemplateIds?: string[];
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // Remove optional
+  createdAnalysisTemplateIds: string[]; // Remove optional
 }) {
   return (
     <div className="overflow-y-auto h-full">
-      <div className="flex items-center justify-between px-4 py-2">
+      <div className="flex items-center justify-between px-4 py-2 border-b">
         <span className="text-xs font-medium">Analysis</span>
-        {onAnalysisCreate && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={() => onAnalysisCreate(analysis)}
-            title="Create Analysis"
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        )}
+        <div className="flex gap-2">
+          <AnalysisSelectionModal
+            onAnalysisCreate={onAnalysisCreate}
+            createdAnalysisTemplateIds={createdAnalysisTemplateIds}
+          />
+        </div>
       </div>
       {analysis.length === 0 ? (
         <div className="text-xs text-gray-400 p-4">No analysis found.</div>
@@ -172,7 +182,12 @@ export default function MobileSidebar({
   mapStatusToUI,
   onAnalysisCreate,
   createdAnalysisTemplateIds = [],
-}: MobileSidebarProps) {
+  refetchSheets,
+  clearSelectedSheet,
+}: MobileSidebarProps & {
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
+}) {
   return (
     <div
       className={`
@@ -229,6 +244,8 @@ export default function MobileSidebar({
             onItemClick={onItemClick}
             statusDotColors={statusDotColors}
             mapStatusToUI={mapStatusToUI}
+            refetchSheets={refetchSheets}
+            clearSelectedSheet={clearSelectedSheet}
           />
         ) : (
           <AnalysisPanel

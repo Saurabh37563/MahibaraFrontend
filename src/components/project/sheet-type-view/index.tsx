@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback } from "react";
+import React, { useMemo, useCallback, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   FileSpreadsheet,
@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Clock,
   FileX,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSSE } from "@/hooks/useSSE";
@@ -46,6 +47,14 @@ interface SheetApiResponse {
   taskId: string;
   message?: string;
   progress?: number;
+  stage?: string;
+  type?: string;
+  timestamp?: string;
+  projectId?: string;
+  sheetType?: string;
+  resultUrl?: string;
+  createdAt?: string;
+  completedAt?: string;
   metadata: {
     fileName: string;
     fileSize: string;
@@ -91,7 +100,7 @@ const fetchSheetData = async (
 ): Promise<SheetApiResponse> => {
   try {
     const { data: response } = await axios.post<ApiResponse>(
-      `http://192.168.1.63:8000/api/v1/sheet/get_mapped_sheet`,
+      `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/get_mapped_sheet`,
       {
         project_id: projectId,
         sheet_type: sheetType,
@@ -124,6 +133,9 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
   const params = useParams();
   const projectId = params?.id as string;
 
+  // Add state to force updates on SSE events
+  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+
   // React Query for sheet data
   const {
     data: sheetData,
@@ -146,7 +158,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
 
   const sseUrl = useMemo(() => {
     if (!projectId || !sheetData?.taskId) return "";
-    return `${BASE_TEMP_BACKEND_URL}/api/v1/file/task-stream/${sheetData.taskId}`;
+    return `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/task_events/${sheetData.taskId}`;
   }, [projectId, sheetData?.taskId]);
 
   const { addEventListener, disconnect: disconnectSSE } = useSSE(sseUrl, {
@@ -157,45 +169,133 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
   });
 
   // SSE event handler
-  React.useEffect(() => {
+  useEffect(() => {
     if (!shouldConnectSSE || !sheetData) return;
-    const unsubscribeFileStatus = addEventListener("file_status", (event) => {
+
+    // Listen for 'update' events (progress updates as per your documentation)
+    const unsubscribeUpdate = addEventListener("update", (event) => {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const eventData: any =
+        const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-        const actualData = eventData?.data || eventData;
-        if (
-          (actualData.projectId === projectId ||
-            actualData.fileId === projectId) &&
-          actualData.sheetType === sheetType
-        ) {
+
+        console.log("[SSE] Progress update received:", {
+          taskId: eventData.taskId,
+          status: eventData.status,
+          progress: eventData.progress,
+          stage: eventData.stage,
+          message: eventData.message,
+          timestamp: eventData.timestamp,
+        });
+
+        // Match by taskId as per your documentation
+        if (eventData.taskId === sheetData.taskId) {
           queryClient.setQueryData<SheetApiResponse>(
             ["sheetData", projectId, sheetType],
             (prev) =>
               prev
                 ? {
                     ...prev,
-                    status: actualData.status,
-                    message: actualData.message,
-                    progress: actualData.progress,
-                    fileUrl: actualData.fileUrl || prev.fileUrl,
-                    metadata: { ...prev.metadata, ...actualData.metadata },
+                    status: eventData.status,
+                    message: eventData.message,
+                    progress: eventData.progress,
+                    stage: eventData.stage,
+                    type: eventData.type,
+                    timestamp: eventData.timestamp,
+                    fileUrl: eventData.resultUrl || prev.fileUrl,
+                    metadata: { ...prev.metadata, ...eventData.metadata },
                   }
                 : prev
           );
-          if (FINAL_STATUSES.includes(actualData.status)) {
+
+          // Force update for each progress change
+          setLastUpdate(Date.now());
+
+          if (FINAL_STATUSES.includes(eventData.status)) {
+            console.log(
+              "[SSE] Final status reached, disconnecting in 2s:",
+              eventData.status
+            );
             setTimeout(() => {
               disconnectSSE();
+              // Refetch data to get the final processed file
+              refetch();
             }, 2000);
           }
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        console.error("Error parsing SSE update event:", error);
       }
     });
+
+    // Listen for 'final' events (task completion)
+    const unsubscribeFinal = addEventListener("final", (event) => {
+      try {
+        const eventData =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        console.log("[SSE] Final event received:", eventData);
+
+        if (eventData.taskId === sheetData.taskId) {
+          queryClient.setQueryData<SheetApiResponse>(
+            ["sheetData", projectId, sheetType],
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: eventData.status,
+                    progress: 100,
+                    message: eventData.message || "Task completed successfully",
+                    completedAt: eventData.timestamp,
+                    fileUrl: eventData.resultUrl || prev.fileUrl,
+                  }
+                : prev
+          );
+
+          setLastUpdate(Date.now());
+
+          // Disconnect after final event and refetch data
+          setTimeout(() => {
+            disconnectSSE();
+            refetch();
+          }, 1000);
+        }
+      } catch (error) {
+        console.error("Error parsing SSE final event:", error);
+      }
+    });
+
+    // Listen for 'error' events
+    const unsubscribeError = addEventListener("error", (event) => {
+      try {
+        const eventData =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        console.error("[SSE] Error event received:", eventData);
+
+        if (eventData.taskId === sheetData.taskId) {
+          queryClient.setQueryData<SheetApiResponse>(
+            ["sheetData", projectId, sheetType],
+            (prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: "failed",
+                    message: eventData.message || "Processing failed",
+                  }
+                : prev
+          );
+
+          setLastUpdate(Date.now());
+        }
+      } catch (error) {
+        console.error("Error parsing SSE error event:", error);
+      }
+    });
+
     return () => {
-      unsubscribeFileStatus();
+      unsubscribeUpdate();
+      unsubscribeFinal();
+      unsubscribeError();
     };
   }, [
     shouldConnectSSE,
@@ -204,35 +304,68 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     sheetType,
     disconnectSSE,
     sheetData,
+    refetch,
   ]);
 
-  // Render status badge
-  const renderStatusBadge = React.useMemo(() => {
+  // Render status badge - NOT memoized to ensure always up-to-date
+  const renderStatusBadge = () => {
     if (!sheetData) return null;
     const config =
       statusBadgeConfig[sheetData.status] || statusBadgeConfig.pending;
     const Icon = config.icon;
+
     return (
-      <div className="flex items-center gap-2">
-        <span
-          className={`${config.styles} text-[10px] capitalize rounded-full px-2 py-[2px] flex items-center gap-1`}
-        >
-          <Icon
-            className={
-              sheetData?.status.toLowerCase() === "processing"
-                ? "animate-spin"
-                : ""
-            }
-            size={12}
-          />
-          <span>{config.label}</span>
-          {sheetData.progress !== undefined && (
-            <span className="ml-1">({sheetData.progress}%)</span>
-          )}
-        </span>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={`${config.styles} text-[10px] capitalize rounded-full px-2 py-[2px] flex items-center gap-1`}
+          >
+            <Icon
+              className={
+                sheetData?.status.toLowerCase() === "processing"
+                  ? "animate-spin"
+                  : ""
+              }
+              size={12}
+            />
+            <span>{config.label}</span>
+            {sheetData.progress !== undefined && (
+              <span className="ml-1">({sheetData.progress}%)</span>
+            )}
+          </span>
+        </div>
+
+        {/* Show progress stage and message for processing */}
+        {/* {sheetData.status === "processing" && (
+          <div className="text-[9px] text-gray-500 flex flex-col gap-0.5">
+            {sheetData.stage && (
+              <span className="font-medium text-blue-600">
+                Stage: {sheetData.stage}
+              </span>
+            )}
+            {sheetData.message && (
+              <span className="truncate max-w-48" title={sheetData.message}>
+                {sheetData.message}
+              </span>
+            )}
+          </div>
+        )} */}
+
+        {/* Show mini progress bar for processing */}
+        {/* {sheetData.status === "processing" &&
+          sheetData.progress !== undefined && (
+            <div className="w-32 bg-gray-200 rounded-full h-1.5 mt-1">
+              <div
+                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: `${Math.min(100, Math.max(0, sheetData.progress))}%`,
+                }}
+              />
+            </div>
+          )} */}
       </div>
     );
-  }, [sheetData]);
+  };
 
   // Retry handler
   const handleRetry = useCallback(() => {
@@ -302,6 +435,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     sheetData.status
   );
   const hasFileUrl = !!sheetData.fileUrl;
+  const isProcessingComplete = FINAL_STATUSES.includes(sheetData.status);
 
   return (
     <div className="h-full max-md:h-[95%] flex flex-col">
@@ -314,7 +448,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
               <h2 className="text-[14px] font-medium">
                 {sheetData?.metadata?.fileName}
               </h2>
-              {renderStatusBadge}
+              {renderStatusBadge()}
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -359,9 +493,71 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
           <span>Sheet Type: {sheetData.metadata?.sheetType}</span>
         </p>
       </div>
-      {/* File Viewer Section */}
+
+      {/* File Viewer Section with Proper Placeholder During Processing */}
       <div className="flex-1 overflow-y-hidden overflow-x-hidden p-0">
-        <ExcelViewer fileUrl={sheetData?.fileUrl} />
+        {sheetData.status === "processing" ? (
+          <div className="h-full flex flex-col items-center justify-center bg-white p-6">
+            <div className="w-full max-w-md flex flex-col items-center">
+              {/* Minimal Progress UI */}
+              <div className="mt-8 flex flex-col items-center">
+                <FileSpreadsheet className="h-16 w-16 text-gray-200 mb-3" />
+                <p className="text-xs text-gray-400">
+                  Your file will be available when processing completes
+                </p>
+              </div>
+              <div className="w-full mb-8">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-gray-700">
+                    Processing
+                  </span>
+                  <span className="text-sm font-medium text-emerald-800">
+                    {sheetData.progress || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-100 rounded-full h-1.5">
+                  <div
+                    className="bg-emerald-800 h-1.5 rounded-full transition-all duration-300 ease-out"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Math.max(0, sheetData.progress || 0)
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Minimal Status Display */}
+              {sheetData.stage && (
+                <div className="flex items-center gap-2 mb-3 text-gray-600">
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                  <span className="text-sm">{sheetData.stage}</span>
+                </div>
+              )}
+
+              {/* Message */}
+              {sheetData.message && (
+                <p className="text-sm text-gray-500 text-center max-w-sm">
+                  {sheetData.message}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : isProcessingComplete && hasFileUrl ? (
+          <ExcelViewer fileUrl={sheetData?.fileUrl} />
+        ) : (
+          <div className="h-full flex items-center justify-center bg-white">
+            <div className="text-center">
+              <FileX size={48} className="text-gray-300 mx-auto mb-4" />
+              <p className="text-sm text-gray-500">
+                {hasFileUrl
+                  ? "File preview is not available"
+                  : "Waiting for file processing to begin"}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

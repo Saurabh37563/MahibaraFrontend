@@ -1,6 +1,6 @@
 "use client";
 
-import TeamDashboard from "@/components/teams";
+import TeamDashboard from "@/components/functions";
 import { Loader2 } from "lucide-react";
 import React, { Suspense } from "react";
 

@@ -49,6 +49,7 @@ function FileUploadMapping({
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const {
     uploadedFiles,
     mappings,
@@ -174,6 +175,17 @@ function FileUploadMapping({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Add mobile detection
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkIfMobile();
+    window.addEventListener("resize", checkIfMobile);
+    return () => window.removeEventListener("resize", checkIfMobile);
+  }, []);
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
@@ -182,8 +194,16 @@ function FileUploadMapping({
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-screen !rounded-none !max-w-screen h-full w-full flex flex-col overflow-hidden p-0 gap-0">
-        {/* Header */}
+      <DialogContent
+        className={`
+        sm:w-[70dvw]
+        w-full h-full
+         sm:h-auto
+        sm:max-w-[70dvw] sm:max-h-[90dvh]
+        overflow-hidden flex flex-col p-0 gap-0
+        ${isMobile ? "rounded-none" : "rounded-lg"}
+      `}
+      >
         <DialogHeader className="border-b p-4 shrink-0">
           <DialogTitle>
             {step === 1 ? "Upload Files" : "Map Sheets"}
