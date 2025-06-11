@@ -482,24 +482,15 @@ export default function ColumnMappingDialog({
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem>None</SelectItem>
-                                    {targetColumns.map((targetColumn) => {
-                                      const isUsed =
-                                        usedTargetColumns.includes(
-                                          targetColumn.id,
-                                        ) && mappedTargetId !== targetColumn.id;
-
-                                      return (
-                                        <SelectItem
-                                          key={targetColumn.id}
-                                          value={targetColumn.id}
-                                          disabled={isUsed}
-                                          className={isUsed ? "opacity-50" : ""}
-                                        >
-                                          {targetColumn.name}
-                                          {targetColumn.required && " *"}
-                                        </SelectItem>
-                                      );
-                                    })}
+                                    {targetColumns.map((targetColumn) => (
+                                      <SelectItem
+                                        key={targetColumn.id}
+                                        value={targetColumn.id}
+                                      >
+                                        {targetColumn.name}
+                                        {targetColumn.required && " *"}
+                                      </SelectItem>
+                                    ))}
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -583,7 +574,12 @@ export default function ColumnMappingDialog({
                         setOpen(false);
                       })
                     }
-                    disabled={!canComplete || saveMapping.isLoading}
+                    disabled={
+                      saveMapping.isLoading ||
+                      mappedColumnsCount === 0 ||
+                      !isAllRequiredMapped ||
+                      !isAllRequiredApproved
+                    }
                   >
                     {saveMapping.isLoading ? (
                       <>

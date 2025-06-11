@@ -60,6 +60,9 @@ function FileUploadMapping({
   const params = useParams();
   const projectId = params?.id as string;
 
+  // Check if any files are still uploading
+  const isUploading = uploadedFiles.some((file) => file.status === "uploading");
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -213,9 +216,9 @@ function FileUploadMapping({
                 type="button"
                 onClick={nextStep}
                 className="bg-green-900 hover:bg-green-800"
-                disabled={uploadedFiles.length === 0}
+                disabled={uploadedFiles.length === 0 || isUploading}
               >
-                Process
+                {isUploading ? "Uploading..." : "Process"}
               </Button>
             </div>
           ) : (

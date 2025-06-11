@@ -20,7 +20,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -131,7 +130,9 @@ export function TeamMemberSelector({
   const [users, setUsers] = React.useState<UserApiType[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-  const [tempSelectedUsers, setTempSelectedUsers] = React.useState<UserApiType[]>([]);
+  const [tempSelectedUsers, setTempSelectedUsers] = React.useState<
+    UserApiType[]
+  >([]);
 
   React.useEffect(() => {
     const fetchUsers = async () => {
@@ -155,17 +156,18 @@ export function TeamMemberSelector({
   const availableUsers = React.useMemo(() => {
     if (!users || !Array.isArray(users)) return [];
     if (!selectedMembers || !Array.isArray(selectedMembers)) return users;
+
     const selectedIds = new Set(
-      selectedMembers.map((m) => m?.id).filter(Boolean)
+      selectedMembers.map((m) => m?.id?.toString()).filter(Boolean)
     );
     return users.filter((user) => !selectedIds.has(user.id.toString()));
   }, [users, selectedMembers]);
 
   const handleToggleUser = (user: UserApiType) => {
-    setTempSelectedUsers(prev => {
-      const isSelected = prev.some(u => u.id === user.id);
+    setTempSelectedUsers((prev) => {
+      const isSelected = prev.some((u) => u.id === user.id);
       if (isSelected) {
-        return prev.filter(u => u.id !== user.id);
+        return prev.filter((u) => u.id !== user.id);
       } else {
         return [...prev, user];
       }
@@ -173,19 +175,21 @@ export function TeamMemberSelector({
   };
 
   const handleAddSelectedUsers = () => {
-    const newMembers: TeamMemberWithPermission[] = tempSelectedUsers.map(user => ({
-      id: user.id.toString(),
-      name: user.name,
-      email: user.email,
-      position: user.designation || "No designation",
-      avatarUrl: user.image,
-      permission: "view",
-      modulePermissions: {
-        projects: "view",
-        analytics: "view",
-        file_processing: "no_access",
-      },
-    }));
+    const newMembers: TeamMemberWithPermission[] = tempSelectedUsers.map(
+      (user) => ({
+        id: user.id.toString(),
+        name: user.name,
+        email: user.email,
+        position: user.designation || "No designation",
+        avatarUrl: user.image,
+        permission: "view",
+        modulePermissions: {
+          projects: "view",
+          analytics: "view",
+          file_processing: "no_access",
+        },
+      })
+    );
     onMembersChange([...selectedMembers, ...newMembers]);
     setTempSelectedUsers([]);
     setOpen(false);
@@ -201,23 +205,24 @@ export function TeamMemberSelector({
     module: ModuleType,
     permission: AccessLevel
   ) => {
-    onMembersChange(
-      selectedMembers.map((member) => {
-        if (member.id !== memberId) return member;
-        return {
-          ...member,
-          modulePermissions: {
-            ...(member.modulePermissions || {
-              projects: "view",
-              analytics: "view",
-              file_processing: "no_access",
-            }),
-            [module]: permission,
-          },
-          permission: "view",
-        };
-      })
-    );
+    const updatedMembers = selectedMembers.map((member) => {
+      if (member.id !== memberId) return member;
+
+      return {
+        ...member,
+        modulePermissions: {
+          ...(member.modulePermissions || {
+            projects: "view" as const,
+            analytics: "view" as const,
+            file_processing: "no_access" as const,
+          }),
+          [module]: permission,
+        },
+        permission: "view" as const,
+      };
+    });
+
+    onMembersChange(updatedMembers);
   };
 
   const handleRemoveMember = (memberId: string) => {
@@ -249,28 +254,26 @@ export function TeamMemberSelector({
           >
             <div className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
-              <span className="text-left font-normal">
-                Add team members...
-              </span>
+              <span className="text-left font-normal">Add team members...</span>
             </div>
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-2xl max-h-[80vh] p-0">
+        <DialogContent className="max-w-4xl max-h-[85vh] p-0 overflow-hidden">
           <DialogHeader className="p-6 pb-4">
             <DialogTitle>Add Team Members</DialogTitle>
             <DialogDescription>
               Search and select multiple team members to add to your team.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full overflow-hidden">
             <Command className="rounded-lg border-0 shadow-none flex-1">
               <CommandInput
                 placeholder="Search users..."
                 value={searchQuery}
                 onValueChange={setSearchQuery}
               />
-              <CommandList className="max-h-[400px]">
+              <CommandList className="max-h-[350px] overflow-y-auto">
                 <CommandEmpty>
                   {isLoading ? (
                     <div className="flex items-center justify-center py-6">
@@ -283,7 +286,9 @@ export function TeamMemberSelector({
                 </CommandEmpty>
                 <CommandGroup>
                   {availableUsers.map((user) => {
-                    const isSelected = tempSelectedUsers.some(u => u.id === user.id);
+                    const isSelected = tempSelectedUsers.some(
+                      (u) => u.id === user.id
+                    );
                     return (
                       <CommandItem
                         key={user.id}
@@ -310,11 +315,17 @@ export function TeamMemberSelector({
                             </p>
                             <div className="flex flex-col text-xs text-muted-foreground mt-1">
                               <span className="truncate">{user.email}</span>
-                              <span className="truncate">{user.designation || "No designation"}</span>
+                              <span className="truncate">
+                                {user.designation || "No designation"}
+                              </span>
                             </div>
                           </div>
                         </div>
-                        <Check className={`h-4 w-4 ${isSelected ? 'opacity-100' : 'opacity-0'}`} />
+                        <Check
+                          className={`h-4 w-4 ${
+                            isSelected ? "opacity-100" : "opacity-0"
+                          }`}
+                        />
                       </CommandItem>
                     );
                   })}
@@ -325,7 +336,8 @@ export function TeamMemberSelector({
               <div className="border-t p-4 bg-muted/30">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-sm font-medium">
-                    {tempSelectedUsers.length} user{tempSelectedUsers.length > 1 ? 's' : ''} selected
+                    {tempSelectedUsers.length} user
+                    {tempSelectedUsers.length > 1 ? "s" : ""} selected
                   </span>
                   <Button
                     variant="ghost"
@@ -336,11 +348,15 @@ export function TeamMemberSelector({
                   </Button>
                 </div>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {tempSelectedUsers.map(user => (
-                    <Badge key={user.id} variant="secondary" className="flex items-center gap-1">
+                  {tempSelectedUsers.map((user) => (
+                    <Badge
+                      key={user.id}
+                      variant="secondary"
+                      className="flex items-center gap-1"
+                    >
                       {user.name}
-                      <X 
-                        className="h-3 w-3 cursor-pointer" 
+                      <X
+                        className="h-3 w-3 cursor-pointer"
                         onClick={() => handleToggleUser(user)}
                       />
                     </Badge>
@@ -348,15 +364,19 @@ export function TeamMemberSelector({
                 </div>
               </div>
             )}
-            <div className="flex justify-end gap-2 p-4 border-t">
+            <div className="flex justify-end gap-2 p-4 border-t bg-background">
               <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleAddSelectedUsers}
                 disabled={tempSelectedUsers.length === 0}
               >
-                Add {tempSelectedUsers.length > 0 ? `${tempSelectedUsers.length} ` : ''}Member{tempSelectedUsers.length > 1 ? 's' : ''}
+                Add{" "}
+                {tempSelectedUsers.length > 0
+                  ? `${tempSelectedUsers.length} `
+                  : ""}
+                Member{tempSelectedUsers.length > 1 ? "s" : ""}
               </Button>
             </div>
           </div>
@@ -380,24 +400,31 @@ export function TeamMemberSelector({
             )}
           </div>
           <div className="border rounded-md overflow-hidden">
-            <ScrollArea className="w-full overflow-x-auto">
-              <Table className="w-full min-w-[800px]">
+            <div className="overflow-x-auto max-w-full">
+              <Table className="w-full min-w-[700px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="min-w-[200px] sticky left-0 bg-background z-10 border-r">Member</TableHead>
+                    <TableHead className="min-w-[180px] w-[180px] sticky left-0 bg-background z-20 border-r shadow-sm">
+                      Member
+                    </TableHead>
                     {MODULES.map((module) => (
-                      <TableHead key={module.value} className="text-center min-w-[130px]">
+                      <TableHead
+                        key={module.value}
+                        className="text-center min-w-[140px] w-[140px]"
+                      >
                         {module.label}
                       </TableHead>
                     ))}
-                    <TableHead className="w-[60px] sticky right-0 bg-background z-10 border-l">Actions</TableHead>
+                    <TableHead className="w-[70px] min-w-[70px] sticky right-0 bg-background z-20 border-l shadow-sm">
+                      Actions
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {selectedMembers.map((member) => (
                     <TableRow key={member.id}>
-                      <TableCell className="sticky left-0 bg-background z-10 border-r">
-                        <div className="flex items-center space-x-3">
+                      <TableCell className="sticky left-0 bg-background z-10 border-r shadow-sm p-3">
+                        <div className="flex items-center space-x-3 min-w-0">
                           <Avatar className="h-8 w-8 flex-shrink-0">
                             <AvatarImage
                               src={member.avatarUrl || undefined}
@@ -410,21 +437,25 @@ export function TeamMemberSelector({
                                 .join("")}
                             </AvatarFallback>
                           </Avatar>
-                          <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium truncate">
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-sm font-medium truncate max-w-[120px]">
                               {member.name}
                             </span>
-                            <span className="text-xs text-muted-foreground truncate">
+                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
                               {member.email}
                             </span>
                           </div>
                         </div>
                       </TableCell>
                       {MODULES.map((module) => (
-                        <TableCell key={module.value} className="text-center">
+                        <TableCell
+                          key={module.value}
+                          className="text-center p-2"
+                        >
                           <Select
                             value={
-                              member.modulePermissions?.[module.value] ||
+                              (member.modulePermissions &&
+                                member.modulePermissions[module.value]) ||
                               "no_access"
                             }
                             onValueChange={(value: AccessLevel) =>
@@ -435,7 +466,7 @@ export function TeamMemberSelector({
                               )
                             }
                           >
-                            <SelectTrigger className="w-[120px] mx-auto">
+                            <SelectTrigger className="w-[130px] mx-auto">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -458,7 +489,7 @@ export function TeamMemberSelector({
                           </Select>
                         </TableCell>
                       ))}
-                      <TableCell className="sticky right-0 bg-background z-10 border-l">
+                      <TableCell className="sticky right-0 bg-background z-10 border-l shadow-sm p-2">
                         <Button
                           variant="ghost"
                           size="icon"
@@ -472,8 +503,7 @@ export function TeamMemberSelector({
                   ))}
                 </TableBody>
               </Table>
-              <ScrollBar orientation="horizontal" />
-            </ScrollArea>
+            </div>
           </div>
         </>
       )}

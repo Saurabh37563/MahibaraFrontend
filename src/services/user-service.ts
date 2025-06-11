@@ -32,7 +32,6 @@ export class UserService {
   }
 
   private static transformUserResponse(userData: Record<string, unknown>): User {
-    // Ensure userType is one of the allowed values
     const allowedUserTypes = ["USER", "ADMIN", "MANAGER"] as const;
     const userTypeRaw = userData.userType as string;
     const userType = allowedUserTypes.includes(userTypeRaw as (typeof allowedUserTypes)[number])
@@ -40,10 +39,11 @@ export class UserService {
       : "USER";
 
     return {
-      id: userData.id as string,
-      name: userData.name as string | null,
-      email: userData.email as string,
+      id: Number(userData.id),
+      name: (userData.name as string) ?? "", // Ensure name is always a string
+      email: (userData.email as string) ?? "", // Ensure email is always a string
       image: userData.image as string | null,
+      designation: userData.designation as string | null, // Add missing designation field
       organizationId: userData.organizationId as string | null,
       organizationName: userData.organizationName as string | null,
       userType,

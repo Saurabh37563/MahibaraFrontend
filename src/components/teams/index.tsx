@@ -8,7 +8,7 @@ const TeamDashboard = () => {
   return (
     <div className="grid md:grid-cols-[auto_1fr] h-[calc(100vh-var(--header-height))]">
       <FunctionsSidebar />
-      <div className="p-4 overflow-auto ">
+      <div className="p-4 bg-gray-50 overflow-auto ">
         <Functions />
       </div>
     </div>

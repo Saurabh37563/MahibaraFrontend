@@ -146,7 +146,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
 
   const sseUrl = useMemo(() => {
     if (!projectId || !sheetData?.taskId) return "";
-    return `${BASE_TEMP_BACKEND_URL}/tasks/${sheetData.taskId}/events`;
+    return `${BASE_TEMP_BACKEND_URL}/api/v1/file/task-stream/${sheetData.taskId}`;
   }, [projectId, sheetData?.taskId]);
 
   const { addEventListener, disconnect: disconnectSSE } = useSSE(sseUrl, {

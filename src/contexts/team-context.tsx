@@ -7,6 +7,7 @@ import { z } from "zod";
 const OrganizationSchema = z.object({
   id: z.number(),
   name: z.string(),
+  description: z.string().optional(),
   avatar: z.string().optional(),
   image: z.string().nullable().optional(), // <-- allow null here
 });
@@ -157,7 +158,7 @@ export const TeamProvider: React.FC<TeamProviderProps> = ({ children }) => {
   return (
     <TeamContext.Provider value={contextValue}>{children}</TeamContext.Provider>
   );
-}; 
+};
 
 export const useTeamContext = () => {
   const context = useContext(TeamContext);

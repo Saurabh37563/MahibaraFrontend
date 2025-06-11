@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { AlertTriangle } from "lucide-react";
+import { useParams } from "next/navigation";
+import { Info } from "lucide-react"; // Changed icon to Info for neutral state
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 import { toast } from "sonner";
 import AnalysisHeader from "./analysis-header";
@@ -50,12 +50,24 @@ export interface SourceFile {
   name: string;
 }
 
+// Define API error response type
+interface ApiErrorResponse {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
 interface AnalysisViewProps {
   title?: string;
   analysisType: string;
   onError?: (error: Error) => void;
   onAnalysisComplete?: () => void;
   enableSSE?: boolean;
+  onClose?: () => void; // Add onClose prop for closing the error view
 }
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -63,9 +75,9 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   analysisType,
   onError,
   onAnalysisComplete,
+  onClose,
 }) => {
   const params = useParams();
-  const router = useRouter();
   const projectId = params?.id as string;
   const queryClient = useQueryClient();
 
@@ -174,26 +186,47 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
 
   // Error state
   if (analysisError) {
+    let friendlyMessage = "Analysis not found.";
+    if (
+      (analysisError as AxiosError<ApiErrorResponse>)?.response?.status !==
+        404 &&
+      !(analysisError as Error)?.message?.includes("404")
+    ) {
+      friendlyMessage = "Unable to load analysis.";
+    }
+
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Error Loading Analysis
+      <div className="h-full flex items-center justify-center bg-transparent">
+        <div className="text-center max-w-md p-0 rounded-lg">
+          <Info
+            size={48}
+            className="mx-auto mb-4 text-green-900"
+            aria-label="Information"
+          />
+          <h3 className="text-base font-semibold text-green-900 mb-6">
+            {friendlyMessage}
           </h3>
-          <p className="text-red-600 mb-4">
-            {analysisError instanceof Error
-              ? analysisError.message
-              : "Unknown error"}
-          </p>
-          <div className="space-y-2 text-sm text-gray-500">
-            <p>Project ID: {projectId}</p>
-            <p>Analysis Type: {analysisType}</p>
-          </div>
-          <div className="mt-6 space-x-3">
-            <Button onClick={() => refetchAnalysis()}>Retry</Button>
-            <Button variant="outline" onClick={() => router.back()}>
-              Go Back
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={() => refetchAnalysis()}
+              className="bg-green-900 text-white hover:bg-green-800 focus:ring-green-900"
+              aria-label="Retry loading analysis"
+              tabIndex={0}
+            >
+              Retry
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (onClose) {
+                  onClose();
+                }
+              }}
+              className="border-green-900 text-green-900 hover:bg-green-50 focus:ring-green-900"
+              aria-label="Close error message"
+              tabIndex={0}
+            >
+              Close
             </Button>
           </div>
         </div>

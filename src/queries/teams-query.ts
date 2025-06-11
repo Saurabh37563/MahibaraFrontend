@@ -19,15 +19,62 @@ export const useGetTeamsByOrganization = (organizationId: number | string | null
 export const useCreateTeam = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<Team, Error, { org_id: number; team: TeamCreate }>({
-    mutationFn: ({ org_id, team }) => 
+  return useMutation({
+    mutationFn: ({ org_id, team }: { org_id: number; team: TeamCreate }) => 
       TeamsService.createTeam(org_id, team),
-    onSuccess: (newTeam, { org_id }) => {
-      queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEYS.byOrganization(org_id) });
-      queryClient.setQueryData<Team[]>(
-        TEAMS_QUERY_KEYS.byOrganization(org_id),
-        (oldTeams = []) => [...oldTeams, newTeam]
-      );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+    },
+  });
+};
+
+export const useUpdateTeam = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ teamId, teamData }: { 
+      teamId: number; 
+      teamData: { 
+        name: string; 
+        org_id: number; 
+        description: string;
+        members: Array<{
+          id: number;
+          modulePermissions: {
+            projects: string;
+            analytics: string;
+            file_processing: string;
+          };
+        }>;
+      } 
+    }) => {
+      console.log("Query Layer - Update team mutation called with:", { teamId, teamData });
+      return TeamsService.updateTeam(teamId, teamData);
+    },
+    onSuccess: (data) => {
+      console.log("Query Layer - Update team success:", data);
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
+      queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEYS.all });
+    },
+    onError: (error) => {
+      console.error("Query Layer - Update team error:", error);
+    },
+  });
+};
+
+export const useDeleteTeam = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (teamId: number) => TeamsService.deleteTeam(teamId),
+    onSuccess: () => {
+      // Invalidate teams queries to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: TEAMS_QUERY_KEYS.all });
+    },
+    onError: (error: unknown) => {
+      console.error("Delete team error:", error);
+      throw error;
     },
   });
 };

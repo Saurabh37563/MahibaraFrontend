@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 // User type
 export interface User {
   id: string
@@ -25,3 +27,11 @@ export interface CreateOrganizationRequest {
   description?: string
   organisation_admin: number
 }
+
+export const CreateOrganizationSchema = z.object({
+  name: z.string(),
+  description: z.string().optional(),
+  organization_owner: z.number(),
+});
+
+export type CreateOrganizationParams = z.infer<typeof CreateOrganizationSchema>;

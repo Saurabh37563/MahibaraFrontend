@@ -270,9 +270,12 @@ export default function SheetsPanel({
             ))}
           </div>
         ) : sheets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-32 text-gray-400">
-            <LuFileSpreadsheet size={24} className="mb-2" />
-            <span className="text-xs">No sheets available</span>
+          <div className="flex flex-col items-center justify-center h-full text-center py-8">
+            <LuFileSpreadsheet className="text-gray-300 mb-4" size={48} />
+            <p className="text-gray-500 text-sm mb-2">No sheets available</p>
+            <p className="text-gray-400 text-xs">
+              Click the + button to add source files
+            </p>
           </div>
         ) : (
           sheets.map((sheet, index) => (

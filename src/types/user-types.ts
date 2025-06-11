@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
-// User schema with Zod for type safety
+// Base User schema with Zod for type safety
 export const UserSchema = z.object({
-  id: z.string(),
-  name: z.string().nullable(),
+  id: z.number(),
+  name: z.string(),
   email: z.string().email(),
-  image: z.string().url().nullable(),
+  image: z.string().nullable(),
+  designation: z.string().nullable(),
   organizationId: z.string().nullable(),
   organizationName: z.string().nullable(),
-  userType: z.enum(['ADMIN', 'USER', 'MANAGER']),
+  userType: z.enum(['ADMIN', 'USER', 'MANAGER']).optional(),
   createdAt: z.string().datetime().nullable(),
   updatedAt: z.string().datetime().nullable(),
 });
@@ -25,14 +26,12 @@ export interface UserUpdateData {
 export const ApiResponseSchema = z.object({
   success: z.boolean(),
   message: z.string().optional(),
+  error: z.string().nullable(),
+  metadata: z.any().nullable(),
 });
 
 export const UserResponseSchema = ApiResponseSchema.extend({
-  data: UserSchema.optional(),
+  data: z.array(UserSchema),
 });
 
-export const PasswordResetSchema = z.object({
-  oldPassword: z.string().min(8),
-  newPassword: z.string().min(8),
-  confirmPassword: z.string().min(8),
-});
+export type UserApiResponse = z.infer<typeof UserResponseSchema>;

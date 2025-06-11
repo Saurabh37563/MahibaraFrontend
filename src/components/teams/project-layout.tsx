@@ -129,7 +129,7 @@ const Functions = () => {
       </div>
 
       {/* Sticky Filters */}
-      <div className="sticky top-0 z-10 bg-white pb-2">
+      <div className="sticky top-0 z-10  pb-2">
         <FilterDropdown />
       </div>
 
@@ -146,7 +146,7 @@ const Functions = () => {
 
       {/* Sticky Pagination */}
       {projects?.data && projects?.data.length > 0 && (
-        <div className="sticky bottom-0 z-10 bg-white pt-2">
+        <div className="sticky bottom-0 z-10  pt-2">
           <div className="flex justify-center mt-2">
             <Pagination>
               <PaginationContent>

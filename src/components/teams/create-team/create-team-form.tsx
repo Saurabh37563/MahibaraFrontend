@@ -27,10 +27,18 @@ const formSchema = z.object({
   members: z
     .array(
       z.object({
-        id: z.number(),
+        id: z.string(),
+        name: z.string(),
+        email: z.string(),
+        position: z.string(),
         permission: z.enum(["view", "edit"]),
+        avatarUrl: z.string().optional().nullable(),
         modulePermissions: z
-          .record(z.enum(["no_access", "view", "edit", "manage"]))
+          .object({
+            projects: z.enum(["no_access", "view", "edit", "manage"]),
+            analytics: z.enum(["no_access", "view", "edit", "manage"]),
+            file_processing: z.enum(["no_access", "view", "edit", "manage"]),
+          })
           .optional(),
       })
     )
@@ -46,6 +54,8 @@ interface CreateTeamFormProps {
   onCancel: () => void;
   isDesktop: boolean;
   isPending: boolean;
+  initialValues?: Partial<CreateTeamFormValues>;
+  mode?: "create" | "update";
 }
 
 export function CreateTeamForm({
@@ -53,10 +63,14 @@ export function CreateTeamForm({
   onCancel,
   isDesktop,
   isPending,
+  initialValues,
+  mode = "create",
 }: CreateTeamFormProps) {
   const [selectedMembers, setSelectedMembers] = React.useState<
     TeamMemberWithPermission[]
   >([]);
+  const [isInitialized, setIsInitialized] = React.useState(false);
+  const [formKey, setFormKey] = React.useState(0); // Add form key for re-mounting
 
   const form = useForm<CreateTeamFormValues>({
     resolver: zodResolver(formSchema),
@@ -65,27 +79,116 @@ export function CreateTeamForm({
       description: "",
       members: [],
     },
+    mode: "onBlur", // Change validation mode to prevent aggressive validation
   });
 
+  // Initialize form with proper values
+  React.useEffect(() => {
+    const initializeForm = () => {
+      setIsInitialized(false); // Reset initialization state
+
+      if (initialValues && mode === "update") {
+        const processedMembers = (initialValues.members || []).map(
+          (member) => ({
+            ...member,
+            id: member.id?.toString() || "",
+            name: member.name || "",
+            email: member.email || "",
+            position: member.position || "No designation",
+            permission: (member.permission as "view" | "edit") || "view",
+            avatarUrl: member.avatarUrl || null,
+            modulePermissions: member.modulePermissions || {
+              projects: "view" as const,
+              analytics: "view" as const,
+              file_processing: "no_access" as const,
+            },
+          })
+        );
+
+        const formValues = {
+          name: initialValues.name || "",
+          description: initialValues.description || "",
+          members: processedMembers,
+        };
+
+        // Clear all errors first
+        form.clearErrors();
+
+        // Reset form with new values
+        form.reset(formValues, {
+          keepErrors: false,
+          keepDirty: false,
+          keepTouched: false,
+        });
+
+        setSelectedMembers(processedMembers);
+
+        // Mark as initialized after form reset
+        setTimeout(() => {
+          setIsInitialized(true);
+        }, 150);
+      } else if (mode === "create") {
+        const emptyValues = {
+          name: "",
+          description: "",
+          members: [],
+        };
+
+        form.clearErrors();
+        form.reset(emptyValues, {
+          keepErrors: false,
+          keepDirty: false,
+          keepTouched: false,
+        });
+        setSelectedMembers([]);
+        setIsInitialized(true);
+      }
+    };
+
+    initializeForm();
+    // Update form key to force re-mount when initialValues change
+    setFormKey((prev) => prev + 1);
+  }, [initialValues, mode, form]);
+
   const handleMembersChange = (members: TeamMemberWithPermission[]) => {
-    setSelectedMembers(members);
-    form.setValue(
-      "members",
-      members.map((member) => ({
-        id: typeof member.id === "string" ? parseInt(member.id, 10) : member.id,
-        permission: member.permission,
-        modulePermissions: member.modulePermissions || {
-          projects: "view",
-          analytics: "view",
-          file_processing: "no_access",
-        },
-      })),
-      { shouldValidate: true }
-    );
+    const processedMembers = members.map((member) => ({
+      ...member,
+      id: member.id?.toString() || "",
+      permission: (member.permission as "view" | "edit") || "view",
+      modulePermissions: member.modulePermissions || {
+        projects: "view" as const,
+        analytics: "view" as const,
+        file_processing: "no_access" as const,
+      },
+    }));
+
+    setSelectedMembers(processedMembers);
+
+    if (isInitialized) {
+      form.setValue("members", processedMembers, {
+        shouldValidate: false, // Don't validate immediately
+        shouldDirty: true,
+      });
+    }
   };
+
+  // Don't render form until properly initialized
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center h-32">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  // Add debug logging for isPending
+  console.log("CreateTeamForm - isPending:", isPending);
+  console.log("CreateTeamForm - mode:", mode);
+
   return (
     <Form {...form}>
       <form
+        key={formKey}
         onSubmit={form.handleSubmit(onSubmit)}
         className="flex flex-col h-full"
       >
@@ -98,7 +201,13 @@ export function CreateTeamForm({
               <FormItem>
                 <FormLabel>Team Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter team name" {...field} />
+                  <Input
+                    placeholder="Enter team name"
+                    {...field}
+                    disabled={false} // Explicitly set to false
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.stopPropagation()}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -115,6 +224,9 @@ export function CreateTeamForm({
                   <Textarea
                     placeholder="Enter team description"
                     className="resize-none min-h-[100px]"
+                    disabled={false} // Explicitly set to false
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.stopPropagation()}
                     {...field}
                   />
                 </FormControl>
@@ -161,8 +273,10 @@ export function CreateTeamForm({
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {mode === "update" ? "Updating..." : "Creating..."}
                   </>
+                ) : mode === "update" ? (
+                  "Update Team"
                 ) : (
                   "Create Team"
                 )}
@@ -178,8 +292,10 @@ export function CreateTeamForm({
                 {isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating...
+                    {mode === "update" ? "Updating..." : "Creating..."}
                   </>
+                ) : mode === "update" ? (
+                  "Update Team"
                 ) : (
                   "Create Team"
                 )}

@@ -44,23 +44,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const userWithExtras = session.user as typeof session.user &
             SessionUserExtra;
           const sessionUser = {
-            id: userWithExtras.id || "unknown",
+            id: Number(userWithExtras.id) || 0, // Convert to number as required by User type
             name: userWithExtras.name ?? "",
-            firstName: userWithExtras.firstName ?? "",
-            lastName: userWithExtras.lastName ?? "",
             email: userWithExtras.email ?? "unknown@example.com",
-            loginName: userWithExtras.loginName ?? "",
-            image: userWithExtras.image ?? "",
-            // Additional fields with default values
+            image: userWithExtras.image ?? null,
+            designation: null, // Add missing required field
             organizationId: null,
             organizationName: null,
-            userType: userWithExtras.userType ?? "USER", // Default value
+            userType:
+              (userWithExtras.userType as "ADMIN" | "USER" | "SUPER_ADMIN") ??
+              "USER",
             createdAt: null,
             updatedAt: null,
           };
 
-          // Validate with Zod schema
-          const validatedUser = sessionUser as User;
+          // Use proper validation with Zod schema
+          const validatedUser = UserSchema.parse(sessionUser);
           setUser(validatedUser);
 
           // Optionally store in localStorage as backup

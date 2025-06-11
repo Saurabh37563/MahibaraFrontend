@@ -430,7 +430,7 @@ export default function Project() {
                   clearSelectedSheet={handleClearSelection}
                 />
               </ResizablePanel>
-              <ResizableHandle />
+              <ResizableHandle className="resize-handle" />
               <ResizablePanel defaultSize={50}>
                 <AnalysisPanel
                   analysis={analysis.map(toAnalysisItem)} // now Analysis[]
@@ -469,7 +469,7 @@ export default function Project() {
               </ResizablePanel>
             </ResizablePanelGroup>
           </ResizablePanel>
-          <ResizableHandle />
+          <ResizableHandle className="resize-handle" />
           <ResizablePanel defaultSize={75}>
             {/* Content Area */}
             <div className="relative h-full w-full bg-white dark:bg-black overflow-hidden">

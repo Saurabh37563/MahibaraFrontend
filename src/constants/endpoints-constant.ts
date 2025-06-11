@@ -34,6 +34,8 @@ export const ORGANIZATION_ENDPOINTS = {
 export const TEAM_ENDPOINTS = {
   getOrganizationTeams: BASE_TEAMS_URL + '/organization',
   postCreateTeam: BASE_TEAMS_URL,
+  updateTeam: (teamId: number) => `${BASE_TEAMS_URL}/${teamId}`,
+  deleteTeam: (teamId: number) => `${BASE_TEAMS_URL}/${teamId}`,
   getAllUserOrganizations: BASE_ORG_URL + "/get-all-org",
   getOrganizationDetails: BASE_ORG_URL + "/details",
 };

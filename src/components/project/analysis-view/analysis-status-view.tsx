@@ -35,7 +35,7 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
             No source file is mapped to this analysis. Please map a source file
             to proceed.
           </p>
-          <ColumnMappingDialog
+          {/* <ColumnMappingDialog
             projectId={projectId}
             analysisType={analysisType}
             open={columnMappingDialogOpen}
@@ -47,7 +47,7 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
             >
               Map Source File
             </Button>
-          </ColumnMappingDialog>
+          </ColumnMappingDialog> */}
         </div>
       </div>
     );

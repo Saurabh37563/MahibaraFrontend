@@ -193,15 +193,17 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
           )}
 
           {/* Analysis Settings */}
-          <AnalysisSettings
-            projectId={projectId}
-            analysisType={analysisType}
-            open={columnMappingDialogOpen}
-            setOpen={setColumnMappingDialogOpen}
-          >
-            {/* No custom trigger, so pass nothing or null as children */}
-            {null}
-          </AnalysisSettings>
+          {analysisData?.fileMappingStatus && (
+            <AnalysisSettings
+              projectId={projectId}
+              analysisType={analysisType}
+              open={columnMappingDialogOpen}
+              setOpen={setColumnMappingDialogOpen}
+            >
+              {/* No custom trigger, so pass nothing or null as children */}
+              {null}
+            </AnalysisSettings>
+          )}
         </div>
       </div>
 

@@ -41,9 +41,9 @@ import {
 } from "@/components/ui/drawer";
 import { useDebounce } from "@/hooks/use-debounce";
 type StatusOption = "all" | "draft" | "in-progress" | "completed" | "pending";
- type SortField = "title" | "date" | "status" | "none"; // Added "none"
- type SortOrder = "asc" | "desc" | "none"; // Added "none"
- type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
+type SortField = "title" | "date" | "status" | "none"; // Added "none"
+type SortOrder = "asc" | "desc" | "none"; // Added "none"
+type DateRange = "all" | "today" | "week" | "month" | "quarter" | "year";
 
 interface FilterState {
   status: StatusOption;
@@ -171,7 +171,7 @@ export default function Filters() {
             placeholder="Search..."
             value={filters.search}
             onChange={(e) => updateFilter("search", e.target.value)}
-            className="w-full pl-3 pr-8"
+            className="w-full pl-3 bg-white pr-8"
           />
           {filters.search && (
             <Button
@@ -185,7 +185,7 @@ export default function Filters() {
           )}
         </div>
 
-        <div className="hidden sm:flex items-center gap-2">
+        <div className="hidden sm:flex items-center bg-white gap-2">
           <Select
             value={filters.status}
             onValueChange={(value) =>
@@ -286,7 +286,7 @@ export default function Filters() {
           )}
         </div>
 
-        <div className="sm:hidden">
+        <div className="sm:hidden ">
           <Drawer open={isFilterMenuOpen} onOpenChange={setIsFilterMenuOpen}>
             <DrawerTrigger asChild>
               <Button variant="outline" className="w-full flex justify-between">

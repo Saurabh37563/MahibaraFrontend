@@ -1,0 +1,88 @@
+/* Custom ResizableHandle styling */
+[data-panel-group-direction="horizontal"] > [data-resize-handle] {
+  width: 6px;
+  background-color: #f3f4f6;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+[data-panel-group-direction="horizontal"] > [data-resize-handle]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  border-radius: 3px;
+  background-color: #d1d5db;
+}
+
+[data-panel-group-direction="horizontal"] > [data-resize-handle]:hover {
+  background-color: #e5e7eb;
+}
+
+[data-panel-group-direction="horizontal"] > [data-resize-handle]:hover::after {
+  background-color: #9ca3af;
+}
+
+[data-panel-group-direction="horizontal"] > [data-resize-handle][data-active]::after {
+  background-color: #6b7280;
+}
+
+[data-panel-group-direction="vertical"] > [data-resize-handle] {
+  height: 6px;
+  background-color: #f3f4f6;
+  position: relative;
+  transition: background-color 0.2s ease;
+}
+
+[data-panel-group-direction="vertical"] > [data-resize-handle]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  height: 2px;
+  width: 40px;
+  border-radius: 3px;
+  background-color: #d1d5db;
+}
+
+[data-panel-group-direction="vertical"] > [data-resize-handle]:hover {
+  background-color: #e5e7eb;
+}
+
+[data-panel-group-direction="vertical"] > [data-resize-handle]:hover::after {
+  background-color: #9ca3af;
+}
+
+[data-panel-group-direction="vertical"] > [data-resize-handle][data-active]::after {
+  background-color: #6b7280;
+}
+
+/* Dark mode styles */
+.dark [data-panel-group-direction="horizontal"] > [data-resize-handle],
+.dark [data-panel-group-direction="vertical"] > [data-resize-handle] {
+  background-color: #2a2a2a;
+}
+
+.dark [data-panel-group-direction="horizontal"] > [data-resize-handle]::after,
+.dark [data-panel-group-direction="vertical"] > [data-resize-handle]::after {
+  background-color: #4a4a4a;
+}
+
+.dark [data-panel-group-direction="horizontal"] > [data-resize-handle]:hover,
+.dark [data-panel-group-direction="vertical"] > [data-resize-handle]:hover {
+  background-color: #333333;
+}
+
+.dark [data-panel-group-direction="horizontal"] > [data-resize-handle]:hover::after,
+.dark [data-panel-group-direction="vertical"] > [data-resize-handle]:hover::after {
+  background-color: #6b6b6b;
+}
+
+.dark [data-panel-group-direction="horizontal"] > [data-resize-handle][data-active]::after,
+.dark [data-panel-group-direction="vertical"] > [data-resize-handle][data-active]::after {
+  background-color: #8a8a8a;
+}

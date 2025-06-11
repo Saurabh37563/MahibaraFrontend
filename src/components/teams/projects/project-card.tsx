@@ -70,6 +70,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   const router = useRouter();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   const formattedDate = moment(project.modifiedDate).format("MMM D, YYYY");
   const fromNow = moment(project.modifiedDate).fromNow();
@@ -81,11 +82,29 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
     router.push(`/functions/${project.id}/?${newParams.toString()}`);
   };
 
+  // Handles opening dialog after closing dropdown
+  const handleOpenStatusDialog = () => {
+    setDropdownOpen(false);
+    setTimeout(() => setShowStatusDialog(true), 10);
+  };
+  const handleOpenDeleteDialog = () => {
+    setDropdownOpen(false);
+    setTimeout(() => setShowDeleteDialog(true), 10);
+  };
+
   return (
     <>
       <div
         onClick={handleCardClick}
         className={`group border ${borderColor} bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 transition-all hover:shadow-md cursor-pointer hover:translate-y-[-2px] duration-300`}
+        tabIndex={0}
+        aria-label={`Open project ${project.name}`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            handleCardClick();
+          }
+        }}
+        role="button"
       >
         {/* Header with folder icon and status */}
         <div className="flex justify-between items-start mb-4">
@@ -100,18 +119,27 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
             </span>
           </div>
           <div className="project-dropdown">
-            <DropdownMenu>
+            <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  className="h-8 w-8 p-0"
+                  aria-label="Project actions"
+                  onClick={(e) => e.stopPropagation()} // Prevent card click when opening dropdown
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent
+                align="end"
+                onClick={(e) => e.stopPropagation()} // Prevent card click when interacting with dropdown
+              >
                 {project?.status !== "completed" && (
                   <DropdownMenuItem
-                    onClick={(e) => {
+                    onSelect={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
-                      setShowStatusDialog(true);
+                      handleOpenStatusDialog();
                     }}
                   >
                     Update Status
@@ -119,9 +147,10 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
                 )}
                 <DropdownMenuItem
                   className="text-destructive"
-                  onClick={(e) => {
+                  onSelect={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
-                    setShowDeleteDialog(true);
+                    handleOpenDeleteDialog();
                   }}
                 >
                   Delete Project
@@ -166,6 +195,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         </div>
       </div>
 
+      {/* Dialogs rendered outside dropdown for correct behavior */}
       <ProjectStatusDialog
         project={project}
         open={showStatusDialog}

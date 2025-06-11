@@ -9,11 +9,15 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      firstName?: string;
+      lastName?: string;
     };
   }
 
   interface User {
     accessToken?: string;
+    firstName?: string;
+    lastName?: string;
   }
 }
 

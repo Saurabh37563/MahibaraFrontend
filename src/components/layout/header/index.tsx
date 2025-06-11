@@ -9,13 +9,11 @@ import {
   useInfiniteQuery,
 } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
-import { Search, ChevronDown, LogOut, HelpCircle, User } from "lucide-react";
+import { ChevronDown, LogOut, HelpCircle, User } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -93,15 +91,15 @@ interface SearchResponse {
 }
 
 // Routes that should display the search bar
-const SEARCHABLE_ROUTES = [
-  "/dashboard",
-  "/users",
-  "/projects",
-  "/analytics",
-  "/reports",
-  "/settings/general",
-  "/functions",
-];
+// const SEARCHABLE_ROUTES = [
+//   "/dashboard",
+//   "/users",
+//   "/projects",
+//   "/analytics",
+//   "/reports",
+//   "/settings/general",
+//   "/functions",
+// ];
 
 const fetchSearchResults = async ({
   query = "",
@@ -275,9 +273,9 @@ const HeaderContent = () => {
       }
     : null;
 
-  const shouldShowSearch = SEARCHABLE_ROUTES.some(
-    (route) => pathname?.startsWith(route) || false
-  );
+  // const shouldShowSearch = SEARCHABLE_ROUTES.some(
+  //   (route) => pathname?.startsWith(route) || false
+  // );
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -360,11 +358,11 @@ const HeaderContent = () => {
     <>
       <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
         <div className="w-full mx-auto px-2">
-          <div className="flex justify-between items-center h-16">
+          <div className="relative flex items-center h-16">
             {/* Left section - Logo */}
-            <div className="flex items-center ">
+            <div className="flex items-center flex-shrink-0 absolute left-0 top-1/2 -translate-y-1/2">
               {isMobile && !isOpen && isFunctionsPage && (
-                <SidebarTrigger className=" size-10">
+                <SidebarTrigger className="size-10">
                   <FiSidebar size={40} />
                 </SidebarTrigger>
               )}
@@ -376,8 +374,8 @@ const HeaderContent = () => {
             </div>
 
             {/* Middle section - Search Bar */}
-            {shouldShowSearch && (
-              <div className="hidden md:block flex-1 max-w-md mx-8">
+            {/* {shouldShowSearch && (
+              <div className="hidden md:flex flex-1 justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-md w-full">
                 <Button
                   variant="outline"
                   className="w-full justify-between text-muted-foreground text-sm"
@@ -392,21 +390,22 @@ const HeaderContent = () => {
                   </kbd>
                 </Button>
               </div>
-            )}
+            )} */}
 
             {/* Right section - User Profile */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center absolute right-0 top-1/2 -translate-y-1/2 space-x-2 md:space-x-4">
               {/* Search toggle for mobile */}
-              {shouldShowSearch && (
+              {/* {shouldShowSearch && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="md:hidden"
                   onClick={() => setCommandOpen(true)}
+                  aria-label="Open search"
                 >
                   <Search className="h-5 w-5" />
                 </Button>
-              )}
+              )} */}
 
               {/* User dropdown */}
               <DropdownMenu>
@@ -414,56 +413,70 @@ const HeaderContent = () => {
                   <Button
                     variant="ghost"
                     className="flex items-center gap-2 px-2 h-10"
+                    aria-label="Open user menu"
                   >
                     <Avatar className="h-8 w-8">
                       <AvatarImage
                         src={user?.image || undefined}
                         alt={user?.name || "User"}
                       />
-                      <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                      <AvatarFallback className="bg-emerald-800/20 text-emerald-800">
+                        {getUserInitials()}
+                      </AvatarFallback>
                     </Avatar>
-
                     <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel className="font-normal">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {user?.firstName || user?.lastName
-                          ? `${user?.firstName ?? ""} ${
-                              user?.lastName ?? ""
-                            }`.trim()
-                          : user?.name || "User"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {user?.email || ""}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/profile")}>
-                    <User className="mr-2 h-4 w-4" />
+                <DropdownMenuContent
+                  align="end"
+                  className="w-72 max-w-xs p-0 overflow-hidden shadow-lg"
+                >
+                  {/* Profile Card */}
+                  <div className="flex flex-col items-center px-4 py-4 bg-gradient-to-b from-slate-50 to-white border-b border-gray-100">
+                    <Avatar className="h-14 w-14 mb-2">
+                      <AvatarImage
+                        src={user?.image || undefined}
+                        alt={user?.name || "User"}
+                      />
+                      <AvatarFallback className="text-lg">
+                        {getUserInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="font-semibold text-base text-gray-900 text-center w-full truncate">
+                      {user?.firstName || user?.lastName
+                        ? `${user?.firstName ?? ""} ${
+                            user?.lastName ?? ""
+                          }`.trim()
+                        : user?.name || "User"}
+                    </span>
+                    <span
+                      className="text-xs text-gray-500 text-center w-full max-w-[200px] truncate"
+                      title={user?.email || ""}
+                    >
+                      {user?.email || ""}
+                    </span>
+                  </div>
+                  <DropdownMenuItem
+                    onClick={() => router.push("/profile")}
+                    className="flex items-center gap-2 focus:bg-emerald-50 focus:text-emerald-900"
+                  >
+                    <User className="h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  {/* <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
-                  </DropdownMenuItem> */}
                   <DropdownMenuItem
                     onClick={() => router.push("/help-and-support")}
+                    className="flex items-center gap-2 focus:bg-emerald-50 focus:text-emerald-900"
                   >
-                    <HelpCircle className="mr-2 h-4 w-4" />
+                    <HelpCircle className="h-4 w-4" />
                     <span>Help & Support</span>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     onClick={() => {
                       signOut({ callbackUrl: "/login" });
                     }}
-                    className="text-red-600"
+                    className="flex items-center gap-2 text-red-600 focus:bg-red-50 focus:text-red-700"
                   >
-                    <LogOut className="mr-2 h-4 w-4" />
+                    <LogOut className="h-4 w-4" />
                     <span>Sign out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
