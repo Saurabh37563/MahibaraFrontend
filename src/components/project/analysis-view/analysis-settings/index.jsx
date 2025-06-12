@@ -408,12 +408,7 @@ export default function ColumnMappingDialog({
               {/* Table container with both horizontal and vertical scrolling */}
               <div className="flex-grow overflow-hidden mt-4 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
                 <div
-                  className="custom-scrollbar"
-                  style={{
-                    maxHeight: "calc(100% - 20px)",
-                    overflowY: "scroll",
-                    overflowX: "scroll",
-                  }}
+                className="overflow-x-auto overflow-y-auto"
                 >
                   <div className="min-w-[800px] pb-4">
                     <Table className="w-full">
@@ -443,7 +438,6 @@ export default function ColumnMappingDialog({
                           return (
                             <TableRow
                               key={sourceColumn.id}
-                              className={isApproved ? "bg-green-50" : ""}
                             >
                               <TableCell className="font-medium">
                                 <div className="flex flex-wrap gap-1 items-center">

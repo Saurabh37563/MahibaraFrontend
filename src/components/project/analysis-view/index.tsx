@@ -25,7 +25,8 @@ export interface AnalysisApiResponse {
     | "failed"
     | "not_started"
     | "not_mapped"
-    | "draft";
+    | "draft"
+    | "running";
   message?: string;
   progress?: number;
   lastAnalysisDate?: string;
@@ -150,25 +151,31 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       fileUrl: string;
       fileName?: string;
     }) => {
-      const response = await fetch(fileUrl, { cache: "reload" });
-      if (!response.ok) throw new Error("Download failed");
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Create a temporary anchor element to trigger the download
       const a = document.createElement("a");
-      a.href = url;
+
+      // Set the href to the file URL
+      a.href = fileUrl;
+
+      // Set download attribute to specify filename
       a.download = fileName || "analysis_result.xlsx";
+
+      // Important: Do not set target="_blank" as it can interfere with download
+
+      // Hide the element (not necessary to show it)
+      a.style.display = "none";
+
+      // Add to DOM, click, then remove
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      return blob;
+
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+      }, 100);
     },
-    onSuccess: (blob: Blob) => {
-      if (excelViewerBlobUrl) {
-        window.URL.revokeObjectURL(excelViewerBlobUrl);
-      }
-      setExcelViewerBlobUrl(window.URL.createObjectURL(blob));
-      toast.success("File downloaded successfully");
+    onSuccess: () => {
+      toast.success("Download started");
     },
     onError: (error: unknown) => {
       toast.error(
@@ -181,7 +188,19 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   // SSE logic for analysis status
   const shouldConnectSSE = useMemo(() => {
     if (!projectId || !analysisData) return false;
-    return !FINAL_STATUSES.includes(analysisData.status);
+
+    // Early return if status is not_mapped or mapping is needed
+    if (analysisData.status === "not_mapped") return false;
+
+    // Don't connect if mapping is required
+    if (analysisData.isColumnMapped === false) return false;
+
+    // Don't connect if source file changed and status is completed
+    if (analysisData.isSourceFileChanged && analysisData.status === "completed")
+      return false;
+
+    // Only connect for active analysis states
+    return ["pending", "processing"].includes(analysisData.status);
   }, [projectId, analysisData]);
 
   const sseUrl = useMemo(() => {
@@ -198,38 +217,66 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   });
 
   useEffect(() => {
+    // Only disconnect and refetch if we're transitioning from a valid state
+    const shouldDisconnectAndRefetch =
+      analysisData &&
+      ((analysisData.status !== "not_mapped" && !analysisData.isColumnMapped) ||
+        (analysisData.isSourceFileChanged &&
+          analysisData.status === "completed"));
+
+    if (shouldDisconnectAndRefetch) {
+      disconnectSSE();
+      // Only refetch if we're not already in a not_mapped or failed state
+      if (!["not_mapped", "failed"].includes(analysisData.status)) {
+        refetchAnalysis();
+      }
+    }
+  }, [
+    analysisData?.status,
+    analysisData?.isColumnMapped,
+    analysisData?.isSourceFileChanged,
+    disconnectSSE,
+    refetchAnalysis,
+  ]);
+
+  // Modified version of analysis status effect
+  useEffect(() => {
     if (!shouldConnectSSE || !analysisData) return;
 
-    // Listen for 'update' events (progress updates)
     const unsubscribeUpdate = addEventListener("update", (event) => {
       try {
         const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
         if (eventData.analysisId === analysisData.analysisId) {
+          // Map "running" status to "processing" for UI consistency
+          const status =
+            eventData.status === "running" ? "processing" : eventData.status;
+
           queryClient.setQueryData<AnalysisApiResponse>(
             ["analysisData", projectId, analysisType],
             (prev) =>
               prev
                 ? {
                     ...prev,
-                    status: eventData.status,
+                    status,
                     message: eventData.message,
                     progress: eventData.progress,
                     fileUrl: eventData.fileUrl || prev.fileUrl,
                     lastAnalysisDate:
                       eventData.lastAnalysisDate || prev.lastAnalysisDate,
-                    metadata: { ...prev.metadata, ...eventData.metadata },
+                    metadata: {
+                      ...prev.metadata,
+                      ...eventData.metadata,
+                      recordCount: eventData.records_processed,
+                    },
                   }
                 : prev
           );
-          setLastUpdate(Date.now());
 
-          if (FINAL_STATUSES.includes(eventData.status)) {
-            setTimeout(() => {
-              disconnectSSE();
-              refetchAnalysis();
-            }, 2000);
+          // Only update lastUpdate if we're in an active state
+          if (["pending", "processing", "running"].includes(eventData.status)) {
+            setLastUpdate(Date.now());
           }
         }
       } catch (error) {

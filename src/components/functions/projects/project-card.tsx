@@ -29,10 +29,10 @@ const statusConfig: Record<
   }
 > = {
   completed: {
-    color: "text-emerald-700",
+    color: "text-emerald-800",
     iconColor: "text-emerald-700",
-    borderColor: "border-emerald-700",
-    bgColor: "bg-emerald-700",
+    borderColor: "border-emerald-800",
+    bgColor: "bg-emerald-900",
     bgOpacityColor: "bg-emerald-700/10",
   },
   "in-progress": {
@@ -43,11 +43,11 @@ const statusConfig: Record<
     bgOpacityColor: "bg-blue-600/10",
   },
   pending: {
-    color: "text-amber-600",
-    iconColor: "text-amber-600",
-    borderColor: "border-amber-600",
-    bgColor: "bg-amber-600",
-    bgOpacityColor: "bg-amber-600/10",
+    color: "text-[#b89921]",
+    iconColor: "text-[#b89921]",
+    borderColor: "border-[#b89921]",
+    bgColor: "bg-[#b89921]",
+    bgOpacityColor: "bg-[#b89921]/10",
   },
   draft: {
     color: "text-slate-500",

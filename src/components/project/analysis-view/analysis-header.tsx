@@ -82,6 +82,11 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
         styles: "text-gray-800 bg-gray-100",
         label: "Not Mapped",
       },
+      running: {
+        icon: FiRefreshCw,
+        styles: "text-blue-800 bg-blue-100",
+        label: "Processing",
+      },
     }),
     []
   );
@@ -92,23 +97,43 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
     const config =
       statusBadgeConfig[analysisData.status] || statusBadgeConfig.pending;
     const Icon = config.icon;
+    const showProgress = ["processing", "running", "pending"].includes(
+      analysisData.status
+    );
 
     return (
-      <div className="flex items-center gap-2">
-        <span
-          className={`${config.styles} text-[10px] capitalize rounded-full px-2 py-[2px] flex items-center gap-1`}
-        >
-          <Icon
-            className={
-              analysisData?.status === "processing" ? "animate-spin" : ""
-            }
-            size={12}
-          />
-          <span>{config.label}</span>
-          {analysisData.progress !== undefined && analysisData.progress > 0 && (
-            <span className="ml-1">({analysisData.progress}%)</span>
-          )}
-        </span>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <span
+            className={`${config.styles} text-[10px] capitalize rounded-full px-2 py-[2px] flex items-center gap-1`}
+          >
+            <Icon
+              className={
+                ["processing", "running"].includes(analysisData.status)
+                  ? "animate-spin"
+                  : ""
+              }
+              size={12}
+            />
+            <span>{config.label}</span>
+            {showProgress && analysisData.progress !== undefined && (
+              <span className="ml-1">({analysisData.progress}%)</span>
+            )}
+          </span>
+        </div>
+        {showProgress && analysisData.message && (
+          <span className="text-[10px] text-gray-600 max-w-[300px] truncate">
+            {analysisData.message}
+          </span>
+        )}
+        {showProgress && analysisData.progress !== undefined && (
+          <div className="w-[200px] bg-gray-200 rounded-full h-1 mt-1">
+            <div
+              className="bg-blue-600 h-1 rounded-full transition-all duration-300"
+              style={{ width: `${analysisData.progress}%` }}
+            />
+          </div>
+        )}
       </div>
     );
   }, [analysisData, statusBadgeConfig, isLoading]);

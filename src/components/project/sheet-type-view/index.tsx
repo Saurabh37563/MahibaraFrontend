@@ -187,27 +187,39 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
           timestamp: eventData.timestamp,
         });
 
-        // Match by taskId as per your documentation
+        // Avoid unnecessary re-renders by checking if data has actually changed
         if (eventData.taskId === sheetData.taskId) {
+          // Use a function to update query data to ensure we don't miss updates
           queryClient.setQueryData<SheetApiResponse>(
             ["sheetData", projectId, sheetType],
-            (prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: eventData.status,
-                    message: eventData.message,
-                    progress: eventData.progress,
-                    stage: eventData.stage,
-                    type: eventData.type,
-                    timestamp: eventData.timestamp,
-                    fileUrl: eventData.resultUrl || prev.fileUrl,
-                    metadata: { ...prev.metadata, ...eventData.metadata },
-                  }
-                : prev
+            (prev) => {
+              if (!prev) return prev;
+
+              // Only update if something actually changed
+              if (
+                prev.status !== eventData.status ||
+                prev.progress !== eventData.progress ||
+                prev.stage !== eventData.stage ||
+                prev.message !== eventData.message ||
+                (eventData.resultUrl && prev.fileUrl !== eventData.resultUrl)
+              ) {
+                return {
+                  ...prev,
+                  status: eventData.status,
+                  message: eventData.message,
+                  progress: eventData.progress,
+                  stage: eventData.stage,
+                  type: eventData.type,
+                  timestamp: eventData.timestamp,
+                  fileUrl: eventData.resultUrl || prev.fileUrl,
+                  metadata: { ...prev.metadata, ...eventData.metadata },
+                };
+              }
+              return prev;
+            }
           );
 
-          // Force update for each progress change
+          // Force update only when necessary
           setLastUpdate(Date.now());
 
           if (FINAL_STATUSES.includes(eventData.status)) {
