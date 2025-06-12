@@ -184,6 +184,36 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     },
   });
 
+  // Rerun analysis mutation
+  const rerunAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      await axios.post(
+        `${BASE_TEMP_BACKEND_URL}/api/v1/projects/rerun_analysis/${projectId}/${analysisType}`
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["analysisData", projectId, analysisType],
+      });
+      setIsTriggering(false);
+      onAnalysisComplete?.();
+    },
+    onError: (err: unknown) => {
+      setIsTriggering(false);
+      const errorMessage =
+        (
+          err as {
+            response?: { data?: { message?: string } };
+            message?: string;
+          }
+        )?.response?.data?.message ||
+        (err as { message?: string })?.message ||
+        "Failed to re-run analysis";
+      toast.error(errorMessage);
+      onError?.(new Error(errorMessage));
+    },
+  });
+
   // SSE logic for analysis status (manual EventSource)
   useEffect(() => {
     // Inline shouldConnectSSE logic
@@ -375,6 +405,10 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             });
           }
         }}
+        onRerunAnalysis={() => {
+          setIsTriggering(true);
+          rerunAnalysisMutation.mutate();
+        }}
         downloadLoading={downloadMutation.isPending}
         triggerLoading={triggerAnalysisMutation.isPending}
       />
@@ -409,6 +443,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               triggerAnalysisMutation.mutate();
             }}
             isTriggering={isTriggering || triggerAnalysisMutation.isPending}
+            onRerunAnalysis={() => {
+              setIsTriggering(true);
+              rerunAnalysisMutation.mutate();
+            }}
+            rerunLoading={rerunAnalysisMutation.isPending}
           />
         )}
       </div>

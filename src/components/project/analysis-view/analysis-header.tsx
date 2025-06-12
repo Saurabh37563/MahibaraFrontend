@@ -26,6 +26,7 @@ interface AnalysisHeaderProps {
   analysisType: string;
   onTriggerAnalysis: () => void;
   onDownload: () => void;
+  onRerunAnalysis?: () => void;
   downloadLoading: boolean;
   triggerLoading: boolean;
 }
@@ -41,6 +42,7 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
   analysisType,
   onTriggerAnalysis,
   onDownload,
+  onRerunAnalysis,
   downloadLoading,
   triggerLoading,
 }) => {
@@ -174,7 +176,7 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
           {/* Trigger/Re-trigger Analysis Button */}
           {showRetriggerButton && (
             <Button
-              onClick={onTriggerAnalysis}
+              onClick={onRerunAnalysis}
               disabled={isTriggering || isProcessing || triggerLoading}
               className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title={

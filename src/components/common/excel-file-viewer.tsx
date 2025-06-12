@@ -282,6 +282,9 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   );
 
   // Process Excel file with progress tracking
+  const workerRef = useRef<Worker | null>(null);
+
+  // Replace your processExcelFile function with this:
   const processExcelFile = useCallback(
     async (buffer: ArrayBuffer) => {
       // Cancel any ongoing processing
@@ -292,117 +295,62 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
       abortControllerRef.current = new AbortController();
       const signal = abortControllerRef.current.signal;
 
+      // Terminate existing worker if any
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+
       try {
         updateState({ loading: true, error: null, processingProgress: 0 });
 
-        // Check if processing was cancelled
         if (signal.aborted) return;
 
-        updateState({ processingProgress: 10 });
+        // Create new worker
+        workerRef.current = new Worker("/excel-worker.js");
 
-        const workbook = XLSX.read(buffer, {
-          type: "array",
-          cellStyles: true,
-          cellFormula: true,
-          cellDates: true,
-          sheetStubs: false, // Don't create empty cells
+        // Handle worker messages
+        const workerPromise = new Promise<SheetData[]>((resolve, reject) => {
+          if (!workerRef.current) {
+            reject(new Error("Worker not available"));
+            return;
+          }
+
+          workerRef.current.onmessage = (e) => {
+            const { type, progress, sheets, error } = e.data;
+
+            if (signal.aborted) {
+              workerRef.current?.terminate();
+              return;
+            }
+
+            switch (type) {
+              case "progress":
+                updateState({ processingProgress: progress });
+                break;
+
+              case "success":
+                resolve(sheets);
+                break;
+
+              case "error":
+                reject(new Error(error));
+                break;
+            }
+          };
+
+          workerRef.current.onerror = (error) => {
+            reject(new Error("Worker error: " + error.message));
+          };
+
+          // Send data to worker
+          workerRef.current.postMessage({
+            type: "process",
+            buffer: buffer,
+            maxRows: maxRows,
+          });
         });
 
-        if (signal.aborted) return;
-        updateState({ processingProgress: 30 });
-
-        const processedSheets: SheetData[] = [];
-
-        for (let i = 0; i < workbook.SheetNames.length; i++) {
-          if (signal.aborted) return;
-
-          const sheetName = workbook.SheetNames[i];
-          const worksheet = workbook.Sheets[sheetName];
-
-          if (!worksheet["!ref"]) {
-            // Empty sheet
-            processedSheets.push({
-              name: sheetName,
-              data: [],
-              range: "A1",
-              rowCount: 0,
-              colCount: 0,
-              headers: [],
-            });
-            continue;
-          }
-
-          const range = XLSX.utils.decode_range(worksheet["!ref"]);
-          const actualRowCount = Math.min(range.e.r - range.s.r + 1, maxRows);
-
-          updateState({
-            processingProgress: 30 + (i / workbook.SheetNames.length) * 50,
-          });
-
-          const data: CellData[][] = [];
-          const headers: string[] = [];
-
-          // Process header row first
-          if (actualRowCount > 0) {
-            const headerRow: CellData[] = [];
-            for (let col = range.s.c; col <= range.e.c; col++) {
-              const cellAddress = XLSX.utils.encode_cell({
-                r: range.s.r,
-                c: col,
-              });
-              const cell = worksheet[cellAddress];
-              const cellData = formatCellValue(cell);
-              headerRow.push(cellData);
-              headers.push(cellData.displayValue || `Column ${col + 1}`);
-            }
-            data.push(headerRow);
-
-            // Process data rows in batches for better performance
-            const batchSize = 1000;
-            for (
-              let startRow = range.s.r + 1;
-              startRow <= Math.min(range.e.r, range.s.r + maxRows - 1);
-              startRow += batchSize
-            ) {
-              if (signal.aborted) return;
-
-              const endRow = Math.min(startRow + batchSize - 1, range.e.r);
-
-              for (let row = startRow; row <= endRow; row++) {
-                const rowData: CellData[] = [];
-                for (let col = range.s.c; col <= range.e.c; col++) {
-                  const cellAddress = XLSX.utils.encode_cell({
-                    r: row,
-                    c: col,
-                  });
-                  const cell = worksheet[cellAddress];
-                  rowData.push(formatCellValue(cell));
-                }
-                data.push(rowData);
-              }
-
-              // Update progress
-              const progress =
-                30 +
-                (i / workbook.SheetNames.length) * 50 +
-                ((startRow - range.s.r) / actualRowCount) *
-                  (50 / workbook.SheetNames.length);
-              updateState({ processingProgress: Math.min(progress, 80) });
-
-              // Allow UI to update
-              await new Promise((resolve) => setTimeout(resolve, 0));
-            }
-          }
-
-          processedSheets.push({
-            name: sheetName,
-            data,
-            range: worksheet["!ref"] || "A1",
-            rowCount: actualRowCount,
-            colCount: range.e.c - range.s.c + 1,
-            headers,
-          });
-        }
+        const processedSheets = await workerPromise;
 
         if (signal.aborted) return;
 
@@ -428,18 +376,22 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
       } finally {
         if (!signal.aborted) {
           updateState({ loading: false, processingProgress: 0 });
+          workerRef.current?.terminate();
+          workerRef.current = null;
         }
       }
     },
-    [
-      formatCellValue,
-      maxRows,
-      onError,
-      onLoad,
-      updateState,
-      calculateColumnWidths,
-    ]
+    [maxRows, onError, onLoad, updateState, calculateColumnWidths]
   );
+
+  // Add cleanup in useEffect
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+      }
+    };
+  }, []);
 
   // Calculate optimal column widths
 
@@ -453,7 +405,6 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
           await processExcelFile(fileBuffer);
         } else if (fileUrl) {
           updateState({ loading: true, error: null });
-
           const response = await axios.get<ArrayBuffer>(fileUrl, {
             responseType: "arraybuffer",
           });

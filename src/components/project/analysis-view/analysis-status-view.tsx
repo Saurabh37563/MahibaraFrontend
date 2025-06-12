@@ -17,6 +17,8 @@ interface AnalysisStatusViewProps {
   analysisType: string;
   onTriggerAnalysis: () => void;
   isTriggering: boolean;
+  onRerunAnalysis?: () => void;
+  rerunLoading?: boolean;
 }
 
 const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
@@ -25,6 +27,8 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
   analysisType,
   onTriggerAnalysis,
   isTriggering,
+  onRerunAnalysis,
+  rerunLoading,
 }) => {
   const [columnMappingDialogOpen, setColumnMappingDialogOpen] = useState(false);
 
@@ -153,20 +157,38 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
           <p className="text-gray-600 mb-4">
             {analysisData.message || "The analysis could not be completed."}
           </p>
-          <Button
-            onClick={onTriggerAnalysis}
-            disabled={isTriggering}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isTriggering ? (
-              <>
-                <FiRefreshCw className="animate-spin mr-2" size={16} />
-                Retrying...
-              </>
-            ) : (
-              "Retry Analysis"
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={onTriggerAnalysis}
+              disabled={isTriggering}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {isTriggering ? (
+                <>
+                  <FiRefreshCw className="animate-spin mr-2" size={16} />
+                  Retrying...
+                </>
+              ) : (
+                "Retry Analysis"
+              )}
+            </Button>
+            {onRerunAnalysis && (
+              <Button
+                onClick={onRerunAnalysis}
+                disabled={rerunLoading}
+                className="bg-emerald-700 text-white px-4 py-2 rounded-md hover:bg-emerald-800 disabled:opacity-50"
+              >
+                {rerunLoading ? (
+                  <>
+                    <FiRefreshCw className="animate-spin mr-2" size={16} />
+                    Re-running...
+                  </>
+                ) : (
+                  "Re-run Analysis"
+                )}
+              </Button>
             )}
-          </Button>
+          </div>
         </div>
       </div>
     );
