@@ -11,8 +11,6 @@ import { toast } from "sonner";
 import AnalysisHeader from "./analysis-header";
 import AnalysisStatusView from "./analysis-status-view";
 import ExcelViewer from "@/components/common/excel-file-viewer";
-import { useSSE } from "@/hooks/useSSE";
-import { queryClient } from "@/providers/query-provider";
 
 // Types
 export interface AnalysisApiResponse {
@@ -73,6 +71,7 @@ interface AnalysisViewProps {
   onClose?: () => void; // Add onClose prop for closing the error view
 }
 
+const ACTIVE_STATUSES = ["queued", "running", "processing", "pending"];
 const FINAL_STATUSES = ["completed", "failed"];
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
@@ -185,111 +184,61 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     },
   });
 
-  // SSE logic for analysis status
-  const shouldConnectSSE = useMemo(() => {
-    if (!projectId || !analysisData) return false;
-
-    // Early return if status is not_mapped or mapping is needed
-    if (analysisData.status === "not_mapped") return false;
-
-    // Don't connect if mapping is required
-    if (analysisData.isColumnMapped === false) return false;
-
-    // Don't connect if source file changed and status is completed
-    if (analysisData.isSourceFileChanged && analysisData.status === "completed")
-      return false;
-
-    // Only connect for active analysis states
-    return ["pending", "processing"].includes(analysisData.status);
-  }, [projectId, analysisData]);
-
-  const sseUrl = useMemo(() => {
-    if (!projectId || !analysisData?.analysisId) return "";
-    // Use correct backend SSE endpoint
-    return `${BASE_TEMP_BACKEND_URL}/api/v1/projects/${projectId}/analysis/${analysisData.analysisId}/stream`;
-  }, [projectId, analysisData?.analysisId]);
-
-  const { addEventListener, disconnect: disconnectSSE } = useSSE(sseUrl, {
-    enabled: shouldConnectSSE,
-    autoReconnect: true,
-    reconnectInterval: 3000,
-    maxReconnectAttempts: 5,
-  });
-
+  // SSE logic for analysis status (manual EventSource)
   useEffect(() => {
-    // Only disconnect and refetch if we're transitioning from a valid state
-    const shouldDisconnectAndRefetch =
-      analysisData &&
-      ((analysisData.status !== "not_mapped" && !analysisData.isColumnMapped) ||
-        (analysisData.isSourceFileChanged &&
-          analysisData.status === "completed"));
+    // Inline shouldConnectSSE logic
+    const canConnectSSE =
+      !!projectId &&
+      !!analysisData &&
+      analysisData.status !== "not_mapped" &&
+      analysisData.isColumnMapped !== false &&
+      !(
+        analysisData.isSourceFileChanged && analysisData.status === "completed"
+      ) &&
+      ACTIVE_STATUSES.includes(analysisData.status);
 
-    if (shouldDisconnectAndRefetch) {
-      disconnectSSE();
-      // Only refetch if we're not already in a not_mapped or failed state
-      if (!["not_mapped", "failed"].includes(analysisData.status)) {
-        refetchAnalysis();
-      }
-    }
-  }, [
-    analysisData?.status,
-    analysisData?.isColumnMapped,
-    analysisData?.isSourceFileChanged,
-    disconnectSSE,
-    refetchAnalysis,
-  ]);
+    if (!canConnectSSE || !projectId || !analysisData?.analysisId) return;
 
-  // Modified version of analysis status effect
-  useEffect(() => {
-    if (!shouldConnectSSE || !analysisData) return;
+    const sseUrl = `${BASE_TEMP_BACKEND_URL}/api/v1/projects/${projectId}/analysis/${analysisData.analysisId}/stream`;
+    const eventSource = new window.EventSource(sseUrl);
 
-    const unsubscribeUpdate = addEventListener("update", (event) => {
+    const handleStatus = (event: MessageEvent) => {
       try {
         const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
         if (eventData.analysisId === analysisData.analysisId) {
-          // Map "running" status to "processing" for UI consistency
-          const status =
-            eventData.status === "running" ? "processing" : eventData.status;
-
           queryClient.setQueryData<AnalysisApiResponse>(
             ["analysisData", projectId, analysisType],
             (prev) =>
               prev
                 ? {
                     ...prev,
-                    status,
-                    message: eventData.message,
-                    progress: eventData.progress,
+                    status: eventData.status,
+                    progress: eventData.progress ?? prev.progress,
+                    message: eventData.message || prev.message,
                     fileUrl: eventData.fileUrl || prev.fileUrl,
-                    lastAnalysisDate:
-                      eventData.lastAnalysisDate || prev.lastAnalysisDate,
-                    metadata: {
-                      ...prev.metadata,
-                      ...eventData.metadata,
-                      recordCount: eventData.records_processed,
-                    },
                   }
                 : prev
           );
-
-          // Only update lastUpdate if we're in an active state
-          if (["pending", "processing", "running"].includes(eventData.status)) {
+          if (ACTIVE_STATUSES.includes(eventData.status)) {
             setLastUpdate(Date.now());
+          }
+          if (FINAL_STATUSES.includes(eventData.status)) {
+            setTimeout(() => {
+              eventSource.close();
+              refetchAnalysis();
+            }, 1000);
           }
         }
       } catch (error) {
-        console.error("Error parsing SSE update event:", error);
+        console.error("Error parsing SSE status event:", error);
       }
-    });
+    };
 
-    // Listen for 'final' events (task completion)
-    const unsubscribeFinal = addEventListener("final", (event) => {
+    const handleFinal = (event: MessageEvent) => {
       try {
         const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
         if (eventData.analysisId === analysisData.analysisId) {
           queryClient.setQueryData<AnalysisApiResponse>(
             ["analysisData", projectId, analysisType],
@@ -300,62 +249,41 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                     status: eventData.status,
                     progress: 100,
                     message: eventData.message || "Task completed successfully",
-                    lastAnalysisDate:
-                      eventData.lastAnalysisDate || prev.lastAnalysisDate,
                     fileUrl: eventData.fileUrl || prev.fileUrl,
                   }
                 : prev
           );
           setLastUpdate(Date.now());
-
           setTimeout(() => {
-            disconnectSSE();
+            eventSource.close();
             refetchAnalysis();
           }, 1000);
         }
       } catch (error) {
         console.error("Error parsing SSE final event:", error);
       }
-    });
+    };
 
-    // Listen for 'error' events
-    const unsubscribeError = addEventListener("error", (event) => {
-      try {
-        const eventData =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+    eventSource.addEventListener("status", handleStatus);
+    eventSource.addEventListener("final", handleFinal);
 
-        if (eventData.analysisId === analysisData.analysisId) {
-          queryClient.setQueryData<AnalysisApiResponse>(
-            ["analysisData", projectId, analysisType],
-            (prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: "failed",
-                    message: eventData.message || "Processing failed",
-                  }
-                : prev
-          );
-          setLastUpdate(Date.now());
-        }
-      } catch (error) {
-        console.error("Error parsing SSE error event:", error);
-      }
-    });
+    eventSource.onerror = (err) => {
+      eventSource.close();
+    };
 
     return () => {
-      unsubscribeUpdate();
-      unsubscribeFinal();
-      unsubscribeError();
+      eventSource.removeEventListener("status", handleStatus);
+      eventSource.removeEventListener("final", handleFinal);
+      eventSource.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    shouldConnectSSE,
-    addEventListener,
     projectId,
-    analysisType,
-    disconnectSSE,
     analysisData,
+    analysisData?.analysisId,
+    analysisType,
     refetchAnalysis,
+    queryClient,
   ]);
 
   // Computed values

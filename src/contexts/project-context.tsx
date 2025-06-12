@@ -203,6 +203,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
       return (response?.data?.data?.sheet_types as Item[]) || [];
     },
     enabled: !!projectId,
+    refetchInterval: 5000,
   });
 
   // Update sheets state when query data changes
@@ -222,6 +223,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
       return response.data?.data || [];
     },
     enabled: !!projectId,
+    refetchInterval: 5000,
   });
 
   // Keep local state in sync with react-query data

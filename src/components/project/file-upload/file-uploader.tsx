@@ -199,7 +199,7 @@ export function FileUploader() {
           onChange={handleFileInputChange}
           className="hidden"
           multiple
-          accept=".xlsx,.xls,.csv"
+          accept=".xlsx,.xls,.csv,.xlsb"
         />
 
         <div className="flex flex-col items-center justify-center gap-2">

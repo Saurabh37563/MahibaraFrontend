@@ -1,6 +1,12 @@
 import React, { useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
-import { AlertTriangle, Link2, Play } from "lucide-react";
+import {
+  AlertTriangle,
+  Link2,
+  Play,
+  FileSpreadsheet,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ColumnMappingDialog from "./analysis-settings";
 import { AnalysisApiResponse } from ".";
@@ -87,30 +93,48 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
     );
   }
 
-  // Processing state
-  if (["pending", "processing"].includes(analysisData.status)) {
+  // Processing state (unified with sheet-type view)
+  if (["pending", "processing", "running"].includes(analysisData.status)) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Analysis in Progress
-          </h3>
-          <p className="text-gray-600 mb-2">
-            {analysisData.message || "Processing your analysis..."}
-          </p>
-          {analysisData.progress !== undefined && analysisData.progress > 0 && (
-            <div className="w-64 mx-auto">
-              <div className="bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${analysisData.progress}%` }}
-                ></div>
-              </div>
-              <p className="text-sm text-gray-500 mt-2">
-                {analysisData.progress}% complete
-              </p>
+      <div className="h-full flex flex-col items-center justify-center bg-white p-6">
+        <div className="w-full max-w-md flex flex-col items-center">
+          <div className="mt-8 flex flex-col items-center">
+            <FileSpreadsheet className="h-16 w-16 text-gray-200 mb-3" />
+            <p className="text-xs text-gray-400">
+              Your analysis will be available when processing completes
+            </p>
+          </div>
+          <div className="w-full mb-8">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-sm font-medium text-gray-700">
+                Processing
+              </span>
+              <span className="text-sm font-medium text-emerald-800">
+                {analysisData.progress || 0}%
+              </span>
             </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div
+                className="bg-emerald-800 h-1.5 rounded-full transition-all duration-300 ease-out"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.max(0, analysisData.progress || 0)
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+          {/* {analysisData.stage && (
+            <div className="flex items-center gap-2 mb-3 text-gray-600">
+              <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              <span className="text-sm">{analysisData.stage}</span>
+            </div>
+          )} */}
+          {analysisData.message && (
+            <p className="text-sm text-gray-500 text-center max-w-sm">
+              {analysisData.message}
+            </p>
           )}
         </div>
       </div>

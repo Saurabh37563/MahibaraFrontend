@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   FileSpreadsheet,
@@ -11,15 +11,14 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useSSE } from "@/hooks/useSSE";
-import { FiLoader } from "react-icons/fi";
-import DownloadFile from "./download-sheet";
-import DeleteSheet from "./delete-sheet";
-import ExcelViewer from "@/components/common/excel-file-viewer";
 import axios, { AxiosError } from "axios";
 import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/providers/query-provider";
+import DownloadFile from "./download-sheet";
+import DeleteSheet from "./delete-sheet";
+import ExcelViewer from "@/components/common/excel-file-viewer";
+import { FiLoader } from "react-icons/fi";
 
 interface SpreadsheetViewProps {
   title?: string;
@@ -133,7 +132,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
   const params = useParams();
   const projectId = params?.id as string;
 
-  // Add state to force updates on SSE events
+  // State to force updates on SSE events
   const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
 
   // React Query for sheet data
@@ -150,102 +149,59 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     retry: 1,
   });
 
-  // SSE logic
-  const shouldConnectSSE = useMemo(() => {
-    if (!enableSSE || !projectId || !sheetData) return false;
-    return !FINAL_STATUSES.includes(sheetData.status);
-  }, [enableSSE, projectId, sheetData]);
-
-  const sseUrl = useMemo(() => {
-    if (!projectId || !sheetData?.taskId) return "";
-    return `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/task_events/${sheetData.taskId}`;
-  }, [projectId, sheetData?.taskId]);
-
-  const { addEventListener, disconnect: disconnectSSE } = useSSE(sseUrl, {
-    enabled: shouldConnectSSE,
-    autoReconnect: true,
-    reconnectInterval: 3000,
-    maxReconnectAttempts: 5,
-  });
-
-  // SSE event handler
+  // SSE logic for real-time updates
   useEffect(() => {
-    if (!shouldConnectSSE || !sheetData) return;
+    const canConnectSSE =
+      enableSSE &&
+      !!projectId &&
+      !!sheetData?.taskId &&
+      !FINAL_STATUSES.includes(sheetData.status);
 
-    // Listen for 'update' events (progress updates as per your documentation)
-    const unsubscribeUpdate = addEventListener("update", (event) => {
+    if (!canConnectSSE) return;
+
+    const sseUrl = `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/task_events/${sheetData.taskId}`;
+    const eventSource = new window.EventSource(sseUrl);
+
+    const handleUpdate = (event: MessageEvent) => {
       try {
         const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
 
-        console.log("[SSE] Progress update received:", {
-          taskId: eventData.taskId,
-          status: eventData.status,
-          progress: eventData.progress,
-          stage: eventData.stage,
-          message: eventData.message,
-          timestamp: eventData.timestamp,
-        });
-
-        // Avoid unnecessary re-renders by checking if data has actually changed
         if (eventData.taskId === sheetData.taskId) {
-          // Use a function to update query data to ensure we don't miss updates
           queryClient.setQueryData<SheetApiResponse>(
             ["sheetData", projectId, sheetType],
             (prev) => {
               if (!prev) return prev;
-
-              // Only update if something actually changed
-              if (
-                prev.status !== eventData.status ||
-                prev.progress !== eventData.progress ||
-                prev.stage !== eventData.stage ||
-                prev.message !== eventData.message ||
-                (eventData.resultUrl && prev.fileUrl !== eventData.resultUrl)
-              ) {
-                return {
-                  ...prev,
-                  status: eventData.status,
-                  message: eventData.message,
-                  progress: eventData.progress,
-                  stage: eventData.stage,
-                  type: eventData.type,
-                  timestamp: eventData.timestamp,
-                  fileUrl: eventData.resultUrl || prev.fileUrl,
-                  metadata: { ...prev.metadata, ...eventData.metadata },
-                };
-              }
-              return prev;
+              return {
+                ...prev,
+                status: eventData.status,
+                message: eventData.message,
+                progress: eventData.progress,
+                stage: eventData.stage,
+                type: eventData.type,
+                timestamp: eventData.timestamp,
+                fileUrl: eventData.resultUrl || prev.fileUrl,
+                metadata: { ...prev.metadata, ...eventData.metadata },
+              };
             }
           );
-
-          // Force update only when necessary
           setLastUpdate(Date.now());
-
           if (FINAL_STATUSES.includes(eventData.status)) {
-            console.log(
-              "[SSE] Final status reached, disconnecting in 2s:",
-              eventData.status
-            );
             setTimeout(() => {
-              disconnectSSE();
-              // Refetch data to get the final processed file
+              eventSource.close();
               refetch();
-            }, 2000);
+            }, 1000);
           }
         }
       } catch (error) {
         console.error("Error parsing SSE update event:", error);
       }
-    });
+    };
 
-    // Listen for 'final' events (task completion)
-    const unsubscribeFinal = addEventListener("final", (event) => {
+    const handleFinal = (event: MessageEvent) => {
       try {
         const eventData =
           typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
-        console.log("[SSE] Final event received:", eventData);
 
         if (eventData.taskId === sheetData.taskId) {
           queryClient.setQueryData<SheetApiResponse>(
@@ -262,64 +218,40 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                   }
                 : prev
           );
-
           setLastUpdate(Date.now());
-
-          // Disconnect after final event and refetch data
           setTimeout(() => {
-            disconnectSSE();
+            eventSource.close();
             refetch();
           }, 1000);
         }
       } catch (error) {
         console.error("Error parsing SSE final event:", error);
       }
-    });
+    };
 
-    // Listen for 'error' events
-    const unsubscribeError = addEventListener("error", (event) => {
-      try {
-        const eventData =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+    eventSource.addEventListener("update", handleUpdate);
+    eventSource.addEventListener("final", handleFinal);
 
-        console.error("[SSE] Error event received:", eventData);
-
-        if (eventData.taskId === sheetData.taskId) {
-          queryClient.setQueryData<SheetApiResponse>(
-            ["sheetData", projectId, sheetType],
-            (prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: "failed",
-                    message: eventData.message || "Processing failed",
-                  }
-                : prev
-          );
-
-          setLastUpdate(Date.now());
-        }
-      } catch (error) {
-        console.error("Error parsing SSE error event:", error);
-      }
-    });
+    eventSource.onerror = () => {
+      eventSource.close();
+    };
 
     return () => {
-      unsubscribeUpdate();
-      unsubscribeFinal();
-      unsubscribeError();
+      eventSource.removeEventListener("update", handleUpdate);
+      eventSource.removeEventListener("final", handleFinal);
+      eventSource.close();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    shouldConnectSSE,
-    addEventListener,
+    enableSSE,
     projectId,
+    sheetData?.taskId,
+    sheetData?.status,
     sheetType,
-    disconnectSSE,
-    sheetData,
     refetch,
   ]);
 
-  // Render status badge - NOT memoized to ensure always up-to-date
+  // Render status badge
   const renderStatusBadge = () => {
     if (!sheetData) return null;
     const config =
@@ -346,50 +278,18 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
             )}
           </span>
         </div>
-
-        {/* Show progress stage and message for processing */}
-        {/* {sheetData.status === "processing" && (
-          <div className="text-[9px] text-gray-500 flex flex-col gap-0.5">
-            {sheetData.stage && (
-              <span className="font-medium text-blue-600">
-                Stage: {sheetData.stage}
-              </span>
-            )}
-            {sheetData.message && (
-              <span className="truncate max-w-48" title={sheetData.message}>
-                {sheetData.message}
-              </span>
-            )}
-          </div>
-        )} */}
-
-        {/* Show mini progress bar for processing */}
-        {/* {sheetData.status === "processing" &&
-          sheetData.progress !== undefined && (
-            <div className="w-32 bg-gray-200 rounded-full h-1.5 mt-1">
-              <div
-                className="bg-blue-600 h-1.5 rounded-full transition-all duration-300 ease-out"
-                style={{
-                  width: `${Math.min(100, Math.max(0, sheetData.progress))}%`,
-                }}
-              />
-            </div>
-          )} */}
       </div>
     );
   };
 
-  // Retry handler
   const handleRetry = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  // Go back handler
   const handleGoBack = useCallback(() => {
     onClearSelection?.();
   }, [onClearSelection]);
 
-  // Loading state
   if (isLoading || isFetching) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -402,7 +302,6 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     );
   }
 
-  // Error or no data state
   if (error || !sheetData) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to load sheet data";
@@ -506,12 +405,11 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
         </p>
       </div>
 
-      {/* File Viewer Section with Proper Placeholder During Processing */}
+      {/* File Viewer Section */}
       <div className="flex-1 overflow-y-hidden overflow-x-hidden p-0">
         {sheetData.status === "processing" ? (
           <div className="h-full flex flex-col items-center justify-center bg-white p-6">
             <div className="w-full max-w-md flex flex-col items-center">
-              {/* Minimal Progress UI */}
               <div className="mt-8 flex flex-col items-center">
                 <FileSpreadsheet className="h-16 w-16 text-gray-200 mb-3" />
                 <p className="text-xs text-gray-400">
@@ -539,16 +437,12 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                   />
                 </div>
               </div>
-
-              {/* Minimal Status Display */}
               {sheetData.stage && (
                 <div className="flex items-center gap-2 mb-3 text-gray-600">
                   <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
                   <span className="text-sm">{sheetData.stage}</span>
                 </div>
               )}
-
-              {/* Message */}
               {sheetData.message && (
                 <p className="text-sm text-gray-500 text-center max-w-sm">
                   {sheetData.message}

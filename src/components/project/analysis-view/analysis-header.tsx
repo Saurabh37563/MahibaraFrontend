@@ -9,6 +9,7 @@ import {
   RotateCcw,
   Link2,
   Download,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnalysisSettings from "./analysis-settings";
@@ -52,20 +53,35 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
         styles: "text-gray-800 bg-gray-100",
         label: "Not Started",
       },
+      not_mapped: {
+        icon: Link2,
+        styles: "text-gray-800 bg-gray-100",
+        label: "Not Mapped",
+      },
       draft: {
         icon: Clock,
         styles: "text-gray-800 bg-gray-100",
-        label: "Not Started",
+        label: "Draft",
+      },
+      queued: {
+        icon: Clock,
+        styles: "text-yellow-800 bg-yellow-100",
+        label: "Queued",
+      },
+      running: {
+        icon: Loader2,
+        styles: "text-blue-800 bg-blue-100",
+        label: "Running",
+      },
+      processing: {
+        icon: Loader2,
+        styles: "text-blue-800 bg-blue-100",
+        label: "Processing",
       },
       pending: {
         icon: Clock,
         styles: "text-yellow-800 bg-yellow-100",
         label: "Pending",
-      },
-      processing: {
-        icon: FiRefreshCw,
-        styles: "text-blue-800 bg-blue-100",
-        label: "Processing",
       },
       completed: {
         icon: CheckCircle,
@@ -77,16 +93,6 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
         styles: "text-red-800 bg-red-100",
         label: "Failed",
       },
-      not_mapped: {
-        icon: Link2,
-        styles: "text-gray-800 bg-gray-100",
-        label: "Not Mapped",
-      },
-      running: {
-        icon: FiRefreshCw,
-        styles: "text-blue-800 bg-blue-100",
-        label: "Processing",
-      },
     }),
     []
   );
@@ -95,9 +101,9 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
     if (!analysisData || isLoading) return null;
 
     const config =
-      statusBadgeConfig[analysisData.status] || statusBadgeConfig.pending;
+      statusBadgeConfig[analysisData.status] || statusBadgeConfig.not_started;
     const Icon = config.icon;
-    const showProgress = ["processing", "running", "pending"].includes(
+    const showProgress = ["queued", "running", "processing"].includes(
       analysisData.status
     );
 
@@ -109,7 +115,7 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
           >
             <Icon
               className={
-                ["processing", "running"].includes(analysisData.status)
+                ["running", "processing"].includes(analysisData.status)
                   ? "animate-spin"
                   : ""
               }
@@ -121,19 +127,6 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
             )}
           </span>
         </div>
-        {showProgress && analysisData.message && (
-          <span className="text-[10px] text-gray-600 max-w-[300px] truncate">
-            {analysisData.message}
-          </span>
-        )}
-        {showProgress && analysisData.progress !== undefined && (
-          <div className="w-[200px] bg-gray-200 rounded-full h-1 mt-1">
-            <div
-              className="bg-blue-600 h-1 rounded-full transition-all duration-300"
-              style={{ width: `${analysisData.progress}%` }}
-            />
-          </div>
-        )}
       </div>
     );
   }, [analysisData, statusBadgeConfig, isLoading]);

@@ -39,7 +39,7 @@ export default function AnalysisPanel({
   onAnalysisCreate,
   createdAnalysisTemplateIds,
 }: AnalysisPanelProps) {
-  const { isAnalysisLoading } = useProject();
+  const { isAnalysisLoading, mapStatusToUI } = useProject(); // <-- get mapStatusToUI
 
   return (
     <div className="flex flex-col w-full h-full">
@@ -81,31 +81,31 @@ export default function AnalysisPanel({
             </p>
           </div>
         ) : (
-          analysis.map((item, index) => (
-            <div
-              key={`analysis-${item.working_id ?? index}`}
-              className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
-                selectedItem?.index === index &&
-                selectedItem?.type === "analysis"
-                  ? "bg-green-500/10 border-l-4 border-primary"
-                  : ""
-              }`}
-              onClick={() => onItemClick(item, "analysis", index)}
-            >
-              <div className="text-xs flex items-center gap-2">
-                <LuChartPie className="text-gray-400" />
-                <span className="text-gray-950">{item.working_name}</span>
-                <span
-                  className={`size-[6px] rounded-full ${
-                    statusDotColors[
-                      (item.status?.toLowerCase?.() as keyof typeof statusDotColors) ||
-                        "neutral"
-                    ] || "bg-gray-300"
-                  }`}
-                />
+          analysis.map((item, index) => {
+            const statusKey = mapStatusToUI(item.status ?? "");
+            return (
+              <div
+                key={`analysis-${item.working_id ?? index}`}
+                className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
+                  selectedItem?.index === index &&
+                  selectedItem?.type === "analysis"
+                    ? "bg-green-500/10 border-l-4 border-primary"
+                    : ""
+                }`}
+                onClick={() => onItemClick(item, "analysis", index)}
+              >
+                <div className="text-xs flex items-center gap-2">
+                  <LuChartPie className="text-gray-400" />
+                  <span className="text-gray-950">{item.working_name}</span>
+                  <span
+                    className={`size-[6px] rounded-full ${
+                      statusDotColors[statusKey] || "bg-gray-300"
+                    }`}
+                  />
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
