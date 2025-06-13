@@ -1,54 +1,19 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { X, Plus } from "lucide-react";
+import { X } from "lucide-react";
 import React from "react";
 import FileUploadMapping from "./file-upload";
 import { AnalysisSelectionModal } from "./create-analysis";
 import { useProject } from "@/contexts/project-context";
+import type {
+  MobileSidebarProps,
+  SheetItem,
+  StatusEnum,
+  SelectedItem,
+} from "@/types/project-types";
+import { Analysis } from "@/types/project-types";
 
-// Status types and color mapping
-type StatusEnum =
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "neutral"
-  | "uploaded";
-
-type Analysis = {
-  working_id: string;
-  working_name: string;
-  status: string;
-  // Add other fields if needed
-};
-
-type Item = {
-  name: string;
-  status: StatusEnum;
-  // ...other fields if needed
-};
-
-interface MobileSidebarProps {
-  sidebarOpen: boolean;
-  toggleSidebar: () => void;
-  selectedTab: "sheets" | "analysis";
-  setSelectedTab: (tab: "sheets" | "analysis") => void;
-  sheets: Item[];
-  analysis: Analysis[]; // changed from Record<string, unknown>[]
-  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
-  onItemClick: (
-    item: Item | Analysis, // changed from Record<string, unknown>
-    type: "sheet" | "analysis",
-    index: number
-  ) => void;
-  statusDotColors: Record<StatusEnum, string>;
-  mapStatusToUI: (status: string) => StatusEnum;
-  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // Remove optional flag
-  createdAnalysisTemplateIds: string[]; // Remove optional flag
-}
-
-// SheetsPanel component
 function SheetsPanel({
   sheets,
   selectedItem,
@@ -58,9 +23,9 @@ function SheetsPanel({
   refetchSheets,
   clearSelectedSheet,
 }: {
-  sheets: Item[];
-  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
-  onItemClick: (item: Item, type: "sheet", index: number) => void;
+  sheets: SheetItem[];
+  selectedItem: SelectedItem | null;
+  onItemClick: (item: SheetItem, type: "sheet", index: number) => void;
   statusDotColors: Record<StatusEnum, string>;
   mapStatusToUI: (status: string) => StatusEnum;
   refetchSheets?: () => void;
@@ -116,7 +81,6 @@ function SheetsPanel({
   );
 }
 
-// AnalysisPanel component
 function AnalysisPanel({
   analysis,
   selectedItem,
@@ -204,13 +168,10 @@ export default function MobileSidebar({
   statusDotColors,
   mapStatusToUI,
   onAnalysisCreate,
-  createdAnalysisTemplateIds = [],
+  createdAnalysisTemplateIds,
   refetchSheets,
   clearSelectedSheet,
-}: MobileSidebarProps & {
-  refetchSheets?: () => void;
-  clearSelectedSheet?: () => void;
-}) {
+}: MobileSidebarProps) {
   return (
     <div
       className={`

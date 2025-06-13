@@ -15,77 +15,14 @@ import {
   BASE_TEMP_BACKEND_URL,
   FILE_UPLOAD_ENDPOINTS,
 } from "@/constants/endpoints-constant";
-import type { Analysis } from "@/components/project/create-analysis";
-
-// Types
-type StatusEnum =
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "neutral"
-  | "uploaded";
-
-type Item = {
-  id?: string;
-  name?: string;
-  status?: string;
-  summary?: string;
-  templateId?: string;
-  [x: string]: unknown;
-};
-
-type SelectedItem = Item & {
-  type: "sheet" | "analysis";
-  index: number;
-};
-
-type AnalysisAPIItem = {
-  working_id: string;
-  working_name: string;
-  status: string;
-};
-
-// Context types
-interface ProjectContextType {
-  // States
-  selectedItem: SelectedItem | null;
-  sheets: Item[];
-  analysis: AnalysisAPIItem[];
-  loading: boolean;
-  isMobile: boolean;
-  sidebarOpen: boolean;
-  selectedTab: "sheets" | "analysis";
-  projectId: string;
-
-  // Actions
-  setSelectedItem: (item: SelectedItem | null) => void;
-  setLoading: (loading: boolean) => void;
-  setSidebarOpen: (open: boolean) => void;
-  setSelectedTab: (tab: "sheets" | "analysis") => void;
-  toggleSidebar: () => void;
-  handleClearSelection: () => void;
-
-  // Data actions
-  handleItemClick: (
-    item: Item,
-    type: "sheet" | "analysis",
-    index: number
-  ) => void;
-  handleAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
-
-  // Query states and actions
-  isSheetsLoading: boolean;
-  isAnalysisLoading: boolean;
-  refetchSheets: () => void;
-
-  // Utility functions
-  statusDotColors: Record<StatusEnum, string>;
-  mapStatusToUI: (status: string) => StatusEnum;
-  normalizeSheet: (item: Item) => { name: string; status: StatusEnum };
-  toAnalysisItem: (item: Analysis | AnalysisAPIItem | Item) => Analysis;
-  getCreatedAnalysisTemplateIds: () => string[];
-}
+import type {
+  Analysis,
+  StatusEnum,
+  Item,
+  SelectedItem,
+  AnalysisAPIItem,
+  ProjectContextType,
+} from "@/types/project-types";
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
 
@@ -116,12 +53,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Status color mapping
   const statusDotColors: Record<StatusEnum, string> = {
+    processed: "bg-green-500",
     success: "bg-green-500",
     warning: "bg-yellow-500",
     danger: "bg-red-500",
     info: "bg-blue-500",
     neutral: "bg-gray-400",
     uploaded: "bg-purple-500",
+    processing: "bg-blue-500",
+    running: "bg-blue-500",
   };
 
   // Utility functions
@@ -133,12 +73,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
       case "pending":
         return "info";
       case "processing":
-        return "warning";
+        return "processing"; // <-- Fix: map to "processing" not "warning"
       case "failed":
       case "error":
         return "danger";
       case "uploaded":
         return "uploaded";
+      case "processed":
+        return "processed";
       default:
         return "neutral";
     }
@@ -165,6 +107,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
         (item as Item).name ??
         "",
       status: item.status ?? "",
+      summary: (item as Analysis).summary ?? (item as Item).summary ?? "",
+      id:
+        (item as Analysis).id ??
+        (item as Item).id ??
+        (item as AnalysisAPIItem).working_id ??
+        "",
+      name:
+        (item as Analysis).name ??
+        (item as Item).name ??
+        (item as AnalysisAPIItem).working_name ??
+        "",
     }),
     []
   );
@@ -256,7 +209,6 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({
         ...item,
         type,
         index,
-        status: item.status,
       });
       if (isMobile) {
         setSidebarOpen(false);

@@ -6,7 +6,6 @@ import React, {
   useCallback,
   memo,
 } from "react";
-import * as XLSX from "xlsx";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   ChevronLeft,
@@ -151,92 +150,92 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   }, []);
 
   // Format cell value for display
-  const formatCellValue = useCallback(
-    (cell: XLSX.CellObject | undefined): CellData => {
-      if (!cell) {
-        return { value: "", type: "empty", displayValue: "" };
-      }
+  // const formatCellValue = useCallback(
+  //   (cell: XLSX.CellObject | undefined): CellData => {
+  //     if (!cell) {
+  //       return { value: "", type: "empty", displayValue: "" };
+  //     }
 
-      const cellData: CellData = {
-        value: cell.v,
-        type: "empty",
-        displayValue: "",
-      };
+  //     const cellData: CellData = {
+  //       value: cell.v,
+  //       type: "empty",
+  //       displayValue: "",
+  //     };
 
-      try {
-        if (cell.f) {
-          cellData.type = "formula";
-          cellData.formula = cell.f;
-          cellData.value = cell.v;
-          cellData.displayValue = cell.v?.toString() || "";
-        } else if (cell.t === "n") {
-          // Check if this number is actually a date by inspecting the format string
-          const isDate =
-            cell.t === "n" &&
-            typeof cell.z === "string" &&
-            cell.z.toLowerCase().includes("d");
-          if (isDate) {
-            cellData.type = "date";
-            cellData.value = cell.v;
-            if (cell.v instanceof Date) {
-              cellData.displayValue = cell.v.toLocaleDateString();
-            } else if (typeof cell.v === "number") {
-              const date = XLSX.SSF.parse_date_code(cell.v);
-              if (
-                date &&
-                typeof date.y === "number" &&
-                typeof date.m === "number" &&
-                typeof date.d === "number"
-              ) {
-                cellData.displayValue = new Date(
-                  date.y,
-                  date.m - 1,
-                  date.d
-                ).toLocaleDateString();
-              } else {
-                cellData.displayValue = cell.v?.toString() || "";
-              }
-            } else {
-              cellData.displayValue = cell.v?.toString() || "";
-            }
-          } else {
-            cellData.type = "number";
-            cellData.value = cell.v;
-            cellData.displayValue =
-              typeof cell.v === "number"
-                ? cell.v.toLocaleString(undefined, { maximumFractionDigits: 6 })
-                : cell.v?.toString() || "";
-          }
-        } else if (cell.t === "d") {
-          cellData.type = "date";
-          cellData.value = cell.v;
-          if (cell.v instanceof Date) {
-            cellData.displayValue = cell.v.toLocaleDateString();
-          } else {
-            cellData.displayValue = cell.v?.toString() || "";
-          }
-        } else if (cell.t === "b") {
-          cellData.type = "boolean";
-          cellData.value = cell.v;
-          cellData.displayValue = cell.v ? "TRUE" : "FALSE";
-        } else {
-          cellData.type = "string";
-          cellData.value = cell.v || "";
-          cellData.displayValue = cell.v?.toString() || "";
-        }
+  //     try {
+  //       if (cell.f) {
+  //         cellData.type = "formula";
+  //         cellData.formula = cell.f;
+  //         cellData.value = cell.v;
+  //         cellData.displayValue = cell.v?.toString() || "";
+  //       } else if (cell.t === "n") {
+  //         // Check if this number is actually a date by inspecting the format string
+  //         const isDate =
+  //           cell.t === "n" &&
+  //           typeof cell.z === "string" &&
+  //           cell.z.toLowerCase().includes("d");
+  //         if (isDate) {
+  //           cellData.type = "date";
+  //           cellData.value = cell.v;
+  //           if (cell.v instanceof Date) {
+  //             cellData.displayValue = cell.v.toLocaleDateString();
+  //           } else if (typeof cell.v === "number") {
+  //             const date = XLSX.SSF.parse_date_code(cell.v);
+  //             if (
+  //               date &&
+  //               typeof date.y === "number" &&
+  //               typeof date.m === "number" &&
+  //               typeof date.d === "number"
+  //             ) {
+  //               cellData.displayValue = new Date(
+  //                 date.y,
+  //                 date.m - 1,
+  //                 date.d
+  //               ).toLocaleDateString();
+  //             } else {
+  //               cellData.displayValue = cell.v?.toString() || "";
+  //             }
+  //           } else {
+  //             cellData.displayValue = cell.v?.toString() || "";
+  //           }
+  //         } else {
+  //           cellData.type = "number";
+  //           cellData.value = cell.v;
+  //           cellData.displayValue =
+  //             typeof cell.v === "number"
+  //               ? cell.v.toLocaleString(undefined, { maximumFractionDigits: 6 })
+  //               : cell.v?.toString() || "";
+  //         }
+  //       } else if (cell.t === "d") {
+  //         cellData.type = "date";
+  //         cellData.value = cell.v;
+  //         if (cell.v instanceof Date) {
+  //           cellData.displayValue = cell.v.toLocaleDateString();
+  //         } else {
+  //           cellData.displayValue = cell.v?.toString() || "";
+  //         }
+  //       } else if (cell.t === "b") {
+  //         cellData.type = "boolean";
+  //         cellData.value = cell.v;
+  //         cellData.displayValue = cell.v ? "TRUE" : "FALSE";
+  //       } else {
+  //         cellData.type = "string";
+  //         cellData.value = cell.v || "";
+  //         cellData.displayValue = cell.v?.toString() || "";
+  //       }
 
-        if (cell.s) {
-          cellData.style = cell.s as Record<string, unknown>;
-        }
-      } catch (error) {
-        console.warn("Error formatting cell:", error);
-        cellData.displayValue = cell.v?.toString() || "";
-      }
+  //       if (cell.s) {
+  //         cellData.style = cell.s as Record<string, unknown>;
+  //       }
+  //     } catch (error) {
+  //       console.warn("Error formatting cell:", error);
+  //       cellData.displayValue = cell.v?.toString() || "";
+  //     }
 
-      return cellData;
-    },
-    []
-  );
+  //     return cellData;
+  //   },
+  //   []
+  // );
 
   const calculateColumnWidths = useCallback(
     (sheet: SheetData) => {
@@ -284,7 +283,6 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   // Process Excel file with progress tracking
   const workerRef = useRef<Worker | null>(null);
 
-  // Replace your processExcelFile function with this:
   const processExcelFile = useCallback(
     async (buffer: ArrayBuffer) => {
       // Cancel any ongoing processing
@@ -305,8 +303,11 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
 
         if (signal.aborted) return;
 
-        // Create new worker
-        workerRef.current = new Worker("/excel-worker.js");
+        // Create new worker using the imported worker constructor
+        workerRef.current = new Worker(
+          new URL("@/workers/excel-worker.ts", import.meta.url),
+          { type: "module" }
+        );
 
         // Handle worker messages
         const workerPromise = new Promise<SheetData[]>((resolve, reject) => {
@@ -315,7 +316,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
             return;
           }
 
-          workerRef.current.onmessage = (e) => {
+          workerRef.current.onmessage = (e: MessageEvent) => {
             const { type, progress, sheets, error } = e.data;
 
             if (signal.aborted) {
@@ -329,7 +330,11 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
                 break;
 
               case "success":
-                resolve(sheets);
+                if (Array.isArray(sheets)) {
+                  resolve(sheets as SheetData[]);
+                } else {
+                  reject(new Error("Invalid sheet data from worker"));
+                }
                 break;
 
               case "error":
@@ -365,7 +370,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         }
 
         updateState({ processingProgress: 100 });
-        onLoad?.(processedSheets.map((s) => s.name));
+        onLoad?.(processedSheets.map((s: SheetData) => s.name));
       } catch (err) {
         if (signal.aborted) return;
 

@@ -12,8 +12,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import AnalysisSettings from "./analysis-settings";
-import { AnalysisApiResponse } from ".";
+import AnalysisSettings from "./column-mapping";
+import { AnalysisApiResponse } from "@/types/project-types";
 
 interface AnalysisHeaderProps {
   title: string;
@@ -40,7 +40,6 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
   hasResults,
   projectId,
   analysisType,
-  onTriggerAnalysis,
   onDownload,
   onRerunAnalysis,
   downloadLoading,

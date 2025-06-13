@@ -10,16 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Trash2, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
-
-type DeleteFileProps = {
-  projectId: string;
-  sheetType: string;
-  isDisabled?: boolean;
-  fileName?: string;
-  onDeleteStart?: () => void;
-  onDeleteComplete?: () => void;
-  onDeleteError?: (error: Error) => void;
-};
+import { DeleteFileProps } from "@/types/project-types";
 
 const DeleteSheet = ({
   projectId,

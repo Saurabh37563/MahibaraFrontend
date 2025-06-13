@@ -185,14 +185,14 @@ export default function Filters() {
           )}
         </div>
 
-        <div className="hidden sm:flex items-center bg-white gap-2">
+        <div className="hidden sm:flex items-center gap-2">
           <Select
             value={filters.status}
             onValueChange={(value) =>
               updateFilter("status", value as StatusOption)
             }
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[130px] bg-white">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -210,7 +210,7 @@ export default function Filters() {
               updateFilter("dateRange", value as DateRange)
             }
           >
-            <SelectTrigger className="w-[130px]">
+            <SelectTrigger className="w-[130px] bg-white">
               <div className="flex items-center gap-2">
                 <CalendarIcon className="h-4 w-4" />
                 <SelectValue placeholder="Date" />

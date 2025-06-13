@@ -1,4 +1,27 @@
 import { z } from "zod";
+export interface Analysis extends BaseItem {
+  working_id: string;
+  working_name: string;
+  status: string;
+  summary: string;
+  id: string;
+  name: string;
+}
+
+// Add import at the top of the file
+import { UseFormReturn } from "react-hook-form";
+
+// Status Enums
+export type StatusEnum =
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "neutral"
+  | "uploaded"
+  | "processed"
+  | "processing"
+  | "running";
 
 // Project Status Types
 export const ProjectStatusEnum = {
@@ -216,4 +239,340 @@ export interface ApiError {
     status?: number;
   };
   message: string;
+}
+
+
+// Base interface for all items
+export interface BaseItem {
+  [key: string]: unknown; // changed from any to unknown for type safety
+  id?: string;
+  name: string;
+  status: string;
+}
+
+// Analysis interface extending BaseItem
+export interface SheetItem extends BaseItem {
+  status: StatusEnum;
+}
+
+// Update Panel Props types
+export interface AnalysisPanelProps {
+  analysis: Analysis[];
+  selectedItem: SelectedItem | null;
+  onItemClick: (item: Analysis, type: "analysis", index: number) => void;  // Made type more specific
+  statusDotColors: Record<StatusEnum, string>;
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
+  createdAnalysisTemplateIds: string[];
+}
+
+export interface SheetsPanelProps {
+  sheets: SheetItem[];
+  selectedItem: SelectedItem | null;
+  onItemClick: (item: SheetItem, type: "sheet", index: number) => void;  // Made type more specific
+  statusDotColors: Record<StatusEnum, string>;
+  mapStatusToUI: (status: string) => StatusEnum;
+  isLoading?: boolean;
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
+}
+
+// Mobile Sidebar Props
+export interface MobileSidebarProps {
+  sidebarOpen: boolean;
+  toggleSidebar: () => void;
+  selectedTab: "sheets" | "analysis";
+  setSelectedTab: (tab: "sheets" | "analysis") => void;
+  sheets: SheetItem[];
+  analysis: Analysis[];
+  selectedItem: { index: number; type: "sheet" | "analysis" } | null;
+  onItemClick: (
+    item: Analysis | SheetItem,
+    type: "sheet" | "analysis",
+    index: number
+  ) => void;
+  statusDotColors: Record<StatusEnum, string>;
+  mapStatusToUI: (status: string) => StatusEnum;
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
+  createdAnalysisTemplateIds: string[];
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
+}
+
+// Sheet Type View Types
+export interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: SheetApiResponse;
+  error: null | string;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface SheetApiResponse {
+  fileId: string;
+  fileUrl: string;
+  status: "pending" | "processing" | "completed" | "validated" | "failed";
+  taskId: string;
+  message?: string;
+  progress?: number;
+  stage?: string;
+  type?: string;
+  timestamp?: string;
+  projectId?: string;
+  sheetType?: string;
+  resultUrl?: string;
+  createdAt?: string;
+  completedAt?: string;
+  metadata: {
+    fileName: string;
+    fileSize: string;
+    sheetIndex?: number;
+    sheetType: string;
+    lastModified: string;
+  };
+}
+
+export interface SpreadsheetViewProps {
+  title?: string;
+  sheetType: string;
+  onError?: (error: Error) => void;
+  onFileLoad?: (sheetNames: string[]) => void;
+  onFileUpload?: (file: File) => void;
+  onDelete?: () => void;
+  enableSSE?: boolean;
+  onClearSelection?: () => void;
+}
+
+export interface DownloadButtonProps {
+  fileUrl?: string;
+  isDisabled?: boolean;
+  fileName?: string;
+  onDownloadStart?: () => void;
+  onDownloadComplete?: () => void;
+  onDownloadError?: (error: Error) => void;
+}
+
+export interface DeleteFileProps {
+  projectId: string;
+  sheetType: string;
+  isDisabled?: boolean;
+  fileName?: string;
+  onDeleteStart?: () => void;
+  onDeleteComplete?: () => void;
+  onDeleteError?: (error: Error) => void;
+}
+
+// File Upload Related Types
+export interface FileUploaderProps {
+  onUploadComplete?: (file: File) => void;
+  onUploadError?: (error: Error) => void;
+}
+
+export interface SheetRow {
+  fileId: string;
+  fileName: string;
+  sheetId: string;
+  sheetName: string;
+  sheetIndex: number;
+  mappingIndex?: number;
+  isEmpty?: boolean;
+}
+
+export interface SheetMapperProps {
+  form: UseFormReturn<FormValues>;
+}
+
+export interface FileUploadMappingProps {
+  refetchSheets?: () => void;
+  clearSelectedSheet?: () => void;
+}
+
+
+// Create Analysis props :
+// API response mapping types
+export interface ApiAnalysis {
+  id?: string;
+  name?: string;
+  summary?: string;
+}
+
+export interface ApiSubSection {
+  id?: string;
+  name?: string;
+  analyses?: ApiAnalysis[];
+}
+
+export interface ApiSection {
+  id?: string;
+  name?: string;
+  subSections?: ApiSubSection[];
+}
+
+export interface Section {
+  id: string;
+  name: string;
+  subSections: SubSection[];
+}
+
+export interface SubSection {
+  id: string;
+  name: string;
+  analyses: Analysis[];
+}
+
+// --- Analysis View Types Centralized ---
+
+export interface AnalysisApiResponse {
+  analysisId: string;
+  fileUrl: string;
+  status:
+    | "pending"
+    | "processing"
+    | "completed"
+    | "failed"
+    | "not_started"
+    | "not_mapped"
+    | "draft"
+    | "running";
+  message?: string;
+  progress?: number;
+  lastAnalysisDate?: string;
+  sourceFileLastModified?: string;
+  isSourceFileChanged?: boolean;
+  fileMappingStatus?: boolean;
+  isColumnMapped?: boolean;
+  metadata?: {
+    fileName?: string;
+    fileSize?: string;
+    recordCount?: number;
+    analysisParameters?: {
+      threshold?: string;
+      dateRange?: string;
+    };
+    sourceFileName?: string;
+  };
+  sourceFileId?: string;
+  sourceFileName?: string;
+}
+
+export interface SourceFile {
+  id: string;
+  name: string;
+}
+
+// Define API error response type for analysis view
+export interface ApiErrorResponse {
+  response?: {
+    status?: number;
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
+export interface AnalysisViewProps {
+  title?: string;
+  analysisType: string;
+  onError?: (error: Error) => void;
+  onAnalysisComplete?: () => void;
+  enableSSE?: boolean;
+  onClose?: () => void;
+}
+
+export interface AnalysisStatusViewProps {
+  analysisData: AnalysisApiResponse;
+  projectId: string;
+  analysisType: string;
+  onTriggerAnalysis: () => void;
+  isTriggering: boolean;
+  onRerunAnalysis?: () => void;
+  rerunLoading?: boolean;
+}
+
+// Column Mapping Dialog Types
+export interface ColumnMappingSourceColumn {
+  id: string;
+  name: string;
+  required: boolean;
+  summary?: string;
+}
+
+export interface ColumnMappingTargetColumn {
+  id: string;
+  name: string;
+  required: boolean;
+}
+
+export interface ColumnMappingDialogProps {
+  projectId: string;
+  analysisType: string;
+  open?: boolean;
+  setOpen?: (open: boolean) => void;
+  children?: React.ReactNode;
+}
+
+// --- Project Context Types ---
+
+// Item type used in context
+export type Item = {
+  id?: string;
+  name?: string;
+  status?: string;
+  summary?: string;
+  templateId?: string;
+  [x: string]: unknown;
+};
+
+// SelectedItem type for context
+export type SelectedItem = Item & {
+  type: "sheet" | "analysis";
+  index: number;
+};
+
+// AnalysisAPIItem type for context
+export type AnalysisAPIItem = {
+  working_id: string;
+  working_name: string;
+  status: string;
+};
+
+// ProjectContextType interface
+export interface ProjectContextType {
+  // States
+  selectedItem: SelectedItem | null;
+  sheets: Item[];
+  analysis: AnalysisAPIItem[];
+  loading: boolean;
+  isMobile: boolean;
+  sidebarOpen: boolean;
+  selectedTab: "sheets" | "analysis";
+  projectId: string;
+
+  // Actions
+  setSelectedItem: (item: SelectedItem | null) => void;
+  setLoading: (loading: boolean) => void;
+  setSidebarOpen: (open: boolean) => void;
+  setSelectedTab: (tab: "sheets" | "analysis") => void;
+  toggleSidebar: () => void;
+  handleClearSelection: () => void;
+
+  // Data actions
+  handleItemClick: (
+    item: Item,
+    type: "sheet" | "analysis",
+    index: number
+  ) => void;
+  handleAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
+
+  // Query states and actions
+  isSheetsLoading: boolean;
+  isAnalysisLoading: boolean;
+  refetchSheets: () => void;
+
+  // Utility functions
+  statusDotColors: Record<StatusEnum, string>;
+  mapStatusToUI: (status: string) => StatusEnum;
+  normalizeSheet: (item: Item) => { name: string; status: StatusEnum };
+  toAnalysisItem: (item: Analysis | AnalysisAPIItem | Item) => Analysis;
+  getCreatedAnalysisTemplateIds: () => string[];
 }

@@ -18,6 +18,7 @@ import SheetsPanel from "./sheets-panel";
 import AnalysisPanel from "./analysis-panel";
 import MobileSidebar from "./mobile-sidebar";
 import { ProjectProvider, useProject } from "@/contexts/project-context";
+import type { Analysis, SheetItem } from "@/types/project-types";
 
 // Extract the main content to a separate component that uses the context
 function ProjectContent() {
@@ -29,7 +30,6 @@ function ProjectContent() {
     isMobile,
     sidebarOpen,
     selectedTab,
-    projectId,
     setLoading,
     setSelectedTab,
     toggleSidebar,
@@ -57,7 +57,7 @@ function ProjectContent() {
     } finally {
       setLoading(false);
     }
-  }, [selectedItem, setLoading]);
+  }, [setLoading]);
 
   // Fetch data when selectedItem changes
   useEffect(() => {
@@ -162,7 +162,7 @@ function ProjectContent() {
     );
   };
 
-  // Update mobile sidebar props to include correct analysis data
+  // Update mobile sidebar props
   const mobileSidebarProps = {
     sidebarOpen,
     toggleSidebar,
@@ -171,7 +171,11 @@ function ProjectContent() {
     sheets: sheets.map(normalizeSheet),
     analysis: analysis.map(toAnalysisItem),
     selectedItem,
-    onItemClick: handleItemClick,
+    onItemClick: handleItemClick as (
+      item: Analysis | SheetItem,
+      type: "sheet" | "analysis",
+      index: number
+    ) => void,
     statusDotColors,
     mapStatusToUI,
     onAnalysisCreate: handleAnalysisCreate,
@@ -229,22 +233,11 @@ function ProjectContent() {
                       : null
                   }
                   onItemClick={(
-                    item: any,
-                    type: "sheet" | "analysis",
+                    item: Analysis,
+                    type: "analysis",
                     index: number
                   ) => {
-                    if (type === "analysis") {
-                      handleItemClick(
-                        {
-                          ...item,
-                          id: item.working_id,
-                          name: item.working_name,
-                          status: item.status,
-                        },
-                        type,
-                        index
-                      );
-                    }
+                    handleItemClick(item, type, index);
                   }}
                   statusDotColors={statusDotColors}
                   onAnalysisCreate={handleAnalysisCreate}

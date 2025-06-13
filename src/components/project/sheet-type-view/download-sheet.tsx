@@ -9,15 +9,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Download, Loader2, AlertCircle } from "lucide-react";
-
-type DownloadButtonProps = {
-  fileUrl?: string;
-  isDisabled?: boolean;
-  fileName?: string;
-  onDownloadStart?: () => void;
-  onDownloadComplete?: () => void;
-  onDownloadError?: (error: Error) => void;
-};
+import { DownloadButtonProps } from "@/types/project-types";
 
 const DownloadFile = ({
   fileUrl,

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Info } from "lucide-react"; // Changed icon to Info for neutral state
+import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios, { AxiosError } from "axios";
@@ -11,68 +11,13 @@ import { toast } from "sonner";
 import AnalysisHeader from "./analysis-header";
 import AnalysisStatusView from "./analysis-status-view";
 import ExcelViewer from "@/components/common/excel-file-viewer";
-
-// Types
-export interface AnalysisApiResponse {
-  analysisId: string;
-  fileUrl: string;
-  status:
-    | "pending"
-    | "processing"
-    | "completed"
-    | "failed"
-    | "not_started"
-    | "not_mapped"
-    | "draft"
-    | "running";
-  message?: string;
-  progress?: number;
-  lastAnalysisDate?: string;
-  sourceFileLastModified?: string;
-  isSourceFileChanged?: boolean;
-  fileMappingStatus?: boolean;
-  isColumnMapped?: boolean;
-  metadata?: {
-    fileName?: string;
-    fileSize?: string;
-    recordCount?: number;
-    analysisParameters?: {
-      threshold?: string;
-      dateRange?: string;
-    };
-    sourceFileName?: string;
-  };
-  sourceFileId?: string;
-  sourceFileName?: string;
-}
-
-export interface SourceFile {
-  id: string;
-  name: string;
-}
-
-// Define API error response type
-interface ApiErrorResponse {
-  response?: {
-    status?: number;
-    data?: {
-      message?: string;
-    };
-  };
-  message?: string;
-}
-
-interface AnalysisViewProps {
-  title?: string;
-  analysisType: string;
-  onError?: (error: Error) => void;
-  onAnalysisComplete?: () => void;
-  enableSSE?: boolean;
-  onClose?: () => void; // Add onClose prop for closing the error view
-}
+import {
+  AnalysisApiResponse,
+  ApiErrorResponse,
+  AnalysisViewProps,
+} from "@/types/project-types";
 
 const ACTIVE_STATUSES = ["queued", "running", "processing", "pending"];
-const FINAL_STATUSES = ["completed", "failed"];
 
 const AnalysisView: React.FC<AnalysisViewProps> = ({
   title = "Analysis",
@@ -86,11 +31,8 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const queryClient = useQueryClient();
 
   // State management
-  const [isTriggering, setIsTriggering] = useState(false);
-  const [excelViewerBlobUrl, setExcelViewerBlobUrl] = useState<string | null>(
-    null
-  );
-  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
+  const [isTriggering, setIsTriggerging] = useState(false);
+  const [excelViewerBlobUrl] = useState<string | null>(null);
 
   // Fetch analysis data
   const {
@@ -122,11 +64,11 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       queryClient.invalidateQueries({
         queryKey: ["analysisData", projectId, analysisType],
       });
-      setIsTriggering(false);
+      setIsTriggerging(false);
       onAnalysisComplete?.();
     },
     onError: (err: unknown) => {
-      setIsTriggering(false);
+      setIsTriggerging(false);
       const errorMessage =
         (
           err as {
@@ -188,27 +130,19 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
   const rerunAnalysisMutation = useMutation({
     mutationFn: async () => {
       await axios.post(
-        `${BASE_TEMP_BACKEND_URL}/api/v1/projects/rerun_analysis/${projectId}/${analysisType}`
+        `${BASE_TEMP_BACKEND_URL}/api/v1/analysis/rerun/${projectId}/${analysisType}`
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["analysisData", projectId, analysisType],
       });
-      setIsTriggering(false);
+      setIsTriggerging(false);
       onAnalysisComplete?.();
     },
-    onError: (err: unknown) => {
-      setIsTriggering(false);
-      const errorMessage =
-        (
-          err as {
-            response?: { data?: { message?: string } };
-            message?: string;
-          }
-        )?.response?.data?.message ||
-        (err as { message?: string })?.message ||
-        "Failed to re-run analysis";
+    onError: () => {
+      setIsTriggerging(false);
+      const errorMessage = "Failed to re-run analysis";
       toast.error(errorMessage);
       onError?.(new Error(errorMessage));
     },
@@ -250,15 +184,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   }
                 : prev
           );
-          if (ACTIVE_STATUSES.includes(eventData.status)) {
-            setLastUpdate(Date.now());
-          }
-          if (FINAL_STATUSES.includes(eventData.status)) {
-            setTimeout(() => {
-              eventSource.close();
-              refetchAnalysis();
-            }, 1000);
-          }
         }
       } catch (error) {
         console.error("Error parsing SSE status event:", error);
@@ -283,11 +208,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
                   }
                 : prev
           );
-          setLastUpdate(Date.now());
-          setTimeout(() => {
-            eventSource.close();
-            refetchAnalysis();
-          }, 1000);
         }
       } catch (error) {
         console.error("Error parsing SSE final event:", error);
@@ -297,7 +217,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
     eventSource.addEventListener("status", handleStatus);
     eventSource.addEventListener("final", handleFinal);
 
-    eventSource.onerror = (err) => {
+    eventSource.onerror = () => {
       eventSource.close();
     };
 
@@ -306,7 +226,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
       eventSource.removeEventListener("final", handleFinal);
       eventSource.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     projectId,
     analysisData,
@@ -394,7 +313,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
         projectId={projectId}
         analysisType={analysisType}
         onTriggerAnalysis={() => {
-          setIsTriggering(true);
+          setIsTriggerging(true);
           triggerAnalysisMutation.mutate();
         }}
         onDownload={() => {
@@ -406,7 +325,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           }
         }}
         onRerunAnalysis={() => {
-          setIsTriggering(true);
+          setIsTriggerging(true);
           rerunAnalysisMutation.mutate();
         }}
         downloadLoading={downloadMutation.isPending}
@@ -439,12 +358,12 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
             projectId={projectId}
             analysisType={analysisType}
             onTriggerAnalysis={() => {
-              setIsTriggering(true);
+              setIsTriggerging(true);
               triggerAnalysisMutation.mutate();
             }}
             isTriggering={isTriggering || triggerAnalysisMutation.isPending}
             onRerunAnalysis={() => {
-              setIsTriggering(true);
+              setIsTriggerging(true);
               rerunAnalysisMutation.mutate();
             }}
             rerunLoading={rerunAnalysisMutation.isPending}

@@ -11,7 +11,7 @@ import * as XLSX from "xlsx";
 import { uploadToDigitalOcean } from "@/utils/storage-utils";
 import { useFileUpload } from "@/contexts/file-upload-context";
 import { toast } from "sonner";
-import type { Sheet } from "@/types/project-types";
+import { Sheet } from "@/types/project-types";
 import { useParams } from "next/navigation";
 
 const extractSheetsFromExcel = async (file: File): Promise<Sheet[]> => {

@@ -8,35 +8,7 @@ import FileUploadMapping from "./file-upload";
 import { Button } from "@/components/ui/button";
 import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type StatusEnum =
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "neutral"
-  | "uploaded";
-
-type Item = {
-  name: string;
-  status: StatusEnum;
-};
-
-interface SelectedItem {
-  index: number;
-  type: "sheet" | "analysis";
-}
-
-interface SheetsPanelProps {
-  sheets: Item[];
-  selectedItem: SelectedItem | null;
-  onItemClick: (item: Item, type: "sheet" | "analysis", index: number) => void;
-  statusDotColors: Record<StatusEnum, string>;
-  mapStatusToUI: (status: string) => StatusEnum;
-  isLoading?: boolean;
-  refetchSheets?: () => void;
-  clearSelectedSheet?: () => void;
-}
+import type { SheetsPanelProps } from "@/types/project-types";
 
 export default function SheetsPanel({
   sheets,

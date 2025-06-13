@@ -1,25 +1,9 @@
 import React, { useState } from "react";
 import { FiRefreshCw } from "react-icons/fi";
-import {
-  AlertTriangle,
-  Link2,
-  Play,
-  FileSpreadsheet,
-  Loader2,
-} from "lucide-react";
+import { AlertTriangle, Link2, Play, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import ColumnMappingDialog from "./analysis-settings";
-import { AnalysisApiResponse } from ".";
-
-interface AnalysisStatusViewProps {
-  analysisData: AnalysisApiResponse;
-  projectId: string;
-  analysisType: string;
-  onTriggerAnalysis: () => void;
-  isTriggering: boolean;
-  onRerunAnalysis?: () => void;
-  rerunLoading?: boolean;
-}
+import ColumnMappingDialog from "./column-mapping";
+import { AnalysisStatusViewProps } from "@/types/project-types";
 
 const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
   analysisData,
@@ -79,6 +63,21 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
             File mapping is complete, but columns must be mapped before analysis
             can start.
           </p>
+          {/* Show source file changed warning if applicable */}
+          {analysisData.isSourceFileChanged && (
+            <div className="mt-2 mb-4 p-2 bg-amber-50 border border-amber-200 rounded-md">
+              <div className="flex items-start gap-2">
+                <AlertTriangle
+                  size={14}
+                  className="text-amber-600 mt-0.5 flex-shrink-0"
+                />
+                <div className="text-xs text-amber-800 text-left">
+                  <strong>Source file has been updated</strong> since the last
+                  mapping. Please review and re-map columns to ensure accuracy.
+                </div>
+              </div>
+            </div>
+          )}
           <ColumnMappingDialog
             projectId={projectId}
             analysisType={analysisType}

@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/dialog";
 import { FileUploader } from "./file-uploader";
 import { SheetMapper } from "./sheet-mapper";
-import { ApiError, formSchema, type FormValues } from "@/types/project-types";
+import {
+  ApiError,
+  formSchema,
+  FormValues,
+  FileUploadMappingProps,
+} from "@/types/project-types";
 import { IoMdAdd } from "react-icons/io";
 import { toast } from "sonner";
 import {
@@ -26,11 +31,6 @@ import {
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
 import { useParams } from "next/navigation";
-
-type FileUploadMappingProps = {
-  refetchSheets?: () => void;
-  clearSelectedSheet?: () => void;
-};
 
 export function FileUploadMappingWrapper(props: FileUploadMappingProps) {
   const params = useParams();

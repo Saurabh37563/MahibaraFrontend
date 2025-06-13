@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { UseFormReturn } from "react-hook-form";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,22 +31,12 @@ import {
 import { X } from "lucide-react";
 import { MdVerified } from "react-icons/md";
 import { useFileUpload } from "@/contexts/file-upload-context";
-import { FormValues, SheetMapping } from "@/types/project-types";
+import {
+  SheetMapping,
+  SheetMapperProps,
+  SheetRow,
+} from "@/types/project-types";
 import { Input } from "@/components/ui/input";
-
-interface SheetMapperProps {
-  form: UseFormReturn<FormValues>;
-}
-
-interface SheetRow {
-  fileId: string;
-  fileName: string;
-  sheetId: string;
-  sheetName: string;
-  sheetIndex: number;
-  mappingIndex?: number;
-  isEmpty?: boolean; // For empty rows
-}
 
 const CLEAR_SELECTION_VALUE = "__CLEAR_SELECTION__";
 

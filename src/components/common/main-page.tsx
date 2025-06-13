@@ -3,6 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { Loader } from "../ui/loader";
 
 export default function RootPage() {
   const { status } = useSession();
@@ -18,7 +19,7 @@ export default function RootPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      {status === "loading" ? "Authenticating..." : "Redirecting..."}
+      <Loader />
     </div>
   );
 }

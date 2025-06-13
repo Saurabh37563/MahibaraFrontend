@@ -37,35 +37,75 @@ import {
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
 import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
+import {
+  ColumnMappingDialogProps,
+  ColumnMappingSourceColumn,
+  ColumnMappingTargetColumn,
+} from "@/types/project-types";
 
-export default function ColumnMappingDialog({
+// If not present in project-types, define here and move to project-types.ts
+// interface ColumnMappingDialogProps {
+//   projectId: string;
+//   analysisType: string;
+//   open?: boolean;
+//   setOpen?: (open: boolean) => void;
+//   children?: ReactNode;
+// }
+
+const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
   projectId,
   analysisType,
   open: controlledOpen,
   setOpen: setControlledOpen,
-  children, // custom trigger
-}) {
+  children,
+}) => {
   const queryClient = useQueryClient();
 
+  // Always call useState for open
+  const [open, setOpen] = useState(false);
+
+  // Sync internal open state with controlled props if provided
+  useEffect(() => {
+    if (typeof controlledOpen === "boolean") {
+      setOpen(controlledOpen);
+    }
+  }, [controlledOpen]);
+
+  // Handler to update open state and call controlled setter if present
+  const handleOpenChange = (value: boolean) => {
+    setOpen(value);
+    if (setControlledOpen) setControlledOpen(value);
+  };
+
   // Dialog open state
-  const [open, setOpen] =
-    typeof controlledOpen === "boolean"
-      ? [controlledOpen, setControlledOpen]
-      : useState(false);
+  // const [open, setOpen] =
+  //   typeof controlledOpen === "boolean" && setControlledOpen
+  //     ? [controlledOpen, setControlledOpen]
+  //     : useState(false);
 
   // State for loading column mapping data
   const [isLoading, setIsLoading] = useState(false);
 
   // States for column mapping data
-  const [sourceColumns, setSourceColumns] = useState([]);
-  const [targetColumns, setTargetColumns] = useState([]);
-  const [columnMappingQuery, setColumnMappingQuery] = useState({ data: {} });
+  const [sourceColumns, setSourceColumns] = useState<
+    ColumnMappingSourceColumn[]
+  >([]);
+  const [targetColumns, setTargetColumns] = useState<
+    ColumnMappingTargetColumn[]
+  >([]);
+  const [columnMappingQuery, setColumnMappingQuery] = useState<{
+    data: Record<string, string>;
+  }>({ data: {} });
 
   // State to track approved mappings
-  const [approvedMappings, setApprovedMappings] = useState(new Set());
+  const [approvedMappings, setApprovedMappings] = useState<Set<string>>(
+    new Set()
+  );
 
   // New state to track approved mappings
-  const [saveMapping, setSaveMapping] = useState({ isLoading: false });
+  const [saveMapping, setSaveMapping] = useState<{ isLoading: boolean }>({
+    isLoading: false,
+  });
   const [isApproveAllLoading, setIsApproveAllLoading] = useState(false);
 
   // Derived values
@@ -75,7 +115,7 @@ export default function ColumnMappingDialog({
   const approvedColumnsCount = approvedMappings.size;
 
   const unmappedRequired = targetColumns.filter(
-    (col) => col.required && !usedTargetColumns.includes(col.id),
+    (col) => col.required && !usedTargetColumns.includes(col.id)
   );
 
   // Find required source columns that are mapped but not approved
@@ -84,7 +124,7 @@ export default function ColumnMappingDialog({
       (col) =>
         col.required &&
         columnMappingQuery.data[col.id] &&
-        !approvedMappings.has(col.id),
+        !approvedMappings.has(col.id)
     )
     .map((col) => col.name);
 
@@ -122,13 +162,13 @@ export default function ColumnMappingDialog({
     setIsApproveAllLoading(false);
   };
 
-  const handleApproveMapping = (sourceId) => {
+  const handleApproveMapping = (sourceId: string) => {
     const newApprovedSet = new Set(approvedMappings);
     newApprovedSet.add(sourceId);
     setApprovedMappings(newApprovedSet);
   };
 
-  const handleColumnMappingChange = (sourceId, targetId) => {
+  const handleColumnMappingChange = (sourceId: string, targetId: string) => {
     // When mapping changes, remove approval
     const newApprovedSet = new Set(approvedMappings);
     newApprovedSet.delete(sourceId);
@@ -139,7 +179,7 @@ export default function ColumnMappingDialog({
     }));
   };
 
-  const clearMapping = (sourceId) => {
+  const clearMapping = (sourceId: string) => {
     // When mapping is cleared, remove approval
     const newApprovedSet = new Set(approvedMappings);
     newApprovedSet.delete(sourceId);
@@ -150,7 +190,7 @@ export default function ColumnMappingDialog({
     setColumnMappingQuery({ data: newData });
   };
 
-  const handleSubmit = async (callback) => {
+  const handleSubmit = async (callback: () => void) => {
     setSaveMapping({ isLoading: true });
     try {
       await axios.post(
@@ -201,7 +241,7 @@ export default function ColumnMappingDialog({
         if (mappingData) {
           // Populate source columns (mark all as required)
           setSourceColumns(
-            mappingData.source_columns.map((sourceColumn) => ({
+            mappingData.source_columns.map((sourceColumn: string) => ({
               id: sourceColumn,
               name: sourceColumn,
               required: true, // Only source columns are required
@@ -210,7 +250,7 @@ export default function ColumnMappingDialog({
 
           // Populate target columns
           setTargetColumns(
-            mappingData.target_columns.map((targetColumn) => ({
+            mappingData.target_columns.map((targetColumn: string) => ({
               id: targetColumn,
               name: targetColumn,
               required: false, // Target columns are not required
@@ -218,10 +258,12 @@ export default function ColumnMappingDialog({
           );
 
           // Populate column mapping query
-          const mappedColumns = {};
-          mappingData.mapped_columns.forEach((mapping) => {
-            mappedColumns[mapping.source_column] = mapping.target_column;
-          });
+          const mappedColumns: Record<string, string> = {};
+          mappingData.mapped_columns.forEach(
+            (mapping: { source_column: string; target_column: string }) => {
+              mappedColumns[mapping.source_column] = mapping.target_column;
+            }
+          );
           setColumnMappingQuery({ data: mappedColumns });
 
           // Approve all mapped columns by default
@@ -263,13 +305,17 @@ export default function ColumnMappingDialog({
         }
       `}</style>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleOpenChange}>
         {/* Allow custom trigger via children, fallback to settings icon */}
         <DialogTrigger asChild>
           {children ? (
             children
           ) : (
-            <Button variant="outline" size="icon" onClick={() => setOpen(true)}>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleOpenChange(true)}
+            >
               <Settings className="size-4" />
             </Button>
           )}
@@ -303,7 +349,7 @@ export default function ColumnMappingDialog({
                       variant="outline"
                       className={cn(
                         "relative overflow-hidden transition-all duration-300 bg-blue-800/10 hover:bg-blue-800/20 text-blue-800 hover:shadow-lg",
-                        isApproveAllLoading && "pointer-events-none",
+                        isApproveAllLoading && "pointer-events-none"
                       )}
                       onClick={handleApproveAll}
                       disabled={isApproveAllLoading || mappedColumnsCount === 0}
@@ -331,7 +377,7 @@ export default function ColumnMappingDialog({
                       variant="outline"
                       className={cn(
                         "relative overflow-hidden transition-all duration-300 bg-green-800/10 hover:bg-green-800/20 text-green-800 hover:shadow-lg",
-                        isAutoRemapLoading && "pointer-events-none",
+                        isAutoRemapLoading && "pointer-events-none"
                       )}
                       onClick={handleAutoMap}
                       disabled={isAutoRemapLoading}
@@ -369,7 +415,7 @@ export default function ColumnMappingDialog({
                   <Alert className="bg-amber-50 border-amber-200">
                     <AlertDescription className="text-amber-800">
                       There are {unmappedRequired.length} required target
-                      columns that haven't been mapped yet:
+                      columns that haven&apos;t been mapped yet:
                       <div className="flex flex-wrap gap-1 mt-2">
                         {unmappedRequired.map((col) => (
                           <Badge
@@ -407,9 +453,7 @@ export default function ColumnMappingDialog({
 
               {/* Table container with both horizontal and vertical scrolling */}
               <div className="flex-grow overflow-hidden mt-4 -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
-                <div
-                className="overflow-x-auto overflow-y-auto"
-                >
+                <div className="overflow-x-auto overflow-y-auto">
                   <div className="min-w-[800px] pb-4">
                     <Table className="w-full">
                       <TableHeader className="sticky top-0 bg-background z-10">
@@ -430,15 +474,13 @@ export default function ColumnMappingDialog({
                           const mappedTargetId =
                             columnMappingQuery.data?.[sourceColumn.id] || "";
                           const isApproved = approvedMappings.has(
-                            sourceColumn.id,
+                            sourceColumn.id
                           );
                           const canApprove =
                             mappedTargetId && mappedTargetId !== "none";
 
                           return (
-                            <TableRow
-                              key={sourceColumn.id}
-                            >
+                            <TableRow key={sourceColumn.id}>
                               <TableCell className="font-medium">
                                 <div className="flex flex-wrap gap-1 items-center">
                                   <span className="w-fit">
@@ -467,7 +509,7 @@ export default function ColumnMappingDialog({
                                   onValueChange={(value) =>
                                     handleColumnMappingChange(
                                       sourceColumn.id,
-                                      value,
+                                      value
                                     )
                                   }
                                 >
@@ -475,7 +517,7 @@ export default function ColumnMappingDialog({
                                     <SelectValue placeholder="Select a target column" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem>None</SelectItem>
+                                    <SelectItem value="none">None</SelectItem>
                                     {targetColumns.map((targetColumn) => (
                                       <SelectItem
                                         key={targetColumn.id}
@@ -556,7 +598,7 @@ export default function ColumnMappingDialog({
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    onClick={() => setOpen(false)}
+                    onClick={() => handleOpenChange(false)}
                     className="w-full sm:w-auto"
                   >
                     Cancel
@@ -592,4 +634,6 @@ export default function ColumnMappingDialog({
       </Dialog>
     </>
   );
-}
+};
+
+export default ColumnMappingDialog;

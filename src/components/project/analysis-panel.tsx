@@ -3,33 +3,7 @@
 import { LuChartPie } from "react-icons/lu";
 import { AnalysisSelectionModal } from "./create-analysis";
 import { useProject } from "@/contexts/project-context";
-import type { Analysis } from "./create-analysis";
-
-type StatusEnum =
-  | "success"
-  | "warning"
-  | "danger"
-  | "info"
-  | "neutral"
-  | "uploaded";
-
-interface SelectedItem {
-  index: number;
-  type: "sheet" | "analysis";
-}
-
-interface AnalysisPanelProps {
-  analysis: Analysis[];
-  selectedItem: SelectedItem | null;
-  onItemClick: (
-    item: Analysis,
-    type: "sheet" | "analysis",
-    index: number
-  ) => void;
-  statusDotColors: Record<StatusEnum, string>;
-  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
-  createdAnalysisTemplateIds: string[];
-}
+import type { AnalysisPanelProps } from "@/types/project-types";
 
 export default function AnalysisPanel({
   analysis,
@@ -83,6 +57,8 @@ export default function AnalysisPanel({
         ) : (
           analysis.map((item, index) => {
             const statusKey = mapStatusToUI(item.status ?? "");
+            // Fallback to blue for running/processing if not mapped
+            const dotColor = statusDotColors[statusKey];
             return (
               <div
                 key={`analysis-${item.working_id ?? index}`}
@@ -97,11 +73,7 @@ export default function AnalysisPanel({
                 <div className="text-xs flex items-center gap-2">
                   <LuChartPie className="text-gray-400" />
                   <span className="text-gray-950">{item.working_name}</span>
-                  <span
-                    className={`size-[6px] rounded-full ${
-                      statusDotColors[statusKey] || "bg-gray-300"
-                    }`}
-                  />
+                  <span className={`size-[6px] rounded-full ${dotColor}`} />
                 </div>
               </div>
             );

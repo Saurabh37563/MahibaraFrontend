@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { useParams } from "next/navigation";
 import {
   FileSpreadsheet,
@@ -18,50 +18,11 @@ import { queryClient } from "@/providers/query-provider";
 import DownloadFile from "./download-sheet";
 import DeleteSheet from "./delete-sheet";
 import ExcelViewer from "@/components/common/excel-file-viewer";
-import { FiLoader } from "react-icons/fi";
-
-interface SpreadsheetViewProps {
-  title?: string;
-  sheetType: string;
-  onError?: (error: Error) => void;
-  onFileLoad?: (sheetNames: string[]) => void;
-  onFileUpload?: (file: File) => void;
-  onDelete?: () => void;
-  enableSSE?: boolean;
-  onClearSelection?: () => void;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  data: SheetApiResponse;
-  error: null | string;
-  metadata: Record<string, unknown> | null;
-}
-
-interface SheetApiResponse {
-  fileId: string;
-  fileUrl: string;
-  status: "pending" | "processing" | "completed" | "validated" | "failed";
-  taskId: string;
-  message?: string;
-  progress?: number;
-  stage?: string;
-  type?: string;
-  timestamp?: string;
-  projectId?: string;
-  sheetType?: string;
-  resultUrl?: string;
-  createdAt?: string;
-  completedAt?: string;
-  metadata: {
-    fileName: string;
-    fileSize: string;
-    sheetIndex?: number;
-    sheetType: string;
-    lastModified: string;
-  };
-}
+import {
+  SpreadsheetViewProps,
+  ApiResponse,
+  SheetApiResponse,
+} from "@/types/project-types";
 
 const FINAL_STATUSES = ["completed", "failed", "validated"];
 
@@ -72,7 +33,7 @@ const statusBadgeConfig = {
     label: "Pending",
   },
   processing: {
-    icon: FiLoader,
+    icon: Loader2,
     styles: "text-blue-800 bg-blue-100",
     label: "Processing",
   },
@@ -132,9 +93,6 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
   const params = useParams();
   const projectId = params?.id as string;
 
-  // State to force updates on SSE events
-  const [lastUpdate, setLastUpdate] = useState<number>(Date.now());
-
   // React Query for sheet data
   const {
     data: sheetData,
@@ -185,7 +143,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
               };
             }
           );
-          setLastUpdate(Date.now());
+          // setLastUpdate(Date.now());
           if (FINAL_STATUSES.includes(eventData.status)) {
             setTimeout(() => {
               eventSource.close();
@@ -218,7 +176,7 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
                   }
                 : prev
           );
-          setLastUpdate(Date.now());
+          // setLastUpdate(Date.now());
           setTimeout(() => {
             eventSource.close();
             refetch();
@@ -241,7 +199,6 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
       eventSource.removeEventListener("final", handleFinal);
       eventSource.close();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     enableSSE,
     projectId,

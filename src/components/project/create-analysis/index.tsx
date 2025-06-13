@@ -20,53 +20,18 @@ import { useParams } from "next/navigation";
 import axios from "axios";
 import { toast } from "sonner";
 import { queryClient } from "@/providers/query-provider";
-// Define our data types
-export interface Analysis {
-  working_id: string;
-  working_name: string;
-  status: string;
-  summary?: string;
-  id?: string; // optional, for compatibility
-  name?: string; // optional, for compatibility
-}
-
-interface SubSection {
-  id: string;
-  name: string;
-  analyses: Analysis[];
-}
-
-interface Section {
-  id: string;
-  name: string;
-  subSections: SubSection[];
-}
+import {
+  Analysis,
+  Section,
+  ApiSection,
+  ApiSubSection,
+  ApiAnalysis,
+} from "@/types/project-types";
 
 interface AnalysisSelectionModalProps {
-  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void; // <-- change here
+  onAnalysisCreate: (selectedAnalyses: Analysis[]) => void;
   createdAnalysisTemplateIds: string[];
 }
-
-// Add types for API response mapping
-type ApiAnalysis = {
-  id?: string;
-  name?: string;
-  summary?: string;
-};
-
-type ApiSubSection = {
-  id?: string;
-  name?: string;
-  analyses?: ApiAnalysis[];
-};
-
-type ApiSection = {
-  id?: string;
-  name?: string;
-  subSections?: ApiSubSection[];
-};
-
-// Sample data - In real app, this would come from API
 
 export function AnalysisSelectionModal({
   onAnalysisCreate,
