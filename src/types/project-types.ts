@@ -487,6 +487,7 @@ export interface AnalysisStatusViewProps {
   isTriggering: boolean;
   onRerunAnalysis?: () => void;
   rerunLoading?: boolean;
+  refetchAnalysis: () => void;
 }
 
 // Column Mapping Dialog Types

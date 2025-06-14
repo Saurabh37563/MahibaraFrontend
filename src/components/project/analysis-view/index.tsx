@@ -359,6 +359,7 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
               rerunAnalysisMutation.mutate();
             }}
             rerunLoading={rerunAnalysisMutation.isPending}
+            refetchAnalysis={refetchAnalysis}
           />
         )}
       </div>

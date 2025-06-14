@@ -13,6 +13,7 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
   isTriggering,
   onRerunAnalysis,
   rerunLoading,
+  refetchAnalysis,
 }) => {
   const [columnMappingDialogOpen, setColumnMappingDialogOpen] = useState(false);
 
@@ -229,6 +230,56 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
     );
   }
 
+  // Completed but fileUrl is missing
+  if (
+    analysisData.status === "completed" &&
+    (!analysisData.fileUrl || analysisData.fileUrl === null)
+  ) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <FileSpreadsheet size={48} className="text-emerald-800 mx-auto mb-4" />
+          <h3 className="font-medium text-sm text-gray-900 mb-2 capitalize">
+            File Not Found , Please rerun the analysis or Refresh the analysis data 
+          </h3>
+          
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              variant="default"
+              onClick={refetchAnalysis}
+              aria-label="Refresh analysis data"
+              tabIndex={0}
+            >
+              <FiRefreshCw className="mr-2" size={16} />
+              Refresh Analysis
+            </Button>
+            {onRerunAnalysis && (
+              <Button
+                variant="secondary"
+                onClick={onRerunAnalysis}
+                disabled={rerunLoading}
+                aria-label="Re-run analysis"
+                tabIndex={0}
+              >
+                {rerunLoading ? (
+                  <>
+                    <FiRefreshCw className="animate-spin mr-2" size={16} />
+                    Re-running...
+                  </>
+                ) : (
+                  <>
+                    <FiRefreshCw className="mr-2" size={16} />
+                    Re-run Analysis
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Fallback for unknown states
   return (
     <div className="h-full flex items-center justify-center">
@@ -241,10 +292,12 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
           Analysis status: {analysisData.status}
         </p>
         <Button
-          onClick={onTriggerAnalysis}
-          disabled={isTriggering}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          variant="default"
+          onClick={refetchAnalysis}
+          aria-label="Refresh analysis data"
+          tabIndex={0}
         >
+          <FiRefreshCw className="mr-2" size={16} />
           Refresh Analysis
         </Button>
       </div>
