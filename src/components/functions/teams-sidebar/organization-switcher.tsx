@@ -224,7 +224,17 @@ export function OrganizationSwitcher({
                               name: org.name,
                               description: org.description || "",
                               organization_admin: org.organisation_admin
-                                ? ({ id: org.organisation_admin } as any)
+                                ? {
+                                    image: null,
+                                    id: org.organisation_admin,
+                                    email: "",
+                                    name: "",
+                                    designation: null,
+                                    organizationId: null,
+                                    organizationName: null,
+                                    createdAt: null,
+                                    updatedAt: null,
+                                  }
                                 : null,
                             }}
                             onCreateSuccess={() => {

@@ -38,6 +38,7 @@ const usersApi = {
       );
       return response.data?.data;
     } catch (error) {
+      console.error(error);
       throw new Error("Could not load users");
     }
   },
