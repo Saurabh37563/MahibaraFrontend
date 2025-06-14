@@ -1,7 +1,7 @@
 import { useQuery, useMutation, UseMutationResult, UseQueryResult, useQueryClient } from '@tanstack/react-query'
-import organizationService from '@/services/organization-service'
-import { User, Organization } from '@/types/organization-types'
-import { BASE_TEMP_BACKEND_URL } from '@/constants/endpoints-constant';
+import axios from 'axios'
+import {  Organization } from '@/types/organization-types'
+import { BASE_TEMP_BACKEND_URL, ORGANIZATION_ENDPOINTS } from '@/constants/endpoints-constant'
 export interface UpdateOrganizationParams {
   id: string;
   name: string;
@@ -9,14 +9,6 @@ export interface UpdateOrganizationParams {
   organisation_admin?: number;
 }
 
-// Search Users
-export function useSearchUsers(query: string): UseQueryResult<User[], Error> {
-  return useQuery({
-    queryKey: ['users', 'search', query],
-    queryFn: () => organizationService.searchUsers(query),
-    enabled: !!query,
-  })
-}
 
 interface CreateOrganizationParams {
   name: string
@@ -33,8 +25,18 @@ export function useCreateOrganization(): UseMutationResult<
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ name, description, organization_owner }) =>
-      organizationService.createOrganization(name, description, organization_owner),
+    mutationFn: async ({ name, description, organization_owner }) => {
+      const response = await axios.post(
+        ORGANIZATION_ENDPOINTS.postCreateOrganization,
+        { name, description, organisation_admin: organization_owner },
+        {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
+          },
+        }
+      );
+      return response.data?.data;
+    },
     onSuccess: (newOrg, variables) => {
       console.log("New Org data:", newOrg);
       // Invalidate organizations for the user who created the org
@@ -48,7 +50,15 @@ export function useCreateOrganization(): UseMutationResult<
 export function useGetAllUserOrganizations(user_id: number): UseQueryResult<Organization[], Error> {
   return useQuery({
     queryKey: ['organizations', user_id],
-    queryFn: () => organizationService.getAllUserOrganizations(user_id),
+    queryFn: async () => {
+      const response = await axios.get(ORGANIZATION_ENDPOINTS.getAllUserOrganizations, {
+        params: { user_id },
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
+        },
+      });
+      return response.data?.data;
+    },
     enabled: !!user_id,
   });
 }
@@ -58,23 +68,19 @@ export const useDeleteOrganization = () => {
   
   return useMutation({
     mutationFn: async (orgId: number) => {
-      const response = await fetch(`${BASE_TEMP_BACKEND_URL}/api/v1/organizations/${orgId}?permanent=false`, {
-        method: 'DELETE',
-        headers: {
-          'accept': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU4MTIxNzU2fQ.er7ojWsABIKpq_DqnK0EnZFK6r41bU8zHzxBrVLkNSs',
-        },
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to delete organization: ${response.status} ${errorData}`);
-      }
-      
-      return response.json();
+      const response = await axios.delete(
+        `${BASE_TEMP_BACKEND_URL}/api/v1/organizations/${orgId}`,
+        {
+          params: { permanent: false },
+          headers: {
+            accept: 'application/json',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU4MTIxNzU2fQ.er7ojWsABIKpq_DqnK0EnZFK6r41bU8zHzxBrVLkNSs',
+          },
+        }
+      );
+      return response.data;
     },
     onSuccess: () => {
-      // Invalidate and refetch organizations list
       queryClient.invalidateQueries({ queryKey: ['organizations'] });
     },
     onError: (error) => {
@@ -88,26 +94,19 @@ export const useUpdateOrganization = () => {
   
   return useMutation({
     mutationFn: async (data: UpdateOrganizationParams) => {
-      console.log('Updating organization with data:', data);
-      
       const { id, ...updatePayload } = data;
-      
-      const response = await fetch(`${BASE_TEMP_BACKEND_URL}/api/v1/organizations/${id}`, {
-        method: 'PUT',
-        headers: {
-          'accept': 'application/json',
-          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU4MTIxNzU2fQ.er7ojWsABIKpq_DqnK0EnZFK6r41bU8zHzxBrVLkNSs',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatePayload),
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`Failed to update organization: ${response.status} ${errorData}`);
-      }
-      
-      return response.json();
+      const response = await axios.put(
+        `${BASE_TEMP_BACKEND_URL}/api/v1/organizations/${id}`,
+        updatePayload,
+        {
+          headers: {
+            accept: 'application/json',
+            Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU4MTIxNzU2fQ.er7ojWsABIKpq_DqnK0EnZFK6r41bU8zHzxBrVLkNSs',
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['organizations'] });

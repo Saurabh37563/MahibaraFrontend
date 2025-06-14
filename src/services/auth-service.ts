@@ -1,4 +1,5 @@
-import { authApi } from "./api/auth-api";
+import http from "@/lib/http";
+import { USER_AUTH_URL } from '@/constants/endpoints-constant';
 import { 
   AuthResponse, 
   LoginFormData, 
@@ -6,14 +7,15 @@ import {
 
 const authService = {
   login: async (credentials: LoginFormData): Promise<AuthResponse> => {
-    const data = await authApi.login(credentials);
+    const response = await http.post(USER_AUTH_URL?.postLogin, credentials);
+    const data = response.data;
     localStorage.setItem("token", data.token);
     return data;
   },
 
 
   logout: async (): Promise<void> => {
-    await authApi.logout();
+    await http.post(USER_AUTH_URL?.postLogout);
     localStorage.removeItem("token");
   },
 

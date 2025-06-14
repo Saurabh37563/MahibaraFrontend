@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import moment from "moment";
 import { Project } from "@/types/project-types";
 import { Clock, Folder, MoreVertical } from "lucide-react";
 import {
@@ -14,6 +13,8 @@ import { ProjectStatusDialog } from "./project-status-dialog";
 import { ProjectDeleteDialog } from "./project-delete-dialog";
 import { useRouter } from "next/navigation";
 import { useTeamContext } from "@/contexts/team-context";
+import { LuTrash2 } from "react-icons/lu";
+import { RiEdit2Line } from "react-icons/ri";
 
 // Define project status types and config
 type ProjectStatus = "completed" | "in-progress" | "pending" | "draft";
@@ -29,18 +30,18 @@ const statusConfig: Record<
   }
 > = {
   completed: {
-    color: "text-emerald-800",
-    iconColor: "text-emerald-700",
-    borderColor: "border-emerald-800",
+    color: "text-emerald-900",
+    iconColor: "text-emerald-900",
+    borderColor: "border-emerald-900",
     bgColor: "bg-emerald-900",
-    bgOpacityColor: "bg-emerald-700/10",
+    bgOpacityColor: "bg-emerald-900/10",
   },
   "in-progress": {
-    color: "text-blue-600",
-    iconColor: "text-blue-600",
-    borderColor: "border-blue-600",
-    bgColor: "bg-blue-600",
-    bgOpacityColor: "bg-blue-600/10",
+    color: "text-blue-900",
+    iconColor: "text-blue-900",
+    borderColor: "border-blue-900",
+    bgColor: "bg-blue-900",
+    bgOpacityColor: "bg-blue-900/10",
   },
   pending: {
     color: "text-[#b89921]",
@@ -52,7 +53,7 @@ const statusConfig: Record<
   draft: {
     color: "text-slate-500",
     iconColor: "text-slate-500",
-    borderColor: "border-slate-500",
+    borderColor: "border-slate-300",
     bgColor: "bg-slate-500",
     bgOpacityColor: "bg-slate-500/10",
   },
@@ -65,15 +66,49 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   const { activeOrg } = useTeamContext();
   const status = project.status as ProjectStatus;
-  const { color, iconColor, borderColor, bgColor } =
+  const {  iconColor, borderColor, bgColor } =
     statusConfig[status] || statusConfig["draft"];
   const router = useRouter();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
 
-  const formattedDate = moment(project.modifiedDate).format("MMM D, YYYY");
-  const fromNow = moment(project.modifiedDate).fromNow();
+  // Use correct field name from API: modified_date
+  const modifiedDate = project.modified_date
+    ? new Date(project.modified_date)
+    : null;
+
+  // Format date as "Jun 13, 2025"
+  const formattedDate = modifiedDate
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }).format(modifiedDate)
+    : "";
+
+  // Utility for "from now" (e.g., "2 days ago")
+  const getRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+
+    const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+
+    if (diffSec < 60) return rtf.format(-diffSec, "second");
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return rtf.format(-diffMin, "minute");
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return rtf.format(-diffHr, "hour");
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 30) return rtf.format(-diffDay, "day");
+    const diffMonth = Math.floor(diffDay / 30);
+    if (diffMonth < 12) return rtf.format(-diffMonth, "month");
+    const diffYear = Math.floor(diffMonth / 12);
+    return rtf.format(-diffYear, "year");
+  };
+
+  const fromNow = modifiedDate ? getRelativeTime(modifiedDate) : "";
 
   const handleCardClick = () => {
     const newParams = new URLSearchParams();
@@ -96,7 +131,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
     <>
       <div
         onClick={handleCardClick}
-        className={`group border ${borderColor} bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 transition-all hover:shadow-md cursor-pointer hover:translate-y-[-2px] duration-300`}
+        className={`group border ${borderColor} bg-white dark:bg-gray-800 rounded-xl  p-5 transition-all hover:shadow-md cursor-pointer hover:translate-y-[-2px] duration-300`}
         tabIndex={0}
         aria-label={`Open project ${project.name}`}
         onKeyDown={(e) => {
@@ -109,9 +144,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         {/* Header with folder icon and status */}
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center">
-            <Folder className={`h-6 w-6 stroke-1 ${iconColor} mr-2`} />
+            <Folder className={`h-6 w-6 stroke-2 ${iconColor} mr-2`} />
             <span
-              className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${color}`}
+              className={`text-xs font-medium px-2.5 py-0.5 rounded-full text-gray-500`}
             >
               {status
                 .replace("-", " ")
@@ -142,17 +177,19 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
                       handleOpenStatusDialog();
                     }}
                   >
+                    <RiEdit2Line className="h-4 w-4 mr-2" />
                     Update Status
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
-                  className="text-destructive"
+                  variant="destructive"
                   onSelect={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     handleOpenDeleteDialog();
                   }}
                 >
+                  <LuTrash2 className="h-4 w-4 mr-2" />
                   Delete Project
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -175,9 +212,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         </div>
 
         {/* Status indicator bar */}
-        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-[6px] overflow-hidden">
           <div
-            className={`h-2.5 rounded-full ${bgColor} w-full transform origin-left transition-transform duration-500 ease-out group-hover:scale-x-[1.03]`}
+            className={`h-[6px] rounded-full ${bgColor} w-full transform origin-left transition-transform duration-500 ease-out group-hover:scale-x-[1.03]`}
           ></div>
         </div>
 

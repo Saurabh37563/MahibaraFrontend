@@ -175,7 +175,7 @@ export interface Project {
   name: string;
   description?: string;
   status: ProjectStatus;
-  modifiedDate: string;
+  modified_date: string;
   team_id: string;
   priority?: number;
 }
@@ -576,3 +576,39 @@ export interface ProjectContextType {
   toAnalysisItem: (item: Analysis | AnalysisAPIItem | Item) => Analysis;
   getCreatedAnalysisTemplateIds: () => string[];
 }
+
+// AI Column Mapping Response Type
+export interface AiColumnMappingResponse {
+  success: boolean;
+  message: string;
+  data: {
+    project_id: number;
+    working_type_id: number;
+    working_type_name: string;
+    working_type_key: string;
+    required_files: string[];
+    mappings: Record<string, Record<string, string>>;
+    analysis_results: Record<
+      string,
+      {
+        status: string;
+        mappings_found: number;
+        total_required: number;
+        file_url: string;
+      }
+    >;
+    total_files_analyzed: number;
+  };
+  error: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+// New type for sheet type mapping state
+export type SheetTypeMappingState = {
+  [sheetType: string]: {
+    sourceColumns: ColumnMappingSourceColumn[];
+    targetColumns: ColumnMappingTargetColumn[];
+    columnMappingQuery: { data: Record<string, string> };
+    approvedMappings: Set<string>;
+  };
+};

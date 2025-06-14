@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import { DownloadButtonProps } from "@/types/project-types";
+import axios from "axios";
 
 const DownloadFile = ({
   fileUrl,
@@ -26,18 +27,15 @@ const DownloadFile = ({
   // Modern download function using fetch with better error handling
   const downloadFile = async (url: string, filename: string) => {
     try {
-      const response = await fetch(url, {
-        method: "GET",
+      // Use axios to get blob
+      const response = await axios.get(url, {
+        responseType: "blob",
         headers: {
           Accept: "*/*",
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const blob = await response.blob();
+      const blob = response.data;
 
       // Check if browser supports the newer showSaveFilePicker API
       if ("showSaveFilePicker" in window) {

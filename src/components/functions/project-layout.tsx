@@ -13,7 +13,6 @@ import {
   type SortOrder,
   type DateRange,
 } from "@/types/project-types";
-import { FiInfo } from "react-icons/fi";
 import {
   Pagination,
   PaginationContent,
@@ -23,16 +22,18 @@ import {
   PaginationLink,
   PaginationEllipsis,
 } from "@/components/ui/pagination";
+import { MdGroupOff } from "react-icons/md";
 
 const EmptyTeamState = () => (
-  <div className="flex flex-col items-center justify-center h-full text-center px-4 py-24">
-    <div className="bg-gray-100 p-6 rounded-full mb-4">
-      <FiInfo size={35} />
+  <div className="flex flex-col items-center justify-center h-full text-center px-6 py-32">
+    <div className="text-emerald-800 bg-emerald-800/10 p-6 rounded-full mb-6 shadow-sm">
+      <MdGroupOff size={40} />
     </div>
-    <h3 className="text-xl font-semibold mb-2">No Team Selected</h3>
-    <p className="text-gray-500 mb-6 max-w-md">
-      Please select a team from the sidebar to view and manage projects for that
-      team.
+    <h3 className="text-2xl font-semibold mb-2 text-gray-800">
+      No Team Selected
+    </h3>
+    <p className="text-gray-500 text-base max-w-md">
+      Choose a team from the sidebar to view and manage projects for that team.
     </p>
   </div>
 );
@@ -120,21 +121,19 @@ const Functions = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full max-h-[calc(100vh-var(--header-height))] gap-4">
-      <div className="flex w-full items-center justify-between">
-        <span className="text-xl font-semibold">Projects</span>
-        {projects && projects.data && projects.data.length > 0 && (
-          <CreateProjectModal />
-        )}
-      </div>
-
-      {/* Sticky Filters */}
-      <div className="sticky top-0 z-10  ">
+    <div className="flex flex-col h-full w-full max-h-[calc(100vh-var(--header-height))] gap-2">
+      <div className="w-full flex flex-col gap-3 bg-white p-4 border-2 border-emerald-800/10 rounded-xl ">
+        <div className="flex w-full items-center justify-between">
+          <span className="text-xl font-semibold">Projects</span>
+          {projects && projects.data && projects.data.length > 0 && (
+            <CreateProjectModal />
+          )}
+        </div>
         <FilterDropdown />
       </div>
 
       {/* Scrollable Project List */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 rounded-xl min-h-0 overflow-y-auto">
         {isLoading ? (
           <LoadingProjects />
         ) : projects?.data && projects?.data.length > 0 ? (
@@ -146,10 +145,10 @@ const Functions = () => {
 
       {/* Sticky Pagination */}
       {projects?.data && projects?.data.length > 0 && (
-        <div className="sticky bottom-0 z-10  ">
-          <div className="flex justify-center mt-2">
+        <div className=" bg-white bottom-0 sticky rounded-md border-2 border-emerald-800/10 p-2">
+          <div className="flex justify-center ">
             <Pagination>
-              <PaginationContent>
+              <PaginationContent className="!py-0 ">
                 <PaginationItem>
                   <PaginationPrevious
                     onClick={() =>

@@ -1,11 +1,15 @@
 import * as XLSX from 'xlsx';
-import type { ProcessMessage, SheetData, CellData } from'@/types/common-types';
+import type { ProcessMessage, SheetData, CellData } from '@/types/common-types';
 
-function formatCellValue(cell: XLSX.CellObject | undefined): CellData {
+// Helper: extend CellData for internal use to include rawValue
+type InternalCellData = Omit<CellData, "type"> & { rawValue?: unknown; type: CellData["type"] };
+
+// Only allow CellData.type values
+function formatCellValue(cell: XLSX.CellObject | undefined): InternalCellData {
   if (!cell || cell.v === undefined) {
     return {
       displayValue: '',
-      rawValue: null,
+      value: null,
       type: 'empty'
     };
   }
@@ -15,27 +19,32 @@ function formatCellValue(cell: XLSX.CellObject | undefined): CellData {
 
   switch (type) {
     case 'n':
+      // Only allow 'number' as type, not 'percentage'
       if (cell.z && typeof cell.z === 'string' && cell.z.includes('%')) {
         return {
           displayValue: ((value as number) * 100).toFixed(2) + '%',
+          value,
           rawValue: value,
-          type: 'percentage'
+          type: 'number'
         };
       }
       return {
         displayValue: typeof value === 'number' ? value.toString() : String(value),
+        value,
         rawValue: value,
         type: 'number'
       };
     case 'd':
       return {
         displayValue: value instanceof Date ? value.toLocaleDateString() : String(value),
+        value,
         rawValue: value,
         type: 'date'
       };
     case 'b':
       return {
         displayValue: value ? 'TRUE' : 'FALSE',
+        value,
         rawValue: value,
         type: 'boolean'
       };
@@ -43,6 +52,7 @@ function formatCellValue(cell: XLSX.CellObject | undefined): CellData {
     default:
       return {
         displayValue: String(value),
+        value,
         rawValue: value,
         type: 'string'
       };
@@ -93,7 +103,7 @@ async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
       const headers: string[] = [];
 
       if (actualRowCount > 0) {
-        const headerRow: CellData[] = [];
+        const headerRow: InternalCellData[] = [];
         for (let col = range.s.c; col <= range.e.c; col++) {
           const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: col });
           const cell = worksheet[cellAddress];
@@ -101,7 +111,9 @@ async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
           headerRow.push(cellData);
           headers.push(cellData.displayValue || `Column ${col + 1}`);
         }
-        data.push(headerRow);
+        // Remove rawValue before pushing to data
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        data.push(headerRow.map(({ rawValue, ...rest }) => rest));
 
         const batchSize = 1000;
         for (
@@ -111,13 +123,15 @@ async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
         ) {
           const endRow = Math.min(startRow + batchSize - 1, range.e.r);
           for (let row = startRow; row <= endRow; row++) {
-            const rowData: CellData[] = [];
+            const rowData: InternalCellData[] = [];
             for (let col = range.s.c; col <= range.e.c; col++) {
               const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
               const cell = worksheet[cellAddress];
               rowData.push(formatCellValue(cell));
             }
-            data.push(rowData);
+            // Remove rawValue before pushing to data
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            data.push(rowData.map(({ rawValue, ...rest }) => rest));
           }
 
           const progress =

@@ -249,7 +249,7 @@ function ProjectContent() {
           <ResizableHandle className="resize-handle" />
           <ResizablePanel defaultSize={75}>
             {/* Content Area */}
-            <div className="relative h-full w-full bg-white dark:bg-black overflow-hidden">
+            <div className="relative h-full w-full  dark:bg-black overflow-hidden">
               <div className="absolute inset-0 [background-size:20px_20px] [background-image:radial-gradient(#d4d4d4_1px,transparent_1px)] dark:[background-image:radial-gradient(#404040_1px,transparent_1px)]" />
               <div className="pointer-events-none absolute inset-0 bg-white dark:bg-black [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]" />
               <div className="relative z-10 h-full">{renderContent()}</div>

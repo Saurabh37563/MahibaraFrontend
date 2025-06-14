@@ -1,4 +1,4 @@
-import HelpAndSupportPage from '@/components/common/help-and-support'
+import HelpAndSupportPage from '@/components/help-and-support'
 import React from 'react'
 
 const page = () => {

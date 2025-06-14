@@ -5,7 +5,7 @@ import axios from "axios";
 import { FiInfo, FiCheck } from "react-icons/fi";
 import { PiMagicWand } from "react-icons/pi";
 import { Loader2, Settings, Trash2, CheckCircle2 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -41,16 +41,35 @@ import {
   ColumnMappingDialogProps,
   ColumnMappingSourceColumn,
   ColumnMappingTargetColumn,
+  AiColumnMappingResponse,
 } from "@/types/project-types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// If not present in project-types, define here and move to project-types.ts
-// interface ColumnMappingDialogProps {
-//   projectId: string;
-//   analysisType: string;
-//   open?: boolean;
-//   setOpen?: (open: boolean) => void;
-//   children?: ReactNode;
-// }
+// --- Add SheetTypeMappingData type ---
+type SheetTypeMappingData = {
+  sourceColumns: ColumnMappingSourceColumn[];
+  targetColumns: ColumnMappingTargetColumn[];
+  columnMappingQuery: { data: Record<string, string> };
+  approvedMappings: Set<string>;
+};
+
+type SheetTypeMappingState = Record<string, SheetTypeMappingData>;
+
+const useAiColumnMapping = () => {
+  return useMutation({
+    mutationFn: async ({
+      projectId,
+      workingTypeId,
+    }: {
+      projectId: string | number;
+      workingTypeId: string | number;
+    }) => {
+      const url = `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/sheet/ai_column_mapping/${projectId}/${workingTypeId}/`;
+      const response = await axios.post(url);
+      return response.data as AiColumnMappingResponse;
+    },
+  });
+};
 
 const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
   projectId,
@@ -77,29 +96,14 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
     if (setControlledOpen) setControlledOpen(value);
   };
 
-  // Dialog open state
-  // const [open, setOpen] =
-  //   typeof controlledOpen === "boolean" && setControlledOpen
-  //     ? [controlledOpen, setControlledOpen]
-  //     : useState(false);
-
   // State for loading column mapping data
   const [isLoading, setIsLoading] = useState(false);
 
-  // States for column mapping data
-  const [sourceColumns, setSourceColumns] = useState<
-    ColumnMappingSourceColumn[]
-  >([]);
-  const [targetColumns, setTargetColumns] = useState<
-    ColumnMappingTargetColumn[]
-  >([]);
-  const [columnMappingQuery, setColumnMappingQuery] = useState<{
-    data: Record<string, string>;
-  }>({ data: {} });
-
-  // State to track approved mappings
-  const [approvedMappings, setApprovedMappings] = useState<Set<string>>(
-    new Set()
+  // State for all sheet types mapping data
+  const [sheetTypeMappings, setSheetTypeMappings] =
+    useState<SheetTypeMappingState>({});
+  const [selectedSheetType, setSelectedSheetType] = useState<string | null>(
+    null
   );
 
   // New state to track approved mappings
@@ -107,114 +111,239 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
     isLoading: false,
   });
   const [isApproveAllLoading, setIsApproveAllLoading] = useState(false);
+  const [isAutoRemapLoading, setIsAutoRemapLoading] = useState(false);
 
   // Derived values
-  const totalSourceColumns = sourceColumns.length;
-  const usedTargetColumns = Object.values(columnMappingQuery.data || {});
-  const mappedColumnsCount = Object.keys(columnMappingQuery.data || {}).length;
-  const approvedColumnsCount = approvedMappings.size;
+  const currentMapping =
+    selectedSheetType && sheetTypeMappings[selectedSheetType]
+      ? sheetTypeMappings[selectedSheetType]
+      : {
+          sourceColumns: [],
+          targetColumns: [],
+          columnMappingQuery: { data: {} },
+          approvedMappings: new Set<string>(),
+        };
 
-  const unmappedRequired = targetColumns.filter(
+  const {
+    sourceColumns: currentSourceColumns,
+    targetColumns: currentTargetColumns,
+    columnMappingQuery: currentColumnMappingQuery,
+    approvedMappings: currentApprovedMappings,
+  } = currentMapping;
+
+  const totalSourceColumns = currentSourceColumns.length;
+  const usedTargetColumns = Object.values(currentColumnMappingQuery.data || {});
+  const mappedColumnsCount = Object.keys(
+    currentColumnMappingQuery.data || {}
+  ).length;
+  const approvedColumnsCount = currentApprovedMappings.size;
+
+  const unmappedRequired = currentTargetColumns.filter(
     (col) => col.required && !usedTargetColumns.includes(col.id)
   );
 
   // Find required source columns that are mapped but not approved
-  const requiredSourceColumnsNotApproved = sourceColumns
+  const requiredSourceColumnsNotApproved = currentSourceColumns
     .filter(
       (col) =>
         col.required &&
-        columnMappingQuery.data[col.id] &&
-        !approvedMappings.has(col.id)
+        currentColumnMappingQuery.data[col.id] &&
+        !currentApprovedMappings.has(col.id)
     )
     .map((col) => col.name);
 
   const isAllRequiredMapped = unmappedRequired.length === 0;
   const isAllRequiredApproved = requiredSourceColumnsNotApproved.length === 0;
 
-  const [isAutoRemapLoading, setIsAutoRemapLoading] = useState(false);
+  // AI column mapping mutation
+  const aiColumnMappingMutation = useAiColumnMapping();
 
+  // --- Remap handler for all sheet types ---
   const handleAutoMap = async () => {
+    aiColumnMappingMutation.reset();
     setIsAutoRemapLoading(true);
-    // Simulate a long operation
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    // Clear approvals when remapping
-    setApprovedMappings(new Set());
-    setIsAutoRemapLoading(false);
+    try {
+      const aiResult = await aiColumnMappingMutation.mutateAsync({
+        projectId,
+        workingTypeId: analysisType,
+      });
+      const sheetTypesData = (aiResult?.data as { [key: string]: unknown })[
+        "sheet_types"
+      ] as Record<string, SheetTypeMappingApiResponse>;
+      if (!sheetTypesData) {
+        setIsAutoRemapLoading(false);
+        return;
+      }
+      const newMappings: SheetTypeMappingState = {};
+      Object.entries(sheetTypesData).forEach(([sheetType, data]) => {
+        const mappedColumns: Record<string, string> = {};
+        (Array.isArray(data.mapped_columns) ? data.mapped_columns : []).forEach(
+          (mapping: { source_column: string; target_column: string }) => {
+            mappedColumns[mapping.source_column] = mapping.target_column;
+          }
+        );
+        newMappings[sheetType] = {
+          sourceColumns: (Array.isArray(data.source_columns)
+            ? data.source_columns
+            : []
+          ).map(
+            (col: string): ColumnMappingSourceColumn => ({
+              id: col,
+              name: col,
+              required: true,
+            })
+          ),
+          targetColumns: (Array.isArray(data.target_columns)
+            ? data.target_columns
+            : []
+          ).map(
+            (col: string): ColumnMappingTargetColumn => ({
+              id: col,
+              name: col,
+              required: false,
+            })
+          ),
+          columnMappingQuery: { data: mappedColumns },
+          approvedMappings: new Set(),
+        };
+      });
+      setSheetTypeMappings(newMappings);
+      if (!selectedSheetType || !newMappings[selectedSheetType]) {
+        setSelectedSheetType(Object.keys(newMappings)[0] || null);
+      }
+    } catch (error) {
+      console.error("AI column mapping failed", error);
+    } finally {
+      setIsAutoRemapLoading(false);
+    }
   };
 
+  // --- Approve All for current sheet type ---
   const handleApproveAll = async () => {
     setIsApproveAllLoading(true);
     // Simulate a short operation
     await new Promise((resolve) => setTimeout(resolve, 800));
 
-    // Approve all currently mapped columns
-    const newApprovedSet = new Set(approvedMappings);
-    Object.keys(columnMappingQuery.data).forEach((sourceId) => {
-      if (
-        columnMappingQuery.data[sourceId] &&
-        columnMappingQuery.data[sourceId] !== "none"
-      ) {
-        newApprovedSet.add(sourceId);
-      }
+    setSheetTypeMappings((prev: SheetTypeMappingState) => {
+      if (!selectedSheetType || !prev[selectedSheetType]) return prev;
+      const mapping = prev[selectedSheetType];
+      const newApprovedSet = new Set(mapping.approvedMappings);
+      Object.keys(mapping.columnMappingQuery.data).forEach(
+        (sourceId: string) => {
+          if (
+            mapping.columnMappingQuery.data[sourceId] &&
+            mapping.columnMappingQuery.data[sourceId] !== "none"
+          ) {
+            newApprovedSet.add(sourceId);
+          }
+        }
+      );
+      return {
+        ...prev,
+        [selectedSheetType]: {
+          ...mapping,
+          approvedMappings: newApprovedSet,
+        },
+      };
     });
-
-    setApprovedMappings(newApprovedSet);
     setIsApproveAllLoading(false);
   };
 
+  // --- Approve single mapping for current sheet type ---
   const handleApproveMapping = (sourceId: string) => {
-    const newApprovedSet = new Set(approvedMappings);
-    newApprovedSet.add(sourceId);
-    setApprovedMappings(newApprovedSet);
+    setSheetTypeMappings((prev: SheetTypeMappingState) => {
+      if (!selectedSheetType || !prev[selectedSheetType]) return prev;
+      const mapping = prev[selectedSheetType];
+      const newApprovedSet = new Set(mapping.approvedMappings);
+      newApprovedSet.add(sourceId);
+      return {
+        ...prev,
+        [selectedSheetType]: {
+          ...mapping,
+          approvedMappings: newApprovedSet,
+        },
+      };
+    });
   };
 
+  // --- Change mapping for current sheet type ---
   const handleColumnMappingChange = (sourceId: string, targetId: string) => {
-    // When mapping changes, remove approval
-    const newApprovedSet = new Set(approvedMappings);
-    newApprovedSet.delete(sourceId);
-    setApprovedMappings(newApprovedSet);
-
-    setColumnMappingQuery((prev) => ({
-      data: { ...prev.data, [sourceId]: targetId },
-    }));
+    setSheetTypeMappings((prev: SheetTypeMappingState) => {
+      if (!selectedSheetType || !prev[selectedSheetType]) return prev;
+      const mapping = prev[selectedSheetType];
+      const newApprovedSet = new Set(mapping.approvedMappings);
+      newApprovedSet.delete(sourceId);
+      return {
+        ...prev,
+        [selectedSheetType]: {
+          ...mapping,
+          columnMappingQuery: {
+            data: { ...mapping.columnMappingQuery.data, [sourceId]: targetId },
+          },
+          approvedMappings: newApprovedSet,
+        },
+      };
+    });
   };
 
+  // --- Clear mapping for current sheet type ---
   const clearMapping = (sourceId: string) => {
-    // When mapping is cleared, remove approval
-    const newApprovedSet = new Set(approvedMappings);
-    newApprovedSet.delete(sourceId);
-    setApprovedMappings(newApprovedSet);
-
-    const newData = { ...columnMappingQuery.data };
-    delete newData[sourceId];
-    setColumnMappingQuery({ data: newData });
+    setSheetTypeMappings((prev: SheetTypeMappingState) => {
+      if (!selectedSheetType || !prev[selectedSheetType]) return prev;
+      const mapping = prev[selectedSheetType];
+      const newApprovedSet = new Set(mapping.approvedMappings);
+      newApprovedSet.delete(sourceId);
+      const newData = { ...mapping.columnMappingQuery.data };
+      delete newData[sourceId];
+      return {
+        ...prev,
+        [selectedSheetType]: {
+          ...mapping,
+          columnMappingQuery: { data: newData },
+          approvedMappings: newApprovedSet,
+        },
+      };
+    });
   };
 
+  // --- Submit handler for all sheet types ---
   const handleSubmit = async (callback: () => void) => {
     setSaveMapping({ isLoading: true });
     try {
+      const sheet_types: Record<
+        string,
+        {
+          status: string;
+          mapped_columns: { source_column: string; target_column: string }[];
+          source_columns: string[];
+          target_columns: string[];
+        }
+      > = {};
+      Object.entries(sheetTypeMappings).forEach(([sheetType, mapping]) => {
+        sheet_types[sheetType] = {
+          status: "success",
+          mapped_columns: Object.entries(mapping.columnMappingQuery.data).map(
+            ([sourceColumn, targetColumn]: [string, string]) => ({
+              source_column: sourceColumn,
+              target_column: targetColumn,
+            })
+          ),
+          source_columns: mapping.sourceColumns.map(
+            (col: ColumnMappingSourceColumn) => col.id
+          ),
+          target_columns: mapping.targetColumns.map(
+            (col: ColumnMappingTargetColumn) => col.id
+          ),
+        };
+      });
       await axios.post(
         BASE_TEMP_BACKEND_URL +
           `/api/v1/sheet/sheet/column_mapping/${projectId}/${analysisType}/save`,
-        {
-          sheet_types: {
-            PO: {
-              status: "success",
-              mapped_columns: Object.entries(columnMappingQuery.data).map(
-                ([sourceColumn, targetColumn]) => ({
-                  source_column: sourceColumn,
-                  target_column: targetColumn,
-                })
-              ),
-              source_columns: sourceColumns.map((col) => col.id),
-              target_columns: targetColumns.map((col) => col.id),
-            },
-          },
-        }
+        { sheet_types }
       );
       queryClient.invalidateQueries({
         queryKey: ["analysisData", projectId, analysisType],
-      }); // Reload analysis data
+      });
       callback();
     } catch (error) {
       console.error("Failed to save column mappings:", error);
@@ -223,9 +352,7 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
     }
   };
 
-  const canComplete = isAllRequiredMapped && isAllRequiredApproved;
-
-  // Fetch column mapping data when dialog opens
+  // --- Fetch column mapping data when dialog opens ---
   useEffect(() => {
     if (!open || !projectId || !analysisType) return;
 
@@ -236,38 +363,10 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
           BASE_TEMP_BACKEND_URL +
             `/api/v1/sheet/sheet/column_mapping/${projectId}/${analysisType}`
         );
-        const mappingData = response.data?.data?.sheet_types?.PO;
-
-        if (mappingData) {
-          // Populate source columns (mark all as required)
-          setSourceColumns(
-            mappingData.source_columns.map((sourceColumn: string) => ({
-              id: sourceColumn,
-              name: sourceColumn,
-              required: true, // Only source columns are required
-            }))
-          );
-
-          // Populate target columns
-          setTargetColumns(
-            mappingData.target_columns.map((targetColumn: string) => ({
-              id: targetColumn,
-              name: targetColumn,
-              required: false, // Target columns are not required
-            }))
-          );
-
-          // Populate column mapping query
-          const mappedColumns: Record<string, string> = {};
-          mappingData.mapped_columns.forEach(
-            (mapping: { source_column: string; target_column: string }) => {
-              mappedColumns[mapping.source_column] = mapping.target_column;
-            }
-          );
-          setColumnMappingQuery({ data: mappedColumns });
-
-          // Approve all mapped columns by default
-          setApprovedMappings(new Set(Object.keys(mappedColumns)));
+        const sheetTypesData = (response.data?.data?.sheet_types ??
+          {}) as Record<string, SheetTypeMappingApiResponse>;
+        if (sheetTypesData) {
+          setAllSheetTypeMappings(sheetTypesData);
         }
       } catch (error) {
         console.error("Failed to fetch column mapping data:", error);
@@ -277,7 +376,59 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
     };
 
     fetchColumnMappingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, projectId, analysisType]);
+
+  // Helper to set all sheet type mappings
+  const setAllSheetTypeMappings = (
+    sheetTypesData: Record<string, SheetTypeMappingApiResponse>
+  ) => {
+    const newMappings: SheetTypeMappingState = {};
+    Object.entries(sheetTypesData).forEach(([sheetType, data]) => {
+      const mappedColumns: Record<string, string> = {};
+      (Array.isArray(data.mapped_columns) ? data.mapped_columns : []).forEach(
+        (mapping: { source_column: string; target_column: string }) => {
+          mappedColumns[mapping.source_column] = mapping.target_column;
+        }
+      );
+      newMappings[sheetType] = {
+        sourceColumns: (Array.isArray(data.source_columns)
+          ? data.source_columns
+          : []
+        ).map(
+          (col: string): ColumnMappingSourceColumn => ({
+            id: col,
+            name: col,
+            required: true,
+          })
+        ),
+        targetColumns: (Array.isArray(data.target_columns)
+          ? data.target_columns
+          : []
+        ).map(
+          (col: string): ColumnMappingTargetColumn => ({
+            id: col,
+            name: col,
+            required: false,
+          })
+        ),
+        columnMappingQuery: { data: mappedColumns },
+        approvedMappings: new Set(Object.keys(mappedColumns)),
+      };
+    });
+    setSheetTypeMappings(newMappings);
+    // Set default selected sheet type if not set
+    if (!selectedSheetType) {
+      const firstType = Object.keys(newMappings)[0] || null;
+      setSelectedSheetType(firstType);
+    }
+  };
+
+  // Dialog open state
+  // const [open, setOpen] =
+  //   typeof controlledOpen === "boolean" && setControlledOpen
+  //     ? [controlledOpen, setControlledOpen]
+  //     : useState(false);
 
   return (
     <>
@@ -335,6 +486,22 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
             </div>
           ) : (
             <div className="flex flex-col flex-grow overflow-hidden">
+              {/* Sheet type tabs */}
+              <div className="mb-4">
+                <Tabs
+                  value={selectedSheetType || ""}
+                  onValueChange={setSelectedSheetType}
+                >
+                  <TabsList>
+                    {Object.keys(sheetTypeMappings).map((sheetType) => (
+                      <TabsTrigger key={sheetType} value={sheetType}>
+                        {sheetType}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
+
               <div className="space-y-4 mt-2 flex-shrink-0">
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                   <div className="text-sm text-gray-600">
@@ -344,7 +511,6 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    {/* New Approve All Button */}
                     <Button
                       variant="outline"
                       className={cn(
@@ -371,8 +537,6 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
                         </span>
                       )}
                     </Button>
-
-                    {/* Existing Re-Map All Button */}
                     <Button
                       variant="outline"
                       className={cn(
@@ -470,10 +634,11 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {sourceColumns.map((sourceColumn) => {
+                        {currentSourceColumns.map((sourceColumn) => {
                           const mappedTargetId =
-                            columnMappingQuery.data?.[sourceColumn.id] || "";
-                          const isApproved = approvedMappings.has(
+                            currentColumnMappingQuery.data?.[sourceColumn.id] ||
+                            "";
+                          const isApproved = currentApprovedMappings.has(
                             sourceColumn.id
                           );
                           const canApprove =
@@ -518,15 +683,17 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
                                   </SelectTrigger>
                                   <SelectContent>
                                     <SelectItem value="none">None</SelectItem>
-                                    {targetColumns.map((targetColumn) => (
-                                      <SelectItem
-                                        key={targetColumn.id}
-                                        value={targetColumn.id}
-                                      >
-                                        {targetColumn.name}
-                                        {targetColumn.required && " *"}
-                                      </SelectItem>
-                                    ))}
+                                    {currentTargetColumns.map(
+                                      (targetColumn) => (
+                                        <SelectItem
+                                          key={targetColumn.id}
+                                          value={targetColumn.id}
+                                        >
+                                          {targetColumn.name}
+                                          {targetColumn.required && " *"}
+                                        </SelectItem>
+                                      )
+                                    )}
                                   </SelectContent>
                                 </Select>
                               </TableCell>
@@ -569,7 +736,7 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
                     </Table>
                   </div>
 
-                  {sourceColumns.length === 0 && (
+                  {currentSourceColumns.length === 0 && (
                     <div className="text-center py-8 text-gray-500">
                       No source columns available for mapping
                     </div>
@@ -585,7 +752,7 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
               <DialogFooter className="flex flex-col sm:flex-row sm:justify-between sm:space-x-2 mt-4 pt-4 border-t flex-shrink-0">
                 <div className="flex items-center text-sm gap-2 font-light mb-4 sm:mb-0">
                   <FiInfo />
-                  {canComplete
+                  {isAllRequiredMapped && isAllRequiredApproved
                     ? "All required columns are mapped and approved"
                     : `${
                         !isAllRequiredMapped
@@ -637,3 +804,11 @@ const ColumnMappingDialog: React.FC<ColumnMappingDialogProps> = ({
 };
 
 export default ColumnMappingDialog;
+
+// --- Add API response type for sheet type mapping ---
+type SheetTypeMappingApiResponse = {
+  mapped_columns: { source_column: string; target_column: string }[];
+  source_columns: string[];
+  target_columns: string[];
+  // ...other possible fields
+};

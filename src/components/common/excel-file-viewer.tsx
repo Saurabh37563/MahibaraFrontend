@@ -21,49 +21,12 @@ import {
   ChevronDown,
 } from "lucide-react";
 import axios from "axios";
-
-// Types
-interface ExcelViewerProps {
-  fileUrl?: string | null;
-  fileBuffer?: ArrayBuffer | null;
-  fileName?: string;
-  onError?: (error: Error) => void;
-  onLoad?: (sheets: string[]) => void;
-  className?: string;
-  height?: number;
-  enableSearch?: boolean;
-  maxRows?: number; // Limit for performance
-  autoLoadFile?: boolean;
-}
-
-interface CellData {
-  value: string | number | boolean | Date | null | undefined;
-  type: "string" | "number" | "boolean" | "date" | "formula" | "empty";
-  style?: Record<string, unknown>;
-  formula?: string;
-  displayValue?: string;
-}
-
-interface SheetData {
-  name: string;
-  data: CellData[][];
-  range: string;
-  rowCount: number;
-  colCount: number;
-  headers: string[];
-}
-
-interface ViewerState {
-  sheets: SheetData[];
-  activeSheetIndex: number;
-  loading: boolean;
-  error: string | null;
-  searchTerm: string;
-  currentPage: number;
-  pageSize: number;
-  columnWidths: number[];
-  processingProgress: number;
-}
+import {
+  ExcelViewerProps,
+  CellData,
+  SheetData,
+  ViewerState,
+} from "@/types/common-types";
 
 // Virtual Cell Component - Memoized for performance
 const VirtualCell = memo<{
@@ -148,94 +111,6 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   const updateState = useCallback((updates: Partial<ViewerState>) => {
     setState((prev) => ({ ...prev, ...updates }));
   }, []);
-
-  // Format cell value for display
-  // const formatCellValue = useCallback(
-  //   (cell: XLSX.CellObject | undefined): CellData => {
-  //     if (!cell) {
-  //       return { value: "", type: "empty", displayValue: "" };
-  //     }
-
-  //     const cellData: CellData = {
-  //       value: cell.v,
-  //       type: "empty",
-  //       displayValue: "",
-  //     };
-
-  //     try {
-  //       if (cell.f) {
-  //         cellData.type = "formula";
-  //         cellData.formula = cell.f;
-  //         cellData.value = cell.v;
-  //         cellData.displayValue = cell.v?.toString() || "";
-  //       } else if (cell.t === "n") {
-  //         // Check if this number is actually a date by inspecting the format string
-  //         const isDate =
-  //           cell.t === "n" &&
-  //           typeof cell.z === "string" &&
-  //           cell.z.toLowerCase().includes("d");
-  //         if (isDate) {
-  //           cellData.type = "date";
-  //           cellData.value = cell.v;
-  //           if (cell.v instanceof Date) {
-  //             cellData.displayValue = cell.v.toLocaleDateString();
-  //           } else if (typeof cell.v === "number") {
-  //             const date = XLSX.SSF.parse_date_code(cell.v);
-  //             if (
-  //               date &&
-  //               typeof date.y === "number" &&
-  //               typeof date.m === "number" &&
-  //               typeof date.d === "number"
-  //             ) {
-  //               cellData.displayValue = new Date(
-  //                 date.y,
-  //                 date.m - 1,
-  //                 date.d
-  //               ).toLocaleDateString();
-  //             } else {
-  //               cellData.displayValue = cell.v?.toString() || "";
-  //             }
-  //           } else {
-  //             cellData.displayValue = cell.v?.toString() || "";
-  //           }
-  //         } else {
-  //           cellData.type = "number";
-  //           cellData.value = cell.v;
-  //           cellData.displayValue =
-  //             typeof cell.v === "number"
-  //               ? cell.v.toLocaleString(undefined, { maximumFractionDigits: 6 })
-  //               : cell.v?.toString() || "";
-  //         }
-  //       } else if (cell.t === "d") {
-  //         cellData.type = "date";
-  //         cellData.value = cell.v;
-  //         if (cell.v instanceof Date) {
-  //           cellData.displayValue = cell.v.toLocaleDateString();
-  //         } else {
-  //           cellData.displayValue = cell.v?.toString() || "";
-  //         }
-  //       } else if (cell.t === "b") {
-  //         cellData.type = "boolean";
-  //         cellData.value = cell.v;
-  //         cellData.displayValue = cell.v ? "TRUE" : "FALSE";
-  //       } else {
-  //         cellData.type = "string";
-  //         cellData.value = cell.v || "";
-  //         cellData.displayValue = cell.v?.toString() || "";
-  //       }
-
-  //       if (cell.s) {
-  //         cellData.style = cell.s as Record<string, unknown>;
-  //       }
-  //     } catch (error) {
-  //       console.warn("Error formatting cell:", error);
-  //       cellData.displayValue = cell.v?.toString() || "";
-  //     }
-
-  //     return cellData;
-  //   },
-  //   []
-  // );
 
   const calculateColumnWidths = useCallback(
     (sheet: SheetData) => {
@@ -397,8 +272,6 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
       }
     };
   }, []);
-
-  // Calculate optimal column widths
 
   // Load file effect with proper error handling
   useEffect(() => {

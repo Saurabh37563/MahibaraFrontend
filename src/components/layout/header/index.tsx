@@ -3,11 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  QueryClient,
-  QueryClientProvider,
-  useInfiniteQuery,
-} from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import { ChevronDown, LogOut, HelpCircle, User } from "lucide-react";
 import {
@@ -18,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   CommandDialog,
@@ -32,217 +26,31 @@ import { signOut } from "next-auth/react";
 import { useSession } from "next-auth/react";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { FiSidebar } from "react-icons/fi";
+import { fetchSearchResults } from "@/services/search-service";
+import { useDebounce } from "@/hooks/use-debounce";
+import {
+  AuthUser,
+  SidebarContextType,
+  HeaderProps,
+  SearchResponse,
+} from "@/types/header-types";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import Image from "next/image";
 
-const queryClient = new QueryClient();
+type QueryKey = readonly ["searchResults", string];
 
-function useDebounce<T>(value: T, delay = 500): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
-
-// Update AuthUser interface to match session data
-interface AuthUser {
-  id: string;
-  name: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  loginName: string;
-  image: string;
-}
-
-interface SearchResult {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  path: string;
-}
-
-interface SearchResponse {
-  results: SearchResult[];
-  nextCursor: string | null;
-  totalCount: number;
-}
-
-// Routes that should display the search bar
-// const SEARCHABLE_ROUTES = [
-//   "/dashboard",
-//   "/users",
-//   "/projects",
-//   "/analytics",
-//   "/reports",
-//   "/settings/general",
-//   "/functions",
-// ];
-
-const fetchSearchResults = async ({
-  query = "",
-  cursor = null,
-  limit = 10,
-}: {
-  query: string;
-  cursor: string | null;
-  limit?: number;
-}): Promise<SearchResponse> => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
-  const allResults = [
-    {
-      id: "fn-1",
-      title: "Data Processing",
-      description: "Process raw data into structured format",
-      type: "function",
-      path: "/functions/fn-1",
-    },
-    {
-      id: "fn-2",
-      title: "Text Analysis",
-      description: "Analyze text for sentiment and keywords",
-      type: "function",
-      path: "/functions/fn-2",
-    },
-    {
-      id: "fn-3",
-      title: "Image Recognition",
-      description: "Identify objects in images",
-      type: "function",
-      path: "/functions/fn-3",
-    },
-    {
-      id: "fn-4",
-      title: "Natural Language Processing",
-      description: "Process and understand human language",
-      type: "function",
-      path: "/functions/fn-4",
-    },
-    {
-      id: "fn-5",
-      title: "Time Series Analysis",
-      description: "Analyze time-based data patterns",
-      type: "function",
-      path: "/functions/fn-5",
-    },
-    {
-      id: "fn-6",
-      title: "Predictive Modeling",
-      description: "Create models to predict outcomes",
-      type: "function",
-      path: "/functions/fn-6",
-    },
-    {
-      id: "fn-7",
-      title: "Data Visualization",
-      description: "Create visual representations of data",
-      type: "function",
-      path: "/functions/fn-7",
-    },
-    {
-      id: "fn-8",
-      title: "Anomaly Detection",
-      description: "Identify outliers in datasets",
-      type: "function",
-      path: "/functions/fn-8",
-    },
-    {
-      id: "fn-9",
-      title: "Clustering Algorithm",
-      description: "Group similar data points",
-      type: "function",
-      path: "/functions/fn-9",
-    },
-    {
-      id: "fn-10",
-      title: "Classification Model",
-      description: "Categorize data into classes",
-      type: "function",
-      path: "/functions/fn-10",
-    },
-    {
-      id: "fn-11",
-      title: "Regression Analysis",
-      description: "Predict continuous values",
-      type: "function",
-      path: "/functions/fn-11",
-    },
-    {
-      id: "fn-12",
-      title: "Data Enrichment",
-      description: "Add context to existing data",
-      type: "function",
-      path: "/functions/fn-12",
-    },
-    {
-      id: "fn-13",
-      title: "Feature Extraction",
-      description: "Identify important attributes in data",
-      type: "function",
-      path: "/functions/fn-13",
-    },
-    {
-      id: "fn-14",
-      title: "Summarization",
-      description: "Create concise summaries of data",
-      type: "function",
-      path: "/functions/fn-14",
-    },
-    {
-      id: "fn-15",
-      title: "Entity Recognition",
-      description: "Identify entities in text",
-      type: "function",
-      path: "/functions/fn-15",
-    },
-  ];
-
-  const filteredResults = query
-    ? allResults.filter(
-        (result) =>
-          result.title.toLowerCase().includes(query.toLowerCase()) ||
-          result.description.toLowerCase().includes(query.toLowerCase())
-      )
-    : allResults;
-
-  const startIndex = cursor ? parseInt(cursor) : 0;
-  const endIndex = startIndex + limit;
-  const paginatedResults = filteredResults.slice(startIndex, endIndex);
-
-  const nextCursorValue =
-    endIndex < filteredResults.length ? endIndex.toString() : null;
-
-  return {
-    results: paginatedResults,
-    nextCursor: nextCursorValue,
-    totalCount: filteredResults.length,
-  };
-};
-
-const HeaderContent = () => {
+export const Header: React.FC<HeaderProps> = ({}) => {
   const pathname = usePathname();
   const router = useRouter();
   const { ref: loadMoreRef, inView } = useInView();
   const { data: session } = useSession();
   const sidebarContext = useSidebar();
-  const { isOpen = false, isMobile = false } = (sidebarContext || {}) as {
-    isOpen?: boolean;
-    isMobile?: boolean;
-  };
+  const { isOpen = false, isMobile = false } = (sidebarContext ||
+    {}) as SidebarContextType;
   const [commandOpen, setCommandOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedQuery = useDebounce(searchQuery, 300);
 
-  // Replace auth.user with session?.user
   const user = session?.user as AuthUser | undefined;
 
   const getUserInitials = () => {
@@ -253,10 +61,6 @@ const HeaderContent = () => {
     return user.name[0].toUpperCase();
   };
 
-  // const shouldShowSearch = SEARCHABLE_ROUTES.some(
-  //   (route) => pathname?.startsWith(route) || false
-  // );
-
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -264,7 +68,6 @@ const HeaderContent = () => {
         setCommandOpen((open) => !open);
       }
     };
-
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
   }, []);
@@ -277,14 +80,15 @@ const HeaderContent = () => {
     isLoading,
     isError,
   } = useInfiniteQuery({
-    queryKey: ["searchResults", debouncedQuery],
-    queryFn: ({ pageParam }: { pageParam?: string | null }) =>
-      fetchSearchResults({
+    queryKey: ["searchResults", debouncedQuery] as QueryKey,
+    queryFn: async ({ pageParam }: { pageParam: string | null }) => {
+      return fetchSearchResults({
         query: debouncedQuery,
-        cursor: pageParam ?? null,
-      }),
+        cursor: pageParam,
+      });
+    },
     initialPageParam: null,
-    getNextPageParam: (lastPage) => lastPage.nextCursor,
+    getNextPageParam: (lastPage: SearchResponse) => lastPage.nextCursor,
     enabled: debouncedQuery.length > 0 && commandOpen,
   });
 
@@ -326,47 +130,11 @@ const HeaderContent = () => {
                 </SidebarTrigger>
               )}
               <Link href="/" className="flex-shrink-0">
-                <div className="h-8 w-auto font-bold text-xl flex items-center">
-                  <span className="text-green-950 px-2 py-1 rounded">M&AI</span>
-                </div>
+                <Image width={30} height={30} src={"/mab.svg"} alt="logo" />
               </Link>
             </div>
 
-            {/* Middle section - Search Bar */}
-            {/* {shouldShowSearch && (
-              <div className="hidden md:flex flex-1 justify-center absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 max-w-md w-full">
-                <Button
-                  variant="outline"
-                  className="w-full justify-between text-muted-foreground text-sm"
-                  onClick={() => setCommandOpen(true)}
-                >
-                  <div className="flex items-center">
-                    <Search className="mr-2 h-4 w-4" />
-                    <span>Search functions...</span>
-                  </div>
-                  <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium opacity-100 sm:flex">
-                    <span className="text-xs">⌘</span>K
-                  </kbd>
-                </Button>
-              </div>
-            )} */}
-
-            {/* Right section - User Profile */}
             <div className="flex items-center absolute right-0 top-1/2 -translate-y-1/2 space-x-2 md:space-x-4">
-              {/* Search toggle for mobile */}
-              {/* {shouldShowSearch && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="md:hidden"
-                  onClick={() => setCommandOpen(true)}
-                  aria-label="Open search"
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              )} */}
-
-              {/* User dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -506,14 +274,3 @@ const HeaderContent = () => {
     </>
   );
 };
-
-// Header component with QueryClientProvider
-const Header = () => {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <HeaderContent />
-    </QueryClientProvider>
-  );
-};
-
-export default Header;

@@ -1,5 +1,6 @@
+import axios from 'axios';
 import { Team, TeamCreate } from '@/types/team-types';
-import teamsApi from './api/team-api';
+import { TEAM_ENDPOINTS } from '@/constants/endpoints-constant';
 
 // Define response types
 type UpdateTeamResponse = {
@@ -13,11 +14,17 @@ type DeleteTeamResponse = {
   message: string;
 };
 
+const AUTH_HEADER = {
+  Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwiZXhwIjoxNzU3MTY2MTQ5fQ.FbbxmSgW6Zs61Ucv731PO3eN2xufGsM5r84GYX2B2nA`
+};
+
 export class TeamsService {
   static async getTeamsByOrganization(organizationId: number): Promise<Team[]> {
     try {
-      const teams = await teamsApi.getTeamsByOrganization(organizationId);
-      return teams;
+      const response = await axios.get(`${TEAM_ENDPOINTS?.getOrganizationTeams}/${organizationId}`, {
+        headers: AUTH_HEADER
+      });
+      return response.data?.data || [];
     } catch (error) {
       console.error('Error fetching teams:', error);
       throw error;
@@ -26,8 +33,12 @@ export class TeamsService {
 
   static async createTeam(organizationId: number, teamData: TeamCreate): Promise<Team> {
     try {
-      const team = await teamsApi.createTeam(organizationId, teamData);
-      return team;
+      const response = await axios.post(
+        `${TEAM_ENDPOINTS?.postCreateTeam}`,
+        teamData,
+        { headers: AUTH_HEADER }
+      );
+      return response.data;
     } catch (error) {
       console.error('Error creating team:', error);
       throw error;
@@ -62,14 +73,23 @@ export class TeamsService {
       console.log("Service Layer - Update team payload:", updatePayload);
       console.log("Service Layer - Members data:", teamData.members);
 
-      const result = await teamsApi.updateTeam(teamId, updatePayload);
+      const response = await axios.put(
+        TEAM_ENDPOINTS.updateTeam(teamId),
+        updatePayload,
+        {
+          headers: {
+            ...AUTH_HEADER,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
-      console.log("Service Layer - Update team response:", result);
+      console.log("Service Layer - Update team response:", response.data);
 
       return {
         success: true,
         message: "Team updated successfully",
-        data: result as Team
+        data: response.data as Team
       };
     } catch (error: unknown) {
       console.error('Service Layer - Error updating team:', error);
@@ -82,15 +102,17 @@ export class TeamsService {
 
   static async deleteTeam(teamId: number): Promise<DeleteTeamResponse> {
     try {
-      const response: DeleteTeamResponse = await teamsApi.deleteTeam(teamId);
+      const response = await axios.delete(TEAM_ENDPOINTS.deleteTeam(teamId), {
+        headers: AUTH_HEADER
+      });
 
-      if (response.success) {
+      if (response.data?.success) {
         return {
           success: true,
-          message: response.message,
+          message: response.data.message,
         };
       } else {
-        throw new Error(response.message || "Failed to delete team");
+        throw new Error(response.data?.message || "Failed to delete team");
       }
     } catch (error: unknown) {
       console.error('Error deleting team:', error);

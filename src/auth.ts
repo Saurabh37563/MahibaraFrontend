@@ -33,6 +33,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token: "https://auth.southguild.tech/oauth/v2/token", // Explicit token endpoint
       userinfo: "https://auth.southguild.tech/oidc/v1/userinfo", // Explicit userinfo endpoint
       async profile(profile: GenericProfile): Promise<SessionUser> {
+        console.log("Zitadel Profile:", JSON.stringify(profile, null, 2));
         // Fallbacks for Google IDP image keys
         const image =
           (profile.picture as string) ||

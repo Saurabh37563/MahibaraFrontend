@@ -5,5 +5,3 @@ export const authAccessToken = 'auth_access_token';
 export const cookieExpirationDays = 7;
 export const resetPasswordBlockedHours = 6;
 export const loginBlockedHours = 24;
-export const defaultUserImage =
-  'dummy-user-image.png'; // Placeholder for default user image

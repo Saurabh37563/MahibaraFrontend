@@ -250,7 +250,7 @@ export default function CreateOrganization({
         <Dialog open={open} onOpenChange={handleOpenChange} modal={true}>
           <DialogTrigger asChild>{triggerElement}</DialogTrigger>
           <DialogContent
-            className="flex my-auto flex-col  overflow-y-auto pointer-events-auto"
+            className="flex my-auto  flex-col  overflow-y-auto pointer-events-auto"
             onPointerDownOutside={(e) => e.preventDefault()} // Prevent all pointer down outside events
             onInteractOutside={(e) => e.preventDefault()} // Prevent all interactions outside
           >

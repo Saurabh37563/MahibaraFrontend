@@ -1,10 +1,33 @@
-import { userApi } from './api/user-api';
+import axios from 'axios';
 import { User, UserUpdateData } from '@/types/user-types';
+import { USER_DATA_URL, USER_AUTH_URL } from '@/constants/endpoints-constant';
 
 export class UserService {
   static async getUserData(): Promise<User> {
     try {
-      const response = await userApi.getUserData();
+      // For development/testing, return mock data
+      // Uncomment below for production API call
+      // const response = await axios.get(USER_DATA_URL.getUserData, {
+      //   headers: {
+      //     Authorization: `Bearer ${token}`
+      //   }
+      // });
+      const response = await Promise.resolve({
+        data: {
+          success: true,
+          data: {
+            id: 'user-123',
+            name: 'John Doe',
+            email: 'john.doe@example.com',
+            image: 'https://randomuser.me/api/portraits/men/1.jpg',
+            organizationId: 'org-456',
+            organizationName: 'Acme Corporation',
+            userType: 'USER',
+            createdAt: '2023-01-15T08:30:00Z',
+            updatedAt: '2023-05-20T14:45:00Z',
+          }
+        }
+      });
       return this.transformUserResponse(response.data.data);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -14,7 +37,11 @@ export class UserService {
 
   static async updateUserData(token: string, userData: UserUpdateData): Promise<User> {
     try {
-      const response = await userApi.updateUserData(token, userData);
+      const response = await axios.put(USER_DATA_URL.updateUserData, userData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       return this.transformUserResponse(response.data.data);
     } catch (error) {
       console.error('Error updating user data:', error);
@@ -24,7 +51,11 @@ export class UserService {
 
   static async requestPasswordReset(token: string, email: string): Promise<void> {
     try {
-      await userApi.requestPasswordReset(token, email);
+      await axios.post(USER_AUTH_URL.resetPassword, { email }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
     } catch (error) {
       console.error('Error requesting password reset:', error);
       throw error;

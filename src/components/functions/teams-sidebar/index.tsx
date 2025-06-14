@@ -32,25 +32,12 @@ import { Trash2 } from "lucide-react";
 import DeleteTeamModal from "../modals/delete-team-modal";
 import { toast } from "sonner";
 import { RiEdit2Line } from "react-icons/ri";
+import { HiUserGroup } from "react-icons/hi2";
 
-// Add these types before the component
 interface SidebarContextType {
   setIsOpen?: (open: boolean) => void;
   isMobile?: boolean;
 }
-
-// interface TeamMemberType {
-//   id: string | number;
-//   name?: string;
-//   email?: string;
-//   image?: string;
-//   designation?: string;
-//   modulePermissions?: {
-//     projects: "view" | "edit" | "no_access" | "manage";
-//     analytics: "view" | "edit" | "no_access" | "manage";
-//     file_processing: "view" | "edit" | "no_access" | "manage";
-//   };
-// }
 
 interface DeleteTeamError {
   message: string;
@@ -154,13 +141,13 @@ export default function FunctionsSidebar() {
   return (
     <>
       <Sidebar
-        className={` h-[calc(100vh-var(--header-height))] sticky top-[var(--header-height)] ${
-          isMobile ? "w-full max-w-[280px]" : "w-64"
+        className={` h-[calc(100vh-var(--header-height))] !border-0 sticky top-[var(--header-height)] ${
+          isMobile ? "w-max max-w-[400px]" : "w-64"
         }`}
       >
-        <SidebarContent className="bg-slate-50">
+        <SidebarContent className="bg-white border-2 border-emerald-800/10 rounded-xl m-2 py-2">
           {isMobile && <SidebarTrigger className="p-4 self-end" />}
-          <div className="px-4 py-2 space-y-4">
+          <div className=" py-2 space-y-4">
             <OrganizationSwitcher
               activeOrg={activeOrg}
               setActiveOrg={handleSetActiveOrg}
@@ -169,12 +156,17 @@ export default function FunctionsSidebar() {
             />
 
             <Separator />
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium text-gray-500">
-                  Functions
-                </label>
+            <div className="px-3">
+              <div className="flex items-center justify-between mb-2 ">
+                <div className="flex items-center gap-2">
+                  <HiUserGroup
+                    size={20}
+                    className="text-emerald-900 align-left"
+                  />
+                  <label className="text-sm font-medium text-gray-500">
+                    Functions
+                  </label>
+                </div>
                 {activeOrg && <CreateTeam />}
               </div>
 

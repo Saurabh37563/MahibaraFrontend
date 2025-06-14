@@ -1,4 +1,5 @@
-import { organizationApi } from '@/services/api/organization-api'
+import axios from 'axios'
+import { ORGANIZATION_ENDPOINTS } from '@/constants/endpoints-constant'
 import { Organization, User } from '@/types/organization-types'
 import { getErrorMessage } from '@/utils/getErrorMassage'
 
@@ -30,8 +31,13 @@ const organizationService: OrganizationService = {
   getAllUserOrganizations: async (user_id: number): Promise<Organization[]> => {
     try {
       console.log("Fetching organizations for user:", user_id)
-      const response = await organizationApi.getAllUserOrganizations(user_id)
-      return response
+      const response = await axios.get(ORGANIZATION_ENDPOINTS?.getAllUserOrganizations, {
+        params: { user_id },
+        headers: {
+          Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
+        },
+      })
+      return response.data?.data
     } catch (error) {
       const msg = getErrorMessage(error, "Error fetching organizations")
       console.error(msg)
@@ -45,8 +51,16 @@ const organizationService: OrganizationService = {
     owner_id: number
   ): Promise<Organization> => {
     try {
-      const response = await organizationApi.createOrganization({ name, description, organisation_admin: owner_id })
-      return response
+      const response = await axios.post(
+        ORGANIZATION_ENDPOINTS?.postCreateOrganization,
+        { name, description, organisation_admin: owner_id },
+        {
+          headers: {
+            Authorization: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMCIsImV4cCI6NDEwMjQ0NDgwMH0.1p2oi1RTDHROIWDEeoXOgTN11w6-5GBecf9GPoDgj70`,
+          },
+        }
+      )
+      return response.data?.data
     } catch (error) {
       const msg = getErrorMessage(error, "Error creating organization")
       console.error(msg)

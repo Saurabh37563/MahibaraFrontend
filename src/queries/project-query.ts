@@ -1,8 +1,30 @@
 import { useQuery, useMutation, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
-import projectService from '@/services/project-service';
+import axios from 'axios';
 import { Project, CreateProjectRequest, UpdateProjectStatusRequest, FilterState } from '@/types/project-types';
-import { PaginatedProjectsResponse } from '@/services/api/project-api';
 import { queryClient } from '@/providers/query-provider';
+import { BASE_TEMP_BACKEND_URL, PROJECT_ENDPOINTS } from '@/constants/endpoints-constant';
+
+export interface PaginatedProjectsResponse {
+  success: boolean;
+  message: string;
+  data: Project[];
+  error: unknown;
+  metadata: {
+    total_items: number;
+    total_pages: number;
+    current_page: number;
+    page_size: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
+const axiosInstance = axios.create({
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer test-token`,
+  },
+});
 
 // Get all projects for a team with filters
 export function useGetTeamProjects(
@@ -11,10 +33,36 @@ export function useGetTeamProjects(
 ): UseQueryResult<PaginatedProjectsResponse, Error> {
   return useQuery({
     queryKey: ['projects', team_id, filters],
-    queryFn: () => projectService.getTeamProjects(team_id, filters),
+    queryFn: async () => {
+      const queryParams = new URLSearchParams();
+      if (team_id) {
+        queryParams.append('team_id', team_id);
+      } else {
+        throw new Error('Team ID is required to fetch projects.');
+      }
+      if (filters) {
+        if (filters.status && filters.status !== 'all') queryParams.append('status', filters.status);
+        if (filters.sortField && filters.sortField !== 'date') queryParams.append('sortField', filters.sortField);
+        if (filters.sortOrder && filters.sortOrder !== 'desc') queryParams.append('sortOrder', filters.sortOrder);
+        if (filters.dateRange && filters.dateRange !== 'all') queryParams.append('dateRange', filters.dateRange);
+        if (filters.search) queryParams.append('search', filters.search.trim());
+        if (filters.page) queryParams.append('page', String(filters.page));
+      }
+      const url = `${PROJECT_ENDPOINTS.getTeamProjects}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      try {
+        const response = await axiosInstance.get<PaginatedProjectsResponse>(url);
+        return response?.data || { data: [], metadata: {}, success: false, message: '', error: null };
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to fetch projects. Please try again.');
+        }
+        throw error;
+      }
+    },
     enabled: !!team_id,
   });
 }
+
 // Create project
 export function useCreateProject(): UseMutationResult<
   Project,
@@ -22,7 +70,20 @@ export function useCreateProject(): UseMutationResult<
   CreateProjectRequest
 > {
   return useMutation({
-    mutationFn: (projectData) => projectService.createProject(projectData),
+    mutationFn: async (projectData) => {
+      try {
+        const response = await axiosInstance.post<Project>(
+          `${BASE_TEMP_BACKEND_URL}/api/v1/projects/create_project`,
+          projectData
+        );
+        return response.data;
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to create project. Please try again.');
+        }
+        throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === 'projects',
@@ -38,8 +99,20 @@ export function useUpdateProjectStatus(): UseMutationResult<
   { team_id: string; project_id: string; status: UpdateProjectStatusRequest }
 > {
   return useMutation({
-    mutationFn: ({ team_id, project_id, status }) =>
-      projectService.updateProjectStatus(team_id, project_id, status),
+    mutationFn: async ({ project_id, status }) => {
+      try {
+        const response = await axiosInstance.patch<Project>(
+          `${PROJECT_ENDPOINTS.updateProject}/${project_id}/status/${typeof status.status === "string" ? status.status : ""}`,
+          status
+        );
+        return response.data as Project || {};
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to update project status. Please try again.');
+        }
+        throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === 'projects',
@@ -55,8 +128,18 @@ export function useDeleteProject(): UseMutationResult<
   { team_id: string; project_id: string }
 > {
   return useMutation({
-    mutationFn: ({ team_id, project_id }) =>
-      projectService.deleteProject(team_id, project_id),
+    mutationFn: async ({ project_id }) => {
+      try {
+        await axiosInstance.delete(
+          `${BASE_TEMP_BACKEND_URL}/api/v1/projects/${project_id}`
+        );
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to delete project. Please try again.');
+        }
+        throw error;
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({
         predicate: (query) => query.queryKey[0] === 'projects',

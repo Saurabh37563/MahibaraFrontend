@@ -1,61 +1,31 @@
 "use client";
 
-import { BiFile } from "react-icons/bi";
-import { LuFileSearch } from "react-icons/lu";
-import { FiMessageSquare } from "react-icons/fi";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { IconType } from "react-icons";
-
-type Agent = {
-  id: string;
-  name: string;
-  icon: IconType;
-  info: string;
-  comingSoon: boolean;
-  path: string;
-};
-
+import { agentsList } from "@/constants/common-constant";
+import { Agent } from "@/types/common-types";
 export default function Agents() {
   const router = useRouter();
-
-  const agentsList: Agent[] = [
-    {
-      id: "akash",
-      name: "Akash",
-      icon: LuFileSearch,
-      info: "Your Very Own Smart Data Analyst powered by AI",
-      comingSoon: false,
-      path: "/functions",
-    },
-    {
-      id: "mony",
-      name: "Mony",
-      icon: FiMessageSquare,
-      info: "Interact with 45+ years of history of records powered by AI",
-      comingSoon: true,
-      path: "/agents/mony",
-    },
-    {
-      id: "vanita",
-      name: "Vanita",
-      icon: BiFile,
-      info: "Advanced optical lens powered by AI",
-      comingSoon: true,
-      path: "/agents/vanita",
-    },
-  ];
 
   const handleAgentClick = (agent: Agent) => {
     if (agent.comingSoon) {
       toast.info(`${agent.name} is coming soon!`);
-    } else {
-      router.push(agent.path);
+      return;
+    }
+    router.push(agent.path);
+  };
+
+  const handleAgentKeyDown = (
+    event: React.KeyboardEvent<HTMLDivElement>,
+    agent: Agent
+  ) => {
+    if (event.key === "Enter" || event.key === " ") {
+      handleAgentClick(agent);
     }
   };
 
   return (
-    <div className="grid place-items-center h-screen w-full p-4">
+    <div className="grid place-items-center h-[calc(100dvh-var(--header-height))] w-full p-4">
       <div className="flex gap-6 items-center justify-center flex-wrap w-fit">
         {agentsList.map((agent) => (
           <div
@@ -66,18 +36,28 @@ export default function Agents() {
               transition-all duration-300
               ${
                 agent.comingSoon
-                  ? "hover:shadow-md"
-                  : "hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1"
+                  ? "hover:shadow-md cursor-default"
+                  : "hover:shadow-xl hover:border-emerald-100 hover:-translate-y-1 cursor-pointer"
               }
+              outline-none focus:ring-2 focus:ring-emerald-700
             `}
+            tabIndex={0}
+            aria-label={
+              agent.comingSoon
+                ? `${agent.name} (Coming Soon)`
+                : `Open ${agent.name} Agent`
+            }
             onClick={() => handleAgentClick(agent)}
-            style={{
-              cursor: agent.comingSoon ? "default" : "pointer",
-            }}
+            onKeyDown={(e) => handleAgentKeyDown(e, agent)}
+            role="button"
           >
             <div className="flex w-full justify-between items-start">
               <div className="bg-zinc-100 p-3 mt-2 flex justify-between rounded-lg w-fit">
-                <agent.icon size={25} className="text-emerald-900" />
+                <agent.icon
+                  size={25}
+                  className="text-emerald-900"
+                  aria-hidden="true"
+                />
               </div>
               {agent.comingSoon && (
                 <span className="text-gray-600 bg-zinc-100 h-fit px-3 py-1 text-xs font-medium rounded-full">

@@ -42,7 +42,7 @@ import type {
   ModuleType,
 } from "@/types/team-types";
 import axios from "axios";
-
+import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 const PERMISSION_LEVELS: {
   value: AccessLevel;
   label: string;
@@ -109,7 +109,7 @@ const usersApi = {
   getUsers: async (search = "") => {
     try {
       const response = await axios.get(
-        "http://192.168.1.63:8000/api/v1/teams/user-info",
+        `${BASE_TEMP_BACKEND_URL}/api/v1/teams/user-info`,
         {
           params: { search },
         }

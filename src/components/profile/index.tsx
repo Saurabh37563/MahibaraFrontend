@@ -14,7 +14,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Lock, Mail, User, Building, Clock, ShieldCheck } from "lucide-react";
-import { ProfileBreadcrumb } from "./profile-breadcrumb";
 import { Loader } from "@/components/ui/loader";
 
 type ProfileUser = {
@@ -103,10 +102,8 @@ export const ProfilePage = () => {
   };
 
   return (
-    <div className="w-full h-dvh min-h-screen p-4 md:p-6 lg:p-8 bg-transparent">
+    <div className="w-full h-dvh min-h-screen p-4  bg-transparent">
       <div className="w-full h-full">
-        <ProfileBreadcrumb activeTab={activeTab} />
-
         <div className="mt-6 h-full">
           <Tabs
             defaultValue="profile"

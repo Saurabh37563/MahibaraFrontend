@@ -66,7 +66,7 @@ export default function SheetsPanel({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b">
         <div className="text-xs flex items-center gap-1">
-          <span>Source Files</span>
+          <span className="font-medium">Source Files</span>
           <span className="text-[12px] mt-[2px] text-muted-foreground">
             ({sheets.length})
           </span>
@@ -105,7 +105,7 @@ export default function SheetsPanel({
       </div>
 
       {/* Content */}
-      <div className="overflow-y-auto py-4 px-2 flex-1">
+      <div className="overflow-y-auto bg-white py-4 px-2 flex-1">
         {isLoading ? (
           <div className="flex flex-col gap-2">
             {[...Array(3)].map((_, i) => (
@@ -133,7 +133,9 @@ export default function SheetsPanel({
             >
               <div className="text-xs flex items-center gap-2">
                 <LuFileSpreadsheet className="text-gray-400" />
-                <span className="text-gray-950 truncate">{sheet.name}</span>
+                <span className="text-gray-950 font-medium truncate">
+                  {sheet.name}
+                </span>
                 <span
                   className={`size-[6px] rounded-full flex-shrink-0 ${
                     statusDotColors[mapStatusToUI(sheet.status)]

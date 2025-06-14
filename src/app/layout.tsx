@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "@/styles/resizable-handle.css";
-import MainPageLayout from "@/components/layout/main-layout";
+import MainPageLayout from "@/components/layout/root-layout";
 import { AuthProvider } from "@/contexts/auth-context";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";

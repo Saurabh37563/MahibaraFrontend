@@ -1,8 +1,24 @@
-import RootPage from "@/components/common/main-page";
-import React from "react";
+"use client";
 
-const page = () => {
-  return <RootPage />;
-};
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader } from "@/components/ui/loader";
+export default function RootPage() {
+  const { status } = useSession();
+  const router = useRouter();
 
-export default page;
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/agents");
+    } else if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader />
+    </div>
+  );
+}

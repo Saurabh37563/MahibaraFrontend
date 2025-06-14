@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Header from "./header";
+import { Header } from "./header";
 import { QueryProvider } from "@/providers/query-provider";
 const HEADER_VISIBLE_ROUTES = [
   "/dashboard",
@@ -21,11 +21,11 @@ export default function MainPageLayout({
   const shouldShowHeader = HEADER_VISIBLE_ROUTES.includes(pathname);
 
   return (
-    <div className="flex flex-col mx-auto w-dvw ">
-      {shouldShowHeader && <Header />}
-      <main className="">
-        <QueryProvider>{children}</QueryProvider>
-      </main>
-    </div>
+    <QueryProvider>
+      <div className="flex bg-slate-50 flex-col mx-auto w-dvw ">
+        {shouldShowHeader && <Header />}
+        <main className="">{children}</main>
+      </div>
+    </QueryProvider>
   );
 }

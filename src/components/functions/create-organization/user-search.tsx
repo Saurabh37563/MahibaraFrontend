@@ -4,6 +4,7 @@ import React from "react";
 import { FaCheck, FaChevronDown } from "react-icons/fa";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 
 interface UserSearchProps {
   onUserSelect: (user: User | null) => void;
@@ -22,7 +23,7 @@ const usersApi = {
   getUsers: async (search = "") => {
     try {
       const response = await axios.get(
-        "http://192.168.1.63:8000/api/v1/teams/user-info",
+        `${BASE_TEMP_BACKEND_URL}/api/v1/teams/user-info`,
         {
           params: { search },
         }
