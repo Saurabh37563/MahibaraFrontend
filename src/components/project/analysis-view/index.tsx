@@ -316,14 +316,6 @@ const AnalysisView: React.FC<AnalysisViewProps> = ({
           setIsTriggerging(true);
           triggerAnalysisMutation.mutate();
         }}
-        onDownload={() => {
-          if (analysisData?.fileUrl) {
-            downloadMutation.mutate({
-              fileUrl: analysisData.fileUrl,
-              fileName: analysisData.metadata?.fileName,
-            });
-          }
-        }}
         onRerunAnalysis={() => {
           setIsTriggerging(true);
           rerunAnalysisMutation.mutate();

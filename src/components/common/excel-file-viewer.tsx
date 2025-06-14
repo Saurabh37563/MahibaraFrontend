@@ -416,12 +416,12 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         className={`flex flex-col items-center justify-center ${className}`}
         style={{ height }}
       >
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500 mb-2" />
-        <span className="mb-2">Processing spreadsheet...</span>
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-800 mb-2" />
+        <span className="mb-2">Loading spreadsheet...</span>
         {state.processingProgress > 0 && (
           <div className="w-64 bg-gray-200 rounded-full h-2">
             <div
-              className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+              className="bg-emerald-900 h-2 rounded-full transition-all duration-300"
               style={{ width: `${state.processingProgress}%` }}
             />
           </div>

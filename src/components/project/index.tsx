@@ -9,7 +9,7 @@ import {
 import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
 import AnalysisView from "./analysis-view";
-import SpreadSheetView from "./sheet-type-view";
+import SpreadSheetView from "./source-files-view";
 import { Button } from "@/components/ui/button";
 import { Menu, ChevronRight } from "lucide-react";
 

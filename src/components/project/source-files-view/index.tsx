@@ -15,7 +15,7 @@ import axios, { AxiosError } from "axios";
 import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/providers/query-provider";
-import DownloadFile from "./download-sheet";
+import DownloadFile from "../../common/download-file";
 import DeleteSheet from "./delete-sheet";
 import ExcelViewer from "@/components/common/excel-file-viewer";
 import {
@@ -84,6 +84,22 @@ const fetchSheetData = async (
   }
 };
 
+// Add type for SSE payload
+type SheetSSEPayload = {
+  state: string;
+  meta: {
+    status?: string;
+    message?: string;
+    progress?: number;
+    stage?: string;
+    type?: string;
+    timestamp?: string;
+    resultUrl?: string;
+    metadata?: Record<string, unknown>;
+    [key: string]: unknown;
+  };
+};
+
 const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
   sheetType,
   onDelete,
@@ -120,83 +136,89 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     const sseUrl = `${BASE_TEMP_BACKEND_URL}/api/v1/sheet/task_events/${sheetData.taskId}`;
     const eventSource = new window.EventSource(sseUrl);
 
-    const handleUpdate = (event: MessageEvent) => {
+    const parseSSEPayload = (raw: string): SheetSSEPayload | null => {
+      // Remove any leading "data: " and parse JSON
+      const cleaned = raw.replace(/^data:\s*/, "").trim();
       try {
-        const eventData =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+        return JSON.parse(cleaned);
+      } catch {
+        // Try parsing again if there is a double "data: " prefix
+        const secondClean = cleaned.replace(/^data:\s*/, "").trim();
+        try {
+          return JSON.parse(secondClean);
+        } catch {
+          return null;
+        }
+      }
+    };
 
-        if (eventData.taskId === sheetData.taskId) {
-          queryClient.setQueryData<SheetApiResponse>(
-            ["sheetData", projectId, sheetType],
-            (prev) => {
-              if (!prev) return prev;
-              return {
-                ...prev,
-                status: eventData.status,
-                message: eventData.message,
-                progress: eventData.progress,
-                stage: eventData.stage,
-                type: eventData.type,
-                timestamp: eventData.timestamp,
-                fileUrl: eventData.resultUrl || prev.fileUrl,
-                metadata: { ...prev.metadata, ...eventData.metadata },
-              };
-            }
-          );
-          // setLastUpdate(Date.now());
-          if (FINAL_STATUSES.includes(eventData.status)) {
-            setTimeout(() => {
-              eventSource.close();
-              refetch();
-            }, 1000);
+    const handleSSEEvent = (event: MessageEvent) => {
+      const payload = parseSSEPayload(event.data);
+      if (!payload || !payload.state || !payload.meta) return;
+
+      if (sheetData.taskId) {
+        queryClient.setQueryData<SheetApiResponse>(
+          ["sheetData", projectId, sheetType],
+          (prev) => {
+            if (!prev) return prev;
+            const allowedStatuses = [
+              "pending",
+              "processing",
+              "completed",
+              "validated",
+              "failed",
+            ] as const;
+            const nextStatus =
+              payload.meta.status &&
+              allowedStatuses.includes(
+                payload.meta.status as (typeof allowedStatuses)[number]
+              )
+                ? (payload.meta.status as SheetApiResponse["status"])
+                : prev.status;
+
+            return {
+              ...prev,
+              status: nextStatus,
+              message: payload.meta.message ?? prev.message,
+              progress: payload.meta.progress ?? prev.progress,
+              stage: payload.meta.stage ?? prev.stage,
+              type: payload.meta.type ?? prev.type,
+              timestamp: payload.meta.timestamp ?? prev.timestamp,
+              fileUrl: payload.meta.resultUrl
+                ? String(payload.meta.resultUrl)
+                : prev.fileUrl,
+              metadata: {
+                ...prev.metadata,
+                ...(payload.meta.metadata &&
+                typeof payload.meta.metadata === "object"
+                  ? payload.meta.metadata
+                  : {}),
+              },
+            };
           }
-        }
-      } catch (error) {
-        console.error("Error parsing SSE update event:", error);
+        );
+      }
+
+      // If state is SUCCESS or FAILURE, close connection and refetch
+      if (
+        ["SUCCESS", "FAILURE", "SUCCESSFUL", "FAILED"].includes(
+          payload.state.toUpperCase()
+        )
+      ) {
+        setTimeout(() => {
+          eventSource.close();
+          refetch();
+        }, 1000);
       }
     };
 
-    const handleFinal = (event: MessageEvent) => {
-      try {
-        const eventData =
-          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
-
-        if (eventData.taskId === sheetData.taskId) {
-          queryClient.setQueryData<SheetApiResponse>(
-            ["sheetData", projectId, sheetType],
-            (prev) =>
-              prev
-                ? {
-                    ...prev,
-                    status: eventData.status,
-                    progress: 100,
-                    message: eventData.message || "Task completed successfully",
-                    completedAt: eventData.timestamp,
-                    fileUrl: eventData.resultUrl || prev.fileUrl,
-                  }
-                : prev
-          );
-          // setLastUpdate(Date.now());
-          setTimeout(() => {
-            eventSource.close();
-            refetch();
-          }, 1000);
-        }
-      } catch (error) {
-        console.error("Error parsing SSE final event:", error);
-      }
-    };
-
-    eventSource.addEventListener("update", handleUpdate);
-    eventSource.addEventListener("final", handleFinal);
+    eventSource.onmessage = handleSSEEvent;
 
     eventSource.onerror = () => {
       eventSource.close();
     };
 
     return () => {
-      eventSource.removeEventListener("update", handleUpdate);
-      eventSource.removeEventListener("final", handleFinal);
       eventSource.close();
     };
   }, [
@@ -206,6 +228,8 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     sheetData?.status,
     sheetType,
     refetch,
+    queryClient,
+    sheetData,
   ]);
 
   // Render status badge

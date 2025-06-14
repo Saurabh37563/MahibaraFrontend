@@ -8,12 +8,12 @@ import {
   Play,
   RotateCcw,
   Link2,
-  Download,
   Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AnalysisSettings from "./column-mapping";
 import { AnalysisApiResponse } from "@/types/project-types";
+import DownloadFile from "@/components/common/download-file";
 
 interface AnalysisHeaderProps {
   title: string;
@@ -25,7 +25,6 @@ interface AnalysisHeaderProps {
   projectId: string;
   analysisType: string;
   onTriggerAnalysis: () => void;
-  onDownload: () => void;
   onRerunAnalysis?: () => void;
   downloadLoading: boolean;
   triggerLoading: boolean;
@@ -40,7 +39,6 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
   hasResults,
   projectId,
   analysisType,
-  onDownload,
   onRerunAnalysis,
   downloadLoading,
   triggerLoading,
@@ -196,19 +194,15 @@ const AnalysisHeader: React.FC<AnalysisHeaderProps> = ({
           )}
 
           {/* Download Results Button */}
-          {hasResults && (
-            <Button
-              onClick={onDownload}
-              disabled={isProcessing || downloadLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title="Download and reload analysis result"
-            >
-              {downloadLoading ? (
-                <FiRefreshCw size={14} className="animate-spin" />
-              ) : (
-                <Download size={14} />
-              )}
-            </Button>
+          {hasResults && analysisData?.fileUrl && (
+            <DownloadFile
+              fileUrl={analysisData.fileUrl}
+              fileName={analysisData.metadata?.fileName}
+              isDisabled={downloadLoading}
+              onDownloadStart={() => {}}
+              onDownloadComplete={() => {}}
+              onDownloadError={() => {}}
+            />
           )}
 
           {/* Analysis Settings */}

@@ -11,6 +11,8 @@ import {
 import { Download, Loader2, AlertCircle } from "lucide-react";
 import { DownloadButtonProps } from "@/types/project-types";
 import axios from "axios";
+import { saveAs } from "file-saver";
+import { toast } from "sonner";
 
 const DownloadFile = ({
   fileUrl,
@@ -24,90 +26,28 @@ const DownloadFile = ({
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Modern download function using fetch with better error handling
   const downloadFile = async (url: string, filename: string) => {
     try {
-      // Use axios to get blob
       const response = await axios.get(url, {
         responseType: "blob",
-        headers: {
-          Accept: "*/*",
-        },
       });
-
-      const blob = response.data;
-
-      // Check if browser supports the newer showSaveFilePicker API
-      if ("showSaveFilePicker" in window) {
-        try {
-          // Modern File System Access API (Chrome 86+, Edge 86+)
-          type ShowSaveFilePickerType = (
-            options: SaveFilePickerOptions
-          ) => Promise<FileSystemFileHandle>;
-          interface SaveFilePickerOptions {
-            suggestedName?: string;
-            types?: Array<{
-              description?: string;
-              accept: Record<string, string[]>;
-            }>;
-          }
-          const maybeWindow = window as unknown as {
-            showSaveFilePicker?: ShowSaveFilePickerType;
-          };
-          if (typeof maybeWindow.showSaveFilePicker === "function") {
-            const fileHandle = await maybeWindow.showSaveFilePicker({
-              suggestedName: filename,
-              types: [
-                {
-                  description: "Downloaded file",
-                  accept: { "*/*": [] },
-                },
-              ],
-            });
-
-            const writable = await fileHandle.createWritable();
-            await writable.write(blob);
-            await writable.close();
-            return { success: true, cancelled: false };
-          }
-        } catch (fsError: unknown) {
-          // Check if user cancelled the save dialog
-          const errorObj = fsError as { name?: string; message?: string };
-          if (
-            errorObj?.name === "AbortError" ||
-            errorObj?.message?.includes("aborted")
-          ) {
-            console.log("User cancelled the save dialog");
-            return { success: false, cancelled: true };
-          }
-
-          // API not supported or other error, fall back to traditional method
-          console.log(
-            "File System Access API not available or error occurred, using fallback:",
-            errorObj?.message
-          );
-          // Continue to fallback method below
-        }
-      }
-
-      // Fallback to traditional download method
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = filename;
-
-      // Ensure the link is hidden and temporary
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-
-      // Cleanup
-      document.body.removeChild(link);
-      URL.revokeObjectURL(downloadUrl);
-
-      return { success: true, cancelled: false };
+      saveAs(response.data, filename);
+      return { success: true };
     } catch (error: unknown) {
-      console.error("Download failed:", error);
+      // Type guard for error object with message and response
+      if (typeof error === "object" && error !== null && "message" in error) {
+        const err = error as {
+          message?: string;
+          response?: { status?: number; headers?: unknown };
+        };
+        console.error("Download failed:", {
+          message: err.message,
+          status: err.response?.status,
+          headers: err.response?.headers,
+        });
+      } else {
+        console.error("Download failed:", error);
+      }
       throw error;
     }
   };
@@ -120,27 +60,26 @@ const DownloadFile = ({
     onDownloadStart?.();
 
     try {
-      // Extract filename from URL if not provided
       const finalFileName =
         fileName || extractFilenameFromUrl(fileUrl) || "downloaded-file";
-
-      const result = await downloadFile(fileUrl, finalFileName);
-
-      // Handle the result properly
-      if (result && result.cancelled) {
-        // User cancelled the download, just close the modal without showing error
-        console.log("Download was cancelled by user");
-        setOpen(false);
-        return;
-      }
-
-      // Download was successful
+      await downloadFile(fileUrl, finalFileName);
+      toast.success("File downloaded successfully.");
       onDownloadComplete?.();
       setOpen(false);
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error occurred";
+    } catch (error: unknown) {
+      let errorMessage = "Unknown error occurred";
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        typeof (error as Record<string, unknown>).message === "string"
+      ) {
+        errorMessage = String((error as Record<string, unknown>).message);
+      }
       setError(`Failed to download file: ${errorMessage}`);
+      toast.error(`Failed to download file: ${errorMessage}`);
       onDownloadError?.(
         error instanceof Error ? error : new Error(errorMessage)
       );
@@ -149,7 +88,6 @@ const DownloadFile = ({
     }
   };
 
-  // Helper function to extract filename from URL
   const extractFilenameFromUrl = (url: string): string | null => {
     try {
       const urlObj = new URL(url);
@@ -161,12 +99,10 @@ const DownloadFile = ({
     }
   };
 
-  // Handle modal close - reset states
   const handleModalClose = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) {
       setError(null);
-      // Don't reset loading state immediately to prevent flashing
       if (!loading) {
         setLoading(false);
       }

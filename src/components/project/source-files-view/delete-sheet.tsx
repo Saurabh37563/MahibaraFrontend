@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
 import { DeleteFileProps } from "@/types/project-types";
+import { BASE_TEMP_BACKEND_URL } from "@/constants/endpoints-constant";
 
 const DeleteSheet = ({
   projectId,
@@ -48,7 +49,7 @@ const DeleteSheet = ({
   const deleteFile = async (projectId: string, sheetType: string) => {
     try {
       const response = await axios.delete(
-        `/api/projects/${projectId}/files/${sheetType}`
+        `${BASE_TEMP_BACKEND_URL}/api/projects/${projectId}/files/${sheetType}`
       );
       return response.data;
     } catch (err: unknown) {
