@@ -117,7 +117,9 @@ export function useUpdateProjectStatus(): UseMutationResult<
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'projects',
+        predicate: (query) =>
+          query.queryKey[0] === 'projects' ||
+          query.queryKey[0] === 'projects-infinite',
       });
     },
   });
@@ -144,7 +146,9 @@ export function useDeleteProject(): UseMutationResult<
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'projects',
+        predicate: (query) =>
+          query.queryKey[0] === 'projects' ||
+          query.queryKey[0] === 'projects-infinite',
       });
     },
   });
