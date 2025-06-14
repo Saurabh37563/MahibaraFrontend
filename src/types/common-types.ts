@@ -53,15 +53,21 @@ export interface ViewerState {
 
 // Worker message types (if needed elsewhere)
 export interface ProcessMessage {
-  type: 'process';
+  type: "process";
   buffer: ArrayBuffer;
   maxRows: number;
 }
 
 export type WorkerMessage =
-  | { type: 'progress'; progress: number }
-  | { type: 'success'; sheets: SheetData[]; progress: number }
-  | { type: 'error'; error: string };
+  | { type: "progress"; progress: number }
+  | {
+      type: "sheet-data";
+      sheet: SheetData;
+      sheetIndex: number;
+      totalSheets: number;
+    }
+  | { type: "complete"; progress: number }
+  | { type: "error"; error: string };
 
 // Other types
 export type Agent = {

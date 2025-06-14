@@ -27,6 +27,7 @@ import {
   SheetData,
   ViewerState,
 } from "@/types/common-types";
+import { Input } from "../ui/input";
 
 // Virtual Cell Component - Memoized for performance
 const VirtualCell = memo<{
@@ -106,82 +107,161 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   // Refs
   const parentRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+  const stateRef = useRef(state);
+  const loadedFileRef = useRef<{
+    url?: string | null;
+    buffer?: ArrayBuffer | null;
+  }>({});
+  const onErrorRef = useRef(onError);
+  const onLoadRef = useRef(onLoad);
 
-  // Safe state updates
+  // Update refs when callbacks change
+  stateRef.current = state;
+  onErrorRef.current = onError;
+  onLoadRef.current = onLoad;
+
+  // Safe state updates - stable reference
   const updateState = useCallback((updates: Partial<ViewerState>) => {
-    setState((prev) => ({ ...prev, ...updates }));
+    if (mountedRef.current) {
+      setState((prev) => ({ ...prev, ...updates }));
+    }
   }, []);
 
-  const calculateColumnWidths = useCallback(
-    (sheet: SheetData) => {
-      if (!parentRef.current) return;
+  const calculateColumnWidths = useCallback((sheet: SheetData) => {
+    if (!parentRef.current) return;
 
-      const containerWidth = parentRef.current.offsetWidth;
-      const widths: number[] = [];
-      const maxWidth = 300;
-      const minWidth = 120;
+    const containerWidth = parentRef.current.offsetWidth;
+    const widths: number[] = [];
+    const maxWidth = 300;
+    const minWidth = 120;
 
-      // Calculate initial widths based on content
-      for (let col = 0; col < sheet.colCount; col++) {
-        let maxLength = 0;
+    // Calculate initial widths based on content
+    for (let col = 0; col < sheet.colCount; col++) {
+      let maxLength = 0;
 
-        // Check first 100 rows for performance
-        const rowsToCheck = Math.min(sheet.rowCount, 100);
-        for (let row = 0; row < rowsToCheck; row++) {
-          const cellValue = sheet.data[row]?.[col]?.displayValue || "";
-          maxLength = Math.max(maxLength, cellValue.length);
-        }
-
-        const width = Math.min(
-          Math.max(maxLength * 8 + 20, minWidth),
-          maxWidth
-        );
-        widths.push(width);
+      // Check first 100 rows for performance
+      const rowsToCheck = Math.min(sheet.rowCount, 100);
+      for (let row = 0; row < rowsToCheck; row++) {
+        const cellValue = sheet.data[row]?.[col]?.displayValue || "";
+        maxLength = Math.max(maxLength, cellValue.length);
       }
 
-      // If total width is less than container, distribute extra space
-      const totalWidth = widths.reduce((sum, width) => sum + width, 0);
-      if (totalWidth < containerWidth && widths.length > 0) {
-        const extraSpace = containerWidth - totalWidth;
-        const additionalWidthPerColumn = extraSpace / widths.length;
+      const width = Math.min(Math.max(maxLength * 8 + 20, minWidth), maxWidth);
+      widths.push(width);
+    }
 
-        for (let i = 0; i < widths.length; i++) {
-          widths[i] = Math.min(widths[i] + additionalWidthPerColumn, maxWidth);
-        }
+    // If total width is less than container, distribute extra space
+    const totalWidth = widths.reduce((sum, width) => sum + width, 0);
+    if (totalWidth < containerWidth && widths.length > 0) {
+      const extraSpace = containerWidth - totalWidth;
+      const additionalWidthPerColumn = extraSpace / widths.length;
+
+      for (let i = 0; i < widths.length; i++) {
+        widths[i] = Math.min(widths[i] + additionalWidthPerColumn, maxWidth);
       }
+    }
 
-      updateState({ columnWidths: widths });
-    },
-    [updateState]
-  );
+    if (mountedRef.current) {
+      setState((prev) => ({ ...prev, columnWidths: widths }));
+    }
+  }, []);
+
+  // Create refs for functions to avoid circular dependencies
+  const updateStateRef = useRef(updateState);
+  const calculateColumnWidthsRef = useRef(calculateColumnWidths);
+
+  // Update function refs
+  updateStateRef.current = updateState;
+  calculateColumnWidthsRef.current = calculateColumnWidths;
 
   // Process Excel file with progress tracking
   const workerRef = useRef<Worker | null>(null);
 
-  const processExcelFile = useCallback(
-    async (buffer: ArrayBuffer) => {
-      // Cancel any ongoing processing
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-
-      abortControllerRef.current = new AbortController();
-      const signal = abortControllerRef.current.signal;
-
-      // Terminate existing worker if any
+  // Add cleanup in useEffect
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
       if (workerRef.current) {
         workerRef.current.terminate();
       }
+    };
+  }, []);
 
+  // Load file effect with proper error handling
+  useEffect(() => {
+    if (!autoLoadFile) return;
+
+    // Check if we've already loaded this exact file
+    const currentFile = { url: fileUrl, buffer: fileBuffer };
+    const loadedFile = loadedFileRef.current;
+
+    // Check if file has changed - if so, reset the loaded file ref
+    const fileChanged =
+      currentFile.url !== loadedFile.url ||
+      currentFile.buffer !== loadedFile.buffer;
+
+    if (fileChanged) {
+      loadedFileRef.current = {}; // Reset when file changes
+    }
+
+    // Skip if we've already loaded this exact file successfully
+    if (
+      !fileChanged &&
+      ((currentFile.url && currentFile.url === loadedFile.url) ||
+        (currentFile.buffer && currentFile.buffer === loadedFile.buffer))
+    ) {
+      return; // Already loaded this file
+    }
+
+    if (stateRef.current.loading) return; // Prevent multiple simultaneous loads
+
+    const loadFile = async () => {
       try {
-        updateState({ loading: true, error: null, processingProgress: 0 });
+        let buffer: ArrayBuffer;
+
+        if (fileBuffer) {
+          buffer = fileBuffer;
+        } else if (fileUrl) {
+          updateState({ loading: true, error: null });
+          const response = await axios.get<ArrayBuffer>(fileUrl, {
+            responseType: "arraybuffer",
+          });
+          buffer = response.data;
+        } else {
+          return;
+        }
+
+        // Track the file we're loading
+        loadedFileRef.current = { url: fileUrl, buffer: fileBuffer };
+
+        // Inline processExcelFile logic to avoid circular dependencies
+        // Cancel any ongoing processing
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
+        // Terminate existing worker if any
+        if (workerRef.current) {
+          workerRef.current.terminate();
+        }
+
+        updateStateRef.current({
+          loading: true,
+          error: null,
+          processingProgress: 0,
+        });
 
         if (signal.aborted) return;
 
-        // Create new worker using the imported worker constructor
+        // Create new worker
         workerRef.current = new Worker(
           new URL("@/workers/excel-worker.ts", import.meta.url),
-          { type: "module" }
+          { type: "module" },
         );
 
         // Handle worker messages
@@ -191,34 +271,76 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
             return;
           }
 
+          const accumulatedSheets: SheetData[] = [];
+          let updateTimeout: NodeJS.Timeout | null = null;
+
+          const throttledSheetUpdate = (totalSheets: number) => {
+            if (updateTimeout) {
+              clearTimeout(updateTimeout);
+            }
+            updateTimeout = setTimeout(() => {
+              if (mountedRef.current && !signal.aborted) {
+                updateStateRef.current({
+                  sheets: [...accumulatedSheets],
+                  processingProgress: Math.min(
+                    85 +
+                      (accumulatedSheets.length /
+                        (accumulatedSheets.length > 0 ? totalSheets || 1 : 1)) *
+                        10,
+                    95,
+                  ),
+                });
+              }
+            }, 100);
+          };
+
           workerRef.current.onmessage = (e: MessageEvent) => {
-            const { type, progress, sheets, error } = e.data;
+            const { type, progress, sheet, error } = e.data;
 
             if (signal.aborted) {
               workerRef.current?.terminate();
+              if (updateTimeout) clearTimeout(updateTimeout);
               return;
             }
 
             switch (type) {
               case "progress":
-                updateState({ processingProgress: progress });
+                updateStateRef.current({ processingProgress: progress });
                 break;
 
-              case "success":
-                if (Array.isArray(sheets)) {
-                  resolve(sheets as SheetData[]);
-                } else {
-                  reject(new Error("Invalid sheet data from worker"));
+              case "sheet-data":
+                const { totalSheets } = e.data;
+                accumulatedSheets.push(sheet);
+                throttledSheetUpdate(totalSheets);
+                break;
+
+              case "complete":
+                if (updateTimeout) {
+                  clearTimeout(updateTimeout);
+                  updateTimeout = null;
                 }
+                updateStateRef.current({
+                  sheets: [...accumulatedSheets],
+                  processingProgress: progress,
+                });
+                resolve(accumulatedSheets);
                 break;
 
               case "error":
+                if (updateTimeout) {
+                  clearTimeout(updateTimeout);
+                  updateTimeout = null;
+                }
                 reject(new Error(error));
                 break;
             }
           };
 
           workerRef.current.onerror = (error) => {
+            if (updateTimeout) {
+              clearTimeout(updateTimeout);
+              updateTimeout = null;
+            }
             reject(new Error("Worker error: " + error.message));
           };
 
@@ -234,66 +356,44 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
 
         if (signal.aborted) return;
 
-        updateState({
+        // Batch state updates to prevent multiple re-renders
+        updateStateRef.current({
           sheets: processedSheets,
           activeSheetIndex: 0,
-          processingProgress: 90,
+          processingProgress: 100,
+          loading: false,
         });
 
+        // Defer column width calculation to next tick to prevent UI blocking
         if (processedSheets.length > 0) {
-          calculateColumnWidths(processedSheets[0]);
+          setTimeout(() => {
+            if (!abortControllerRef.current?.signal.aborted) {
+              calculateColumnWidthsRef.current(processedSheets[0]);
+            }
+          }, 0);
         }
-
-        updateState({ processingProgress: 100 });
-        onLoad?.(processedSheets.map((s: SheetData) => s.name));
+        onLoadRef.current?.(processedSheets.map((s: SheetData) => s.name));
       } catch (err) {
-        if (signal.aborted) return;
+        if (abortControllerRef.current?.signal.aborted) return;
+
+        // Reset loaded file tracking on error to allow retry
+        loadedFileRef.current = {};
 
         const errorMessage =
           err instanceof Error ? err.message : "Failed to process Excel file";
-        updateState({ error: errorMessage });
-        onError?.(new Error(errorMessage));
+        updateStateRef.current({ error: errorMessage, loading: false });
+        onErrorRef.current?.(new Error(errorMessage));
       } finally {
-        if (!signal.aborted) {
-          updateState({ loading: false, processingProgress: 0 });
-          workerRef.current?.terminate();
+        if (workerRef.current && !abortControllerRef.current?.signal.aborted) {
+          if (mountedRef.current) {
+            setState((prev) => ({
+              ...prev,
+              processingProgress: prev.processingProgress === 100 ? 100 : 0,
+            }));
+          }
+          workerRef.current.terminate();
           workerRef.current = null;
         }
-      }
-    },
-    [maxRows, onError, onLoad, updateState, calculateColumnWidths]
-  );
-
-  // Add cleanup in useEffect
-  useEffect(() => {
-    return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-      }
-    };
-  }, []);
-
-  // Load file effect with proper error handling
-  useEffect(() => {
-    if (!autoLoadFile) return;
-
-    const loadFile = async () => {
-      try {
-        if (fileBuffer) {
-          await processExcelFile(fileBuffer);
-        } else if (fileUrl) {
-          updateState({ loading: true, error: null });
-          const response = await axios.get<ArrayBuffer>(fileUrl, {
-            responseType: "arraybuffer",
-          });
-
-          await processExcelFile(response.data);
-        }
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to fetch file";
-        updateState({ error: errorMessage, loading: false });
-        onError?.(new Error(errorMessage));
       }
     };
 
@@ -304,26 +404,22 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         abortControllerRef.current.abort();
       }
     };
-  }, [
-    fileUrl,
-    fileBuffer,
-    processExcelFile,
-    onError,
-    autoLoadFile,
-    updateState,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileUrl, fileBuffer, autoLoadFile, maxRows]);
 
-  // Recalculate widths when container size changes
   useEffect(() => {
     const handleResize = () => {
-      if (state.sheets[state.activeSheetIndex]) {
-        calculateColumnWidths(state.sheets[state.activeSheetIndex]);
+      const currentState = stateRef.current;
+      if (currentState.sheets[currentState.activeSheetIndex]) {
+        calculateColumnWidthsRef.current(
+          currentState.sheets[currentState.activeSheetIndex],
+        );
       }
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, [state.sheets, state.activeSheetIndex, calculateColumnWidths]);
+  }, []);
 
   // Get current sheet with null safety
   const currentSheet = useMemo(() => {
@@ -345,8 +441,8 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         .slice(1)
         .filter((row) =>
           row.some((cell) =>
-            cell.displayValue?.toLowerCase().includes(searchLower)
-          )
+            cell.displayValue?.toLowerCase().includes(searchLower),
+          ),
         );
       data = [header, ...filteredRows];
     }
@@ -401,7 +497,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   const totalWidth = useMemo(() => {
     const calculatedWidth = state.columnWidths.reduce(
       (sum, width) => sum + width,
-      0
+      0,
     );
     return Math.max(calculatedWidth, parentRef.current?.offsetWidth || 0);
   }, [state.columnWidths]);
@@ -484,14 +580,14 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
           {enableSearch && (
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
+              <Input
                 type="text"
                 placeholder="Search..."
                 value={state.searchTerm}
                 onChange={(e) =>
                   updateState({ searchTerm: e.target.value, currentPage: 1 })
                 }
-                className="pl-10 pr-4 py-2 border rounded-md text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="pl-10 text-sm w-64 bg-white"
               />
               {state.searchTerm && (
                 <button

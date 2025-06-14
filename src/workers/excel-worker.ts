@@ -1,108 +1,125 @@
-import * as XLSX from 'xlsx';
-import type { ProcessMessage, SheetData, CellData } from '@/types/common-types';
+import * as XLSX from "xlsx";
+import type {
+  ProcessMessage,
+  SheetData,
+  CellData,
+  WorkerMessage,
+} from "@/types/common-types";
 
-// Helper: extend CellData for internal use to include rawValue
-type InternalCellData = Omit<CellData, "type"> & { rawValue?: unknown; type: CellData["type"] };
+// Helper: extend CellData for internal use
+type InternalCellData = Omit<CellData, "type"> & { type: CellData["type"] };
+
+// Optimized batch sizes for better performance
+const PROCESSING_BATCH_SIZE = 200; // Process rows in smaller batches
+const YIELD_FREQUENCY = 50; // Yield control every 50 rows
 
 // Only allow CellData.type values
 function formatCellValue(cell: XLSX.CellObject | undefined): InternalCellData {
   if (!cell || cell.v === undefined) {
     return {
-      displayValue: '',
+      displayValue: "",
       value: null,
-      type: 'empty'
+      type: "empty",
     };
   }
 
   const value = cell.v;
-  const type = cell.t || 'general';
+  const type = cell.t || "general";
 
   switch (type) {
-    case 'n':
+    case "n":
       // Only allow 'number' as type, not 'percentage'
-      if (cell.z && typeof cell.z === 'string' && cell.z.includes('%')) {
+      if (cell.z && typeof cell.z === "string" && cell.z.includes("%")) {
         return {
-          displayValue: ((value as number) * 100).toFixed(2) + '%',
+          displayValue: ((value as number) * 100).toFixed(2) + "%",
           value,
-          rawValue: value,
-          type: 'number'
+          type: "number",
         };
       }
       return {
-        displayValue: typeof value === 'number' ? value.toString() : String(value),
+        displayValue:
+          typeof value === "number" ? value.toString() : String(value),
         value,
-        rawValue: value,
-        type: 'number'
+        type: "number",
       };
-    case 'd':
+    case "d":
       return {
-        displayValue: value instanceof Date ? value.toLocaleDateString() : String(value),
+        displayValue:
+          value instanceof Date ? value.toLocaleDateString() : String(value),
         value,
-        rawValue: value,
-        type: 'date'
+        type: "date",
       };
-    case 'b':
+    case "b":
       return {
-        displayValue: value ? 'TRUE' : 'FALSE',
+        displayValue: value ? "TRUE" : "FALSE",
         value,
-        rawValue: value,
-        type: 'boolean'
+        type: "boolean",
       };
-    case 's':
+    case "s":
     default:
       return {
         displayValue: String(value),
         value,
-        rawValue: value,
-        type: 'string'
+        type: "string",
       };
   }
 }
 
 async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
   try {
-    self.postMessage({ type: 'progress', progress: 10 });
+    self.postMessage({ type: "progress", progress: 10 });
 
     const workbook = XLSX.read(buffer, {
-      type: 'array',
+      type: "array",
       cellStyles: true,
       cellFormula: true,
       cellDates: true,
       sheetStubs: false,
     });
 
-    self.postMessage({ type: 'progress', progress: 30 });
+    self.postMessage({ type: "progress", progress: 30 });
 
-    const processedSheets: SheetData[] = [];
+    const totalSheets = workbook.SheetNames.length;
 
     for (let i = 0; i < workbook.SheetNames.length; i++) {
       const sheetName = workbook.SheetNames[i];
       const worksheet = workbook.Sheets[sheetName];
 
-      if (!worksheet['!ref']) {
-        processedSheets.push({
+      if (!worksheet["!ref"]) {
+        // Send empty sheet immediately
+        const emptySheet: SheetData = {
           name: sheetName,
           data: [],
-          range: 'A1',
+          range: "A1",
           rowCount: 0,
           colCount: 0,
           headers: [],
-        });
+        };
+
+        self.postMessage({
+          type: "sheet-data",
+          sheet: emptySheet,
+          sheetIndex: i,
+          totalSheets,
+        } as WorkerMessage);
         continue;
       }
 
-      const range = XLSX.utils.decode_range(worksheet['!ref']);
+      const range = XLSX.utils.decode_range(worksheet["!ref"]);
       const actualRowCount = Math.min(range.e.r - range.s.r + 1, maxRows);
 
+      // Update progress for sheet start
+      const sheetStartProgress = 30 + (i / workbook.SheetNames.length) * 60;
       self.postMessage({
-        type: 'progress',
-        progress: 30 + (i / workbook.SheetNames.length) * 50
+        type: "progress",
+        progress: sheetStartProgress,
       });
 
       const data: CellData[][] = [];
       const headers: string[] = [];
 
       if (actualRowCount > 0) {
+        // Process header row
         const headerRow: InternalCellData[] = [];
         for (let col = range.s.c; col <= range.e.c; col++) {
           const cellAddress = XLSX.utils.encode_cell({ r: range.s.r, c: col });
@@ -111,17 +128,24 @@ async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
           headerRow.push(cellData);
           headers.push(cellData.displayValue || `Column ${col + 1}`);
         }
-        // Remove rawValue before pushing to data
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        data.push(headerRow.map(({ rawValue, ...rest }) => rest));
+        data.push(headerRow);
 
-        const batchSize = 1000;
+        // Process data rows in optimized batches
+        let processedRowCount = 1; // Start at 1 since header is already processed
+
         for (
           let startRow = range.s.r + 1;
           startRow <= Math.min(range.e.r, range.s.r + maxRows - 1);
-          startRow += batchSize
+          startRow += PROCESSING_BATCH_SIZE
         ) {
-          const endRow = Math.min(startRow + batchSize - 1, range.e.r);
+          const endRow = Math.min(
+            startRow + PROCESSING_BATCH_SIZE - 1,
+            range.e.r,
+            range.s.r + maxRows - 1,
+          );
+
+          // Process batch of rows
+          const batchData: CellData[][] = [];
           for (let row = startRow; row <= endRow; row++) {
             const rowData: InternalCellData[] = [];
             for (let col = range.s.c; col <= range.e.c; col++) {
@@ -129,50 +153,66 @@ async function processExcelInWorker(buffer: ArrayBuffer, maxRows: number) {
               const cell = worksheet[cellAddress];
               rowData.push(formatCellValue(cell));
             }
-            // Remove rawValue before pushing to data
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            data.push(rowData.map(({ rawValue, ...rest }) => rest));
+            batchData.push(rowData);
+
+            // Yield control frequently to prevent UI blocking
+            if ((row - startRow) % YIELD_FREQUENCY === 0) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+            }
           }
 
-          const progress =
-            30 +
-            (i / workbook.SheetNames.length) * 50 +
-            ((startRow - range.s.r) / actualRowCount) * (50 / workbook.SheetNames.length);
-          self.postMessage({
-            type: 'progress',
-            progress: Math.min(progress, 80)
-          });
+          // Add batch to main data array
+          data.push(...batchData);
+          processedRowCount += batchData.length;
 
-          await new Promise(resolve => setTimeout(resolve, 0));
+          // Calculate and send progress update
+          const rowProgress = (processedRowCount - 1) / (actualRowCount - 1);
+          const sheetProgress =
+            sheetStartProgress +
+            rowProgress * (60 / workbook.SheetNames.length);
+
+          self.postMessage({
+            type: "progress",
+            progress: Math.min(sheetProgress, 85),
+          });
         }
       }
 
-      processedSheets.push({
+      // Send processed sheet immediately to reduce memory usage and transfer time
+      const processedSheet: SheetData = {
         name: sheetName,
         data,
-        range: worksheet['!ref'] || 'A1',
+        range: worksheet["!ref"] || "A1",
         rowCount: actualRowCount,
         colCount: range.e.c - range.s.c + 1,
         headers,
-      });
+      };
+
+      self.postMessage({
+        type: "sheet-data",
+        sheet: processedSheet,
+        sheetIndex: i,
+        totalSheets,
+      } as WorkerMessage);
     }
 
+    // Send completion message
     self.postMessage({
-      type: 'success',
-      sheets: processedSheets,
-      progress: 100
-    });
+      type: "complete",
+      progress: 100,
+    } as WorkerMessage);
   } catch (error) {
     self.postMessage({
-      type: 'error',
-      error: error instanceof Error ? error.message : 'Failed to process Excel file'
+      type: "error",
+      error:
+        error instanceof Error ? error.message : "Failed to process Excel file",
     });
   }
 }
 
 self.onmessage = (e: MessageEvent<ProcessMessage>) => {
   const { type, buffer, maxRows } = e.data;
-  if (type === 'process') {
+  if (type === "process") {
     processExcelInWorker(buffer, maxRows);
   }
 };
