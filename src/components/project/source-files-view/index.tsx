@@ -228,8 +228,6 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     sheetData?.status,
     sheetType,
     refetch,
-    queryClient,
-    sheetData,
   ]);
 
   // Render status badge

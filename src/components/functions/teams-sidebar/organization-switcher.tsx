@@ -22,8 +22,6 @@ import CreateOrganization from "../create-organization";
 import { Button } from "@/components/ui/button";
 import { RiDeleteBinLine, RiEdit2Line } from "react-icons/ri";
 import DeleteOrgModal from "../modals/delete-org-modal";
-import { User } from "@/types/user-types";
-import axios from "axios";
 import { GoOrganization } from "react-icons/go";
 
 interface OrganizationSwitcherProps {
@@ -31,14 +29,6 @@ interface OrganizationSwitcherProps {
   setActiveOrg: (org: Organization | null) => void;
   setActiveTeam: (team: Team | null) => void;
   setProjectName?: (name: string | null) => void;
-}
-
-interface UserData {
-  id: number;
-  name: string;
-  email: string;
-  designation?: string;
-  image?: string;
 }
 
 export function OrganizationSwitcher({
@@ -56,56 +46,6 @@ export function OrganizationSwitcher({
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const [dropdownOpenOrg, setDropdownOpenOrg] = useState<number | null>(null);
-  const [usersMap, setUsersMap] = useState<{ [key: number]: User }>({});
-
-  const fetchAllUsers = async (): Promise<{ [key: number]: User }> => {
-    try {
-      const response = await axios.get(
-        `http://192.168.1.63:8000/api/v1/teams/user-info`
-      );
-
-      const userData = response.data?.data || [];
-      const userMap: { [key: number]: User } = {};
-
-      userData.forEach((user: UserData) => {
-        userMap[user.id] = {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          designation: user.designation || null,
-          image: user.image || null,
-          organizationId: null,
-          organizationName: null,
-          createdAt: null,
-          updatedAt: null,
-        };
-      });
-
-      return userMap;
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      return {};
-    }
-  };
-
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (organizations.length > 0) {
-        const userMap = await fetchAllUsers();
-        setUsersMap(userMap);
-      }
-    };
-
-    fetchUsers();
-  }, [organizations]);
-
-  const getOrgAdmin = (orgId: number): User | null => {
-    const org = organizations.find((o) => o.id === orgId);
-    if (org?.organisation_admin && usersMap[org.organisation_admin]) {
-      return usersMap[org.organisation_admin];
-    }
-    return null;
-  };
 
   const handleCreateSuccess = React.useCallback(() => {
     refetch();
@@ -118,9 +58,6 @@ export function OrganizationSwitcher({
           (org) => org.id === activeOrg.id
         );
         if (!orgStillExists) {
-          console.log(
-            "Active organization no longer exists, switching to first available org"
-          );
           setActiveOrg(organizations[0]);
           setActiveTeam(null);
           if (setProjectName) setProjectName(null);
@@ -131,7 +68,6 @@ export function OrganizationSwitcher({
         if (setProjectName) setProjectName(null);
       }
     } else if (!isLoading && organizations.length === 0 && activeOrg) {
-      console.log("No organizations available, clearing active org");
       setActiveOrg(null);
       setActiveTeam(null);
       if (setProjectName) setProjectName(null);
@@ -229,7 +165,12 @@ export function OrganizationSwitcher({
                       <span className="truncate max-w-[150px]">{org.name}</span>
                     </DropdownMenuItem>
                     <div
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className={
+                        `absolute right-2 top-1/2 -translate-y-1/2 transition-opacity ` +
+                        (dropdownOpenOrg === org.id
+                          ? "opacity-100"
+                          : "opacity-0 group-hover:opacity-100")
+                      }
                       onClick={(e) => e.stopPropagation()}
                     >
                       <DropdownMenu
@@ -282,7 +223,9 @@ export function OrganizationSwitcher({
                             defaultValues={{
                               name: org.name,
                               description: org.description || "",
-                              organization_admin: getOrgAdmin(org.id),
+                              organization_admin: org.organisation_admin
+                                ? ({ id: org.organisation_admin } as any)
+                                : null,
                             }}
                             onCreateSuccess={() => {
                               setDropdownOpenOrg(null);
@@ -296,7 +239,7 @@ export function OrganizationSwitcher({
                               }}
                             >
                               <RiEdit2Line className="mr-2 h-4 w-4" />
-                              Update
+                              Edit
                             </DropdownMenuItem>
                           </CreateOrganization>
                           <DeleteOrgModal

@@ -238,16 +238,12 @@ export default function FunctionHeader({
                     </p>
                   </div>
                 </div>
-                <DropdownMenuItem
-                  onClick={() => router.push("/profile")}
-                  className="flex items-center gap-2 focus:bg-emerald-50 focus:text-emerald-900"
-                >
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
                   <User className="h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => router.push("/help-and-support")}
-                  className="flex items-center gap-2 focus:bg-emerald-50 focus:text-emerald-900"
                 >
                   <HelpCircle className="h-4 w-4" />
                   <span>Help & Support</span>
@@ -257,7 +253,6 @@ export default function FunctionHeader({
                   onClick={() => {
                     signOut({ callbackUrl: "/login" });
                   }}
-                  className="flex items-center gap-2  focus:bg-red-50 focus:text-red-700"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sign out</span>

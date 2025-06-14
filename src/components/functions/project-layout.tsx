@@ -12,9 +12,14 @@ import {
   type SortField,
   type SortOrder,
   type DateRange,
+  type Project,
 } from "@/types/project-types";
 import { MdGroupOff } from "react-icons/md";
-import { Separator } from "../ui/separator";
+import { Loader2 } from "lucide-react";
+
+type PaginatedProjectsResponse = {
+  data: Project[];
+};
 
 const EmptyTeamState = () => (
   <div className="flex flex-col items-center justify-center h-full text-center px-6 py-32">
@@ -67,8 +72,10 @@ const Functions = () => {
   } = useGetTeamProjectsInfinite(activeTeam?.id || "", filters);
 
   // Flatten all projects from pages
-  const allProjects =
-    data?.pages.flatMap((page: { data?: any[] }) => page?.data ?? []) ?? [];
+  const allProjects: Project[] =
+    data?.pages.flatMap(
+      (page: PaginatedProjectsResponse) => page?.data ?? []
+    ) ?? [];
 
   // Intersection Observer for infinite scroll
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
@@ -83,12 +90,13 @@ const Functions = () => {
       },
       { threshold: 1 }
     );
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
   }, [hasNextPage, fetchNextPage, isLoading]);
@@ -105,7 +113,7 @@ const Functions = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-white p-4 rounded-sm border-2 border-emerald-800/10 max-h-[calc(100vh-var(--header-height))] gap-1">
+    <div className="flex flex-col h-full w-full bg-white/30  p-4 rounded-sm border-2 border-emerald-800/10 max-h-[calc(100vh-var(--header-height))] gap-1">
       <div className="w-full flex flex-col gap-3   ">
         <div className="flex w-full items-center justify-between ">
           <span className="text-xl font-semibold">Projects</span>
@@ -113,7 +121,6 @@ const Functions = () => {
         </div>
         <FilterDropdown />
       </div>
-
 
       <div className="flex-1 rounded-xl min-h-0 overflow-y-auto">
         {isLoading ? (
@@ -127,7 +134,7 @@ const Functions = () => {
         <div ref={loadMoreRef} />
         {isFetchingNextPage && (
           <div className="flex justify-center py-4">
-            <div className="animate-spin h-6 w-6 border-4 border-gray-300 rounded-full border-t-green-800"></div>
+            <Loader2 className="animate-spin h-6 w-6 text-emerald-800" />
           </div>
         )}
         {!hasNextPage && allProjects.length > 0 && (

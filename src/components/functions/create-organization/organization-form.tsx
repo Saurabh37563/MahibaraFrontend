@@ -55,6 +55,11 @@ export function OrganizationForm({
     defaultValues.organization_admin
   );
 
+  // Sync selectedUser with defaultValues.organization_admin when it changes
+  React.useEffect(() => {
+    setSelectedUser(defaultValues.organization_admin ?? null);
+  }, [defaultValues.organization_admin]);
+
   React.useEffect(() => {
     console.log("Default values:", defaultValues);
     console.log("Mode:", mode);

@@ -274,23 +274,7 @@ export default function CreateOrganization({
       ) : (
         <Drawer open={open} onOpenChange={handleOpenChange}>
           <DrawerTrigger asChild>{triggerElement}</DrawerTrigger>
-          <DrawerContent
-            className="px-4"
-            onInteractOutside={(e) => {
-              // Allow interactions with dropdowns in mobile drawer
-              const target = e.target as Element;
-              if (
-                target.closest('[role="combobox"]') ||
-                target.classList.contains("absolute") ||
-                target.closest(".absolute") ||
-                target.closest("[data-radix-popover-content]") ||
-                target.closest("[data-radix-select-content]") ||
-                target.closest('[role="listbox"]')
-              ) {
-                e.preventDefault();
-              }
-            }}
-          >
+          <DrawerContent className="px-4">
             <DrawerHeader>
               <DrawerTitle>
                 {mode === "create"

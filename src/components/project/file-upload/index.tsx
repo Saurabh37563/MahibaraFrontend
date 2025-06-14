@@ -31,6 +31,7 @@ import {
 import axios from "axios";
 import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
 import { useParams } from "next/navigation";
+import { queryClient } from "@/providers/query-provider";
 
 export function FileUploadMappingWrapper(props: FileUploadMappingProps) {
   const params = useParams();
@@ -140,6 +141,10 @@ function FileUploadMapping({
       });
 
       if (response.data.success) {
+        // Refetch sheet types with validation after successful mapping
+        queryClient.invalidateQueries({
+          queryKey: ["sheetTypesWithValidation", projectId],
+        });
         clearAllStates();
         setIsOpen(false);
         toast.success("Sheet mappings submitted successfully!");

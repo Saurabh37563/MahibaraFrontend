@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useTeamContext } from "@/contexts/team-context";
 import { LuTrash2 } from "react-icons/lu";
 import { RiEdit2Line } from "react-icons/ri";
+import { Badge } from "@/components/ui/badge";
 
 // Define project status types and config
 type ProjectStatus = "completed" | "in-progress" | "pending" | "draft";
@@ -66,7 +67,7 @@ interface ProjectCardProps {
 export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
   const { activeOrg } = useTeamContext();
   const status = project.status as ProjectStatus;
-  const {  iconColor, borderColor, bgColor } =
+  const { iconColor, borderColor, bgColor, bgOpacityColor, color } =
     statusConfig[status] || statusConfig["draft"];
   const router = useRouter();
   const [showStatusDialog, setShowStatusDialog] = useState(false);
@@ -131,7 +132,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
     <>
       <div
         onClick={handleCardClick}
-        className={`group border ${borderColor} bg-white dark:bg-gray-800 rounded-xl  p-5 transition-all hover:shadow-md cursor-pointer hover:translate-y-[-2px] duration-300`}
+        className={`group  border ${borderColor} bg-white dark:bg-gray-800 rounded-xl  p-5 transition-all hover:shadow-md cursor-pointer hover:translate-y-[-2px] duration-300`}
         tabIndex={0}
         aria-label={`Open project ${project.name}`}
         onKeyDown={(e) => {
@@ -145,13 +146,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({ project }) => {
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center">
             <Folder className={`h-6 w-6 stroke-2 ${iconColor} mr-2`} />
-            <span
-              className={`text-xs font-medium px-2.5 py-0.5 rounded-full text-gray-500`}
+            <Badge
+              className={`text-xs font-medium px-2.5 py-0.5 rounded-full ml-1 ${bgOpacityColor} ${color} border-0`}
+              variant="outline"
             >
               {status
                 .replace("-", " ")
                 .replace(/\b\w/g, (l) => l.toUpperCase())}
-            </span>
+            </Badge>
           </div>
           <div className="project-dropdown">
             <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>

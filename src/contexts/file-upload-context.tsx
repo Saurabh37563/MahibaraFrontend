@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-} from "react";
+import { createContext, useContext, useState, ReactNode } from "react";
 import type {
   UploadedFileInfo,
   SheetType,
@@ -14,8 +8,7 @@ import type {
   Sheet,
   FileMetadata,
 } from "@/types/project-types";
-import axios from "axios";
-import { FILE_UPLOAD_ENDPOINTS } from "@/constants/endpoints-constant";
+import { useSheetTypesWithValidation } from "@/queries/file-upload-query";
 
 interface FileUploadContextType {
   uploadedFiles: UploadedFileInfo[];
@@ -56,58 +49,20 @@ export function FileUploadProvider({
   projectId,
 }: FileUploadProviderProps) {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFileInfo[]>([]);
-  const [sheetTypes, setSheetTypes] = useState<SheetType[]>([]);
   const [mappings, setMappings] = useState<SheetMapping[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchSheetTypes() {
-      try {
-        setLoading(true);
-        setError(null);
+  // Use React Query to fetch sheet types and validated sheet types
+  const {
+    data: sheetTypes = [],
+    isLoading: loading,
+    error: queryError,
+  } = useSheetTypesWithValidation(projectId);
 
-        const response = await axios.get(
-          FILE_UPLOAD_ENDPOINTS?.getSheetTypes, // use projectId
-          {
-            headers: {
-              Authorization: `Bearer test-token`,
-            },
-          }
-        );
-        const dummySheetTypes = response?.data?.data;
-        const reponseValidatedTypes = await axios.get(
-          FILE_UPLOAD_ENDPOINTS?.getValidatedSheetTypes + "/" + projectId, // use projectId
-          {
-            headers: {
-              Authorization: `Bearer test-token`,
-            },
-          }
-        );
-
-        const dummyValidatedSheets = reponseValidatedTypes?.data?.data;
-
-        // Simulate network delay
-        await new Promise((res) => setTimeout(res, 500));
-
-        const allSheetTypes = dummySheetTypes.map((type: string) => ({
-          name: type,
-          isValidated: dummyValidatedSheets.includes(type),
-        }));
-
-        setSheetTypes(allSheetTypes);
-      } catch (err) {
-        console.error("Error fetching sheet types:", err);
-        setError("Failed to load sheet types. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (projectId) {
-      fetchSheetTypes();
-    }
-  }, [projectId]);
+  // Sync query error with context error
+  if (queryError && !error) {
+    setError("Failed to load sheet types. Please try again.");
+  }
 
   const addFiles = (files: UploadedFileInfo[]) => {
     setUploadedFiles((prev) => [...prev, ...files]);
