@@ -28,6 +28,7 @@ import {
   ViewerState,
 } from "@/types/common-types";
 import { Input } from "../ui/input";
+import { BiLoaderCircle } from "react-icons/bi";
 
 // Virtual Cell Component - Memoized for performance
 const VirtualCell = memo<{
@@ -261,7 +262,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         // Create new worker
         workerRef.current = new Worker(
           new URL("@/workers/excel-worker.ts", import.meta.url),
-          { type: "module" },
+          { type: "module" }
         );
 
         // Handle worker messages
@@ -287,7 +288,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
                       (accumulatedSheets.length /
                         (accumulatedSheets.length > 0 ? totalSheets || 1 : 1)) *
                         10,
-                    95,
+                    95
                   ),
                 });
               }
@@ -412,7 +413,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
       const currentState = stateRef.current;
       if (currentState.sheets[currentState.activeSheetIndex]) {
         calculateColumnWidthsRef.current(
-          currentState.sheets[currentState.activeSheetIndex],
+          currentState.sheets[currentState.activeSheetIndex]
         );
       }
     };
@@ -441,8 +442,8 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
         .slice(1)
         .filter((row) =>
           row.some((cell) =>
-            cell.displayValue?.toLowerCase().includes(searchLower),
-          ),
+            cell.displayValue?.toLowerCase().includes(searchLower)
+          )
         );
       data = [header, ...filteredRows];
     }
@@ -497,7 +498,7 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
   const totalWidth = useMemo(() => {
     const calculatedWidth = state.columnWidths.reduce(
       (sum, width) => sum + width,
-      0,
+      0
     );
     return Math.max(calculatedWidth, parentRef.current?.offsetWidth || 0);
   }, [state.columnWidths]);
@@ -507,21 +508,61 @@ const ExcelViewer: React.FC<ExcelViewerProps> = ({
 
   // Loading state
   if (state.loading) {
+    // Determine column count for skeleton (try to match real table if possible)
+    const skeletonColCount =
+      state.columnWidths.length > 0 ? state.columnWidths.length : 6;
+    const skeletonRowCount = 12;
     return (
       <div
         className={`flex flex-col items-center justify-center ${className}`}
         style={{ height }}
+        aria-busy="true"
+        aria-live="polite"
       >
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-800 mb-2" />
-        <span className="mb-2">Loading spreadsheet...</span>
-        {state.processingProgress > 0 && (
-          <div className="w-64 bg-gray-200 rounded-full h-2">
-            <div
-              className="bg-emerald-900 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${state.processingProgress}%` }}
-            />
+        {/* Animated Loader and Progress Bar */}
+        <div className="flex flex-col items-center mb-6">
+          
+          <span className="mt-3 text-emerald-900 font-medium animate-pulse">
+            Loading spreadsheet...
+          </span>
+          {state.processingProgress > 0 && (
+            <div className="w-64 h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner mt-4">
+              <div
+                className="h-3 bg-emerald-800 rounded-full transition-all duration-500"
+                style={{ width: `${state.processingProgress}%` }}
+              >
+                <span className="sr-only">{`Loading: ${state.processingProgress}%`}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Skeleton Table */}
+        <div className="w-full max-w-4xl border border-gray-300 rounded bg-white overflow-hidden animate-pulse">
+          {/* Skeleton Header */}
+          <div className="flex border-b bg-gray-100">
+            {Array.from({ length: skeletonColCount }).map((_, colIdx) => (
+              <div
+                key={colIdx}
+                className="h-10 flex-1 min-w-[120px] border-r last:border-r-0 flex items-center px-4 bg-gray-100"
+              >
+                <div className="h-4 w-3/4 bg-gray-200 rounded" />
+              </div>
+            ))}
           </div>
-        )}
+          {/* Skeleton Rows */}
+          {Array.from({ length: skeletonRowCount }).map((_, rowIdx) => (
+            <div key={rowIdx} className="flex border-b last:border-b-0">
+              {Array.from({ length: skeletonColCount }).map((_, colIdx) => (
+                <div
+                  key={colIdx}
+                  className="h-8 flex-1 min-w-[120px] border-r last:border-r-0 flex items-center px-4"
+                >
+                  <div className="h-3 w-2/3 bg-gray-100 rounded" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

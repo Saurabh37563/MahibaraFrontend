@@ -4,6 +4,7 @@ import { AlertTriangle, Link2, Play, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ColumnMappingDialog from "./column-mapping";
 import { AnalysisStatusViewProps } from "@/types/project-types";
+import { LuSettings } from "react-icons/lu";
 
 const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
   analysisData,
@@ -56,7 +57,7 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md">
-          <AlertTriangle size={48} className="text-yellow-500 mx-auto mb-4" />
+          <AlertTriangle size={48} className="text-emerald-800 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             Column Mapping Required
           </h3>
@@ -86,9 +87,10 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
             setOpen={setColumnMappingDialogOpen}
           >
             <Button
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+              className="group "
               onClick={() => setColumnMappingDialogOpen(true)}
             >
+              <LuSettings className="transform transition-transform duration-300 group-hover:rotate-180" />
               Map Columns
             </Button>
           </ColumnMappingDialog>
@@ -238,11 +240,15 @@ const AnalysisStatusView: React.FC<AnalysisStatusViewProps> = ({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md">
-          <FileSpreadsheet size={48} className="text-emerald-800 mx-auto mb-4" />
+          <FileSpreadsheet
+            size={48}
+            className="text-emerald-800 mx-auto mb-4"
+          />
           <h3 className="font-medium text-sm text-gray-900 mb-2 capitalize">
-            File Not Found , Please rerun the analysis or Refresh the analysis data 
+            File Not Found , Please rerun the analysis or Refresh the analysis
+            data
           </h3>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
               variant="default"
