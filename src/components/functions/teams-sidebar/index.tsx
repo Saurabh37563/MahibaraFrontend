@@ -145,7 +145,7 @@ export default function FunctionsSidebar() {
           isMobile ? "w-max max-w-[400px]" : "w-64"
         }`}
       >
-        <SidebarContent className="bg-white border-2 border-emerald-800/10 rounded-xl m-2 py-2">
+        <SidebarContent className="bg-white border-2 border-emerald-800/10 rounded-sm py-2">
           {isMobile && <SidebarTrigger className="p-4 self-end" />}
           <div className=" py-2 space-y-4">
             <OrganizationSwitcher

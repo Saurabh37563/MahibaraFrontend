@@ -65,7 +65,7 @@ export default function AnalysisPanel({
                 className={`flex group items-center justify-between rounded-md p-2 hover:bg-slate-50 cursor-pointer ${
                   selectedItem?.index === index &&
                   selectedItem?.type === "analysis"
-                    ? "bg-green-500/10 border-l-4 border-primary"
+                    ? "bg-emerald-800/10 border-l-2 border-primary"
                     : ""
                 }`}
                 onClick={() => onItemClick(item, "analysis", index)}

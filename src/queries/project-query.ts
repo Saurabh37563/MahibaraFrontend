@@ -1,4 +1,4 @@
-import { useQuery, useMutation, UseMutationResult, UseQueryResult } from '@tanstack/react-query';
+import { useQuery, useMutation, UseMutationResult, UseQueryResult, useInfiniteQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { Project, CreateProjectRequest, UpdateProjectStatusRequest, FilterState } from '@/types/project-types';
 import { queryClient } from '@/providers/query-provider';
@@ -86,7 +86,9 @@ export function useCreateProject(): UseMutationResult<
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        predicate: (query) => query.queryKey[0] === 'projects',
+        predicate: (query) =>
+          query.queryKey[0] === 'projects' ||
+          query.queryKey[0] === 'projects-infinite',
       });
     },
   });
@@ -145,5 +147,49 @@ export function useDeleteProject(): UseMutationResult<
         predicate: (query) => query.queryKey[0] === 'projects',
       });
     },
+  });
+}
+
+// Infinite query for team projects (for infinite scroll)
+export function useGetTeamProjectsInfinite(
+  team_id: string,
+  filters?: Omit<FilterState, "page">
+) {
+  return useInfiniteQuery<PaginatedProjectsResponse, Error>({
+    queryKey: ['projects-infinite', team_id, filters],
+    queryFn: async ({ pageParam = 1 }) => {
+      const queryParams = new URLSearchParams();
+      if (team_id) {
+        queryParams.append('team_id', team_id);
+      } else {
+        throw new Error('Team ID is required to fetch projects.');
+      }
+      if (filters) {
+        if (filters.status && filters.status !== 'all') queryParams.append('status', filters.status);
+        if (filters.sortField && filters.sortField !== 'date') queryParams.append('sortField', filters.sortField);
+        if (filters.sortOrder && filters.sortOrder !== 'desc') queryParams.append('sortOrder', filters.sortOrder);
+        if (filters.dateRange && filters.dateRange !== 'all') queryParams.append('dateRange', filters.dateRange);
+        if (filters.search) queryParams.append('search', filters.search.trim());
+      }
+      queryParams.append('page', String(pageParam));
+      const url = `${PROJECT_ENDPOINTS.getTeamProjects}${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
+      try {
+        const response = await axiosInstance.get<PaginatedProjectsResponse>(url);
+        return response?.data || { data: [], metadata: {}, success: false, message: '', error: null };
+      } catch (error: unknown) {
+        if (axios.isAxiosError(error)) {
+          throw new Error(error.response?.data?.message || 'Failed to fetch projects. Please try again.');
+        }
+        throw error;
+      }
+    },
+    getNextPageParam: (lastPage) => {
+      if (lastPage?.metadata?.has_next) {
+        return (lastPage.metadata.current_page || 1) + 1;
+      }
+      return undefined;
+    },
+    enabled: !!team_id,
+    initialPageParam: 1, // <-- Fix: required by react-query v5+
   });
 }

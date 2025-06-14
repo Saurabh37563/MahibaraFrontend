@@ -126,7 +126,7 @@ export default function SheetsPanel({
               key={`sheet-${index}`}
               className={`flex group items-center justify-between rounded-sm p-2 hover:bg-slate-50 cursor-pointer transition-colors ${
                 selectedItem?.index === index && selectedItem?.type === "sheet"
-                  ? "bg-green-500/10 border-l-4 border-primary"
+                  ? "bg-emerald-800/10 border-l-2 border-primary"
                   : ""
               }`}
               onClick={() => onItemClick(sheet, "sheet", index)}
