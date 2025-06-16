@@ -287,18 +287,6 @@ export default function FunctionsSidebar() {
                         organization. Teams help you organize members and
                         projects efficiently.
                       </div>
-                      <CreateTeam>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="relative"
-                          aria-label="Create Team"
-                          tabIndex={0}
-                          onClick={handleCreateTeamClick}
-                        >
-                          <span className="sr-only">Create Team</span>+
-                        </Button>
-                      </CreateTeam>
                     </>
                   ) : (
                     <>
