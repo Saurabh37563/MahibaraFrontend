@@ -154,7 +154,7 @@ export function useDeleteProject(): UseMutationResult<
   });
 }
 
-// Infinite query for team projects (for infinite scroll)
+
 export function useGetTeamProjectsInfinite(
   team_id: string,
   filters?: Omit<FilterState, "page">
@@ -194,6 +194,23 @@ export function useGetTeamProjectsInfinite(
       return undefined;
     },
     enabled: !!team_id,
-    initialPageParam: 1, // <-- Fix: required by react-query v5+
+    initialPageParam: 1, 
   });
 }
+
+export const useDownloadProjectResults = () => {
+  return useMutation({
+    mutationFn: async (projectId: string | number) => {
+      const response = await axios.get(`${BASE_TEMP_BACKEND_URL}/api/v1/projects/${projectId}/download-results`, {
+        responseType: "blob",
+      });
+      let filename = "project_results.zip";
+      const disposition = response.headers["content-disposition"];
+      if (disposition) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) filename = match[1];
+      }
+      return { blob: response.data, filename };
+    },
+  });
+};

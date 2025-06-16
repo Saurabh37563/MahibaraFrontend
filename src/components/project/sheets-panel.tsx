@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { LuFileSpreadsheet } from "react-icons/lu";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SheetsPanelProps } from "@/types/project-types";
+import { useDownloadProjectResults } from "@/queries/project-query";
+import { saveAs } from "file-saver";
+import { toast } from "sonner";
 
 export default function SheetsPanel({
   sheets,
@@ -22,44 +25,31 @@ export default function SheetsPanel({
 }: SheetsPanelProps) {
   const params = useParams();
   const { id: projectId } = params as { id: string };
-  const [isDownloading, setIsDownloading] = useState(false);
 
-  // Dummy download function
+  const downloadMutation = useDownloadProjectResults();
+
   const handleDownload = async () => {
-    if (isDownloading) return;
-
-    setIsDownloading(true);
-
+    if (downloadMutation.isPending) return;
     try {
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      const dummyContent =
-        "PK\x03\x04\x14\x00\x00\x00\x08\x00dummy zip file content";
-      const blob = new Blob([dummyContent], {
-        type: "application/zip",
+      await downloadMutation.mutateAsync(projectId, {
+        onSuccess: ({ blob, filename }) => {
+          saveAs(blob, filename);
+          toast.success("Download started");
+        },
+        onError: (error: any) => {
+          toast.error(
+            error?.response?.data?.detail ||
+              error?.message ||
+              "Failed to download ZIP file."
+          );
+        },
       });
-
-      const filename = `project_${projectId}_sheets_dummy.zip`;
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", filename);
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.URL.revokeObjectURL(url);
-
-      console.log("Dummy download completed");
-    } catch (error) {
-      console.error("Download failed:", error);
-      alert("An unexpected error occurred during download.");
-    } finally {
-      setIsDownloading(false);
+    } catch (e) {
+      // Already handled in onError
     }
   };
+
+  const isDownloading = downloadMutation.isPending;
 
   return (
     <div className="flex flex-col w-full h-full">
