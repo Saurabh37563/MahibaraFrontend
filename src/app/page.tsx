@@ -1,7 +1,24 @@
+"use client";
 
-import { redirect } from "next/navigation";
-// TODO : based on session if the user session is active and valid then dont let user access the login or signup
-export default async function HomePage() {
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Loader } from "@/components/ui/loader";
+export default function RootPage() {
+  const { status } = useSession();
+  const router = useRouter();
 
-redirect('/login')
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.push("/agents");
+    } else if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loader />
+    </div>
+  );
 }

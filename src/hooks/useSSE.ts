@@ -1,100 +1,179 @@
+import { useEffect, useRef, useState, useCallback } from 'react';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { SSEClient, SSEClientOptions, SSEEvent } from '@/lib/sse-client';
-
-interface UseSSEOptions extends Omit<SSEClientOptions, 'url'> {
+interface UseSSEOptions {
   enabled?: boolean;
+  token?: string;
+  autoReconnect?: boolean;
+  reconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  onError?: (err: Event) => void; // <-- specify type instead of any
 }
 
-/**
- * React hook for handling SSE connections in components
- * 
- * @param url The SSE endpoint URL
- * @param options Configuration options for the SSE client
- */
-export function useSSE<T extends SSEEvent['type'] | '*' = '*'>(
-  url: string,
-  options: UseSSEOptions = {}
-) {
+interface SSEHook {
+  isConnected: boolean;
+  error: Error | null;
+  addEventListener: (eventType: string, handler: (event: MessageEvent) => void) => () => void;
+  disconnect: () => void;
+}
+
+export const useSSE = (url: string, options: UseSSEOptions = {}): SSEHook => {
   const {
     enabled = true,
-    token,
-    ...restOptions
+    autoReconnect = true,
+    reconnectInterval = 3000,
+    maxReconnectAttempts = 5,
+    onError, // <-- add this line
   } = options;
-  
-  // Use refs to avoid unnecessary re-renders
-  const clientRef = useRef<SSEClient | null>(null);
+
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [lastEvent, setLastEvent] = useState<T extends '*' ? SSEEvent | null : Extract<SSEEvent, { type: T }> | null>(null);
   
-  // Create or update the client when options change
-  useEffect(() => {
-    if (!clientRef.current) {
-      clientRef.current = new SSEClient({
-        url,
-        token,
-        onConnect: () => setIsConnected(true),
-        onDisconnect: () => setIsConnected(false),
-        onError: (err) => setError(err),
-        ...restOptions,
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const listenersRef = useRef<Map<string, Set<(event: MessageEvent) => void>>>(new Map());
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isDisconnectedRef = useRef(false);
+
+  const disconnect = useCallback(() => {
+    console.log('[SSE] Manually disconnecting');
+    isDisconnectedRef.current = true;
+    
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    setIsConnected(false);
+    setError(null);
+  }, []);
+
+  const connect = useCallback(() => {
+    if (!enabled || !url || isDisconnectedRef.current) {
+      console.log('[SSE] Not connecting:', { enabled, url, isDisconnected: isDisconnectedRef.current });
+      return;
+    }
+
+    // Prevent multiple connections
+    if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
+      console.log('[SSE] Connection already exists, skipping');
+      return;
+    }
+
+    try {
+      console.log('[SSE] Creating new connection to:', url);
+      const eventSource = new EventSource(url);
+      eventSourceRef.current = eventSource;
+
+      eventSource.onopen = () => {
+        console.log('[SSE] Connected successfully');
+        setIsConnected(true);
+        setError(null);
+        reconnectAttemptsRef.current = 0;
+      };
+
+      eventSource.onerror = (event) => {
+        console.error('[SSE] Connection error:', event);
+        setIsConnected(false);
+
+        // Call user-provided onError handler if present
+        if (typeof onError === "function") {
+          onError(event);
+        }
+        
+        // Don't reconnect if manually disconnected
+        if (isDisconnectedRef.current) {
+          console.log('[SSE] Manually disconnected, not reconnecting');
+          return;
+        }
+        
+        if (autoReconnect && reconnectAttemptsRef.current < maxReconnectAttempts) {
+          reconnectAttemptsRef.current++;
+          console.log(`[SSE] Attempting reconnect ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+              eventSourceRef.current = null;
+            }
+            connect();
+          }, reconnectInterval);
+        } else {
+          setError(new Error('Failed to connect to real-time updates'));
+        }
+      };
+
+      eventSource.onmessage = (event) => {
+        console.log('[SSE] Generic message received:', event.data);
+        const genericListeners = listenersRef.current.get('message') || new Set();
+        genericListeners.forEach(handler => handler(event));
+      };
+
+      // Setup custom event listeners for events that were registered before connection
+      listenersRef.current.forEach((handlers, eventType) => {
+        if (eventType !== 'message') {
+          eventSource.addEventListener(eventType, (event) => {
+            console.log(`[SSE] Custom event received (${eventType}):`, event.data);
+            handlers.forEach(handler => handler(event as MessageEvent));
+          });
+        }
       });
-    } else {
-      clientRef.current.updateOptions({ url, token, ...restOptions });
+
+    } catch (err) {
+      console.error('[SSE] Failed to create connection:', err);
+      setError(err instanceof Error ? err : new Error('Unknown SSE error'));
     }
+  }, [enabled, url, autoReconnect, maxReconnectAttempts, reconnectInterval, onError]); // <-- add onError
+
+  const addEventListener = useCallback((eventType: string, handler: (event: MessageEvent) => void) => {
+    console.log(`[SSE] Adding event listener for: ${eventType}`);
     
-    // Connect if enabled
-    if (enabled) {
-      clientRef.current.connect();
+    if (!listenersRef.current.has(eventType)) {
+      listenersRef.current.set(eventType, new Set());
     }
-    
-    // Cleanup on unmount
+    listenersRef.current.get(eventType)!.add(handler);
+
+    // If already connected, add listener to existing EventSource
+    if (eventSourceRef.current && eventSourceRef.current.readyState === EventSource.OPEN) {
+      if (eventType !== 'message') {
+        eventSourceRef.current.addEventListener(eventType, handler as EventListener);
+      }
+    }
+
+    // Return cleanup function
     return () => {
-      if (clientRef.current) {
-        clientRef.current.disconnect();
-        clientRef.current = null;
+      const listeners = listenersRef.current.get(eventType);
+      if (listeners) {
+        listeners.delete(handler);
+        if (listeners.size === 0) {
+          listenersRef.current.delete(eventType);
+        }
+      }
+      if (eventSourceRef.current && eventType !== 'message') {
+        eventSourceRef.current.removeEventListener(eventType, handler as EventListener);
       }
     };
-  }, [url, token, enabled]);
-
-  // Listen for events
-  const addEventListener = useCallback(<E extends SSEEvent['type'] | '*'>(
-    eventType: E,
-    handler: (event: E extends '*' ? SSEEvent : Extract<SSEEvent, { type: E }>) => void
-  ) => {
-    if (!clientRef.current) return () => {};
-    return clientRef.current.on(eventType, handler);
   }, []);
 
-  // Subscribe to events of type T or all events
   useEffect(() => {
-    if (!clientRef.current) return;
-    
-    const unsubscribe = clientRef.current.on(
-      (T as string), 
-      (event) => {
-        setLastEvent(event as any);
-      }
-    );
-    
-    return unsubscribe;
-  }, []);
+    if (enabled && url) {
+      isDisconnectedRef.current = false;
+      connect();
+    } else {
+      disconnect();
+    }
 
-  // Expose API for manual control
-  const connect = useCallback(() => {
-    clientRef.current?.connect();
-  }, []);
-  
-  const disconnect = useCallback(() => {
-    clientRef.current?.disconnect();
-  }, []);
-  
+    return () => {
+      disconnect();
+    };
+  }, [enabled, url, connect, disconnect]); // Remove connect and disconnect from dependencies to prevent loops
+
   return {
     isConnected,
-    lastEvent,
     error,
     addEventListener,
-    connect,
     disconnect,
   };
-}
+};
