@@ -22,7 +22,7 @@ type PaginatedProjectsResponse = {
 };
 
 const EmptyTeamState = () => (
-  <div className="flex flex-col items-center justify-center h-full text-center px-6 py-32">
+  <div className="flex flex-col items-center justify-center h-full text-center px-6 ">
     <div className="text-emerald-800 bg-emerald-800/10 p-6 rounded-full mb-6 shadow-sm">
       <HiUserGroup size={40} />
     </div>
@@ -113,7 +113,7 @@ const Functions = () => {
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-white/30  p-4 rounded-sm border-2 border-emerald-800/10 max-h-[calc(100vh-var(--header-height))] gap-1">
+    <div className="flex flex-col h-full w-full bg-white/30  px-2 pt-4 pb-0 rounded-sm border-2 border-emerald-800/10 max-h-[calc(100vh-var(--header-height))] gap-1">
       <div className="w-full flex flex-col gap-3   ">
         <div className="flex w-full items-center justify-between ">
           <span className="text-xl font-semibold">Projects</span>

@@ -31,11 +31,11 @@ const statusConfig: Record<
   }
 > = {
   completed: {
-    color: "text-emerald-900",
-    iconColor: "text-emerald-900",
-    borderColor: "border-emerald-900",
-    bgColor: "bg-emerald-900",
-    bgOpacityColor: "bg-emerald-900/10",
+    color: "text-emerald-800",
+    iconColor: "text-emerald-800",
+    borderColor: "border-emerald-800",
+    bgColor: "bg-emerald-800",
+    bgOpacityColor: "bg-emerald-800/10",
   },
   "in-progress": {
     color: "text-blue-900",
