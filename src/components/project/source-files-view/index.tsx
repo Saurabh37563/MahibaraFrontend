@@ -287,23 +287,18 @@ const SpreadsheetView: React.FC<SpreadsheetViewProps> = ({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center max-w-md">
-          <FileX size={48} className="text-gray-400 mx-auto mb-4" />
+          <FileX size={48} className="text-emerald-800 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             {isNoData ? "No Data Found" : "Error Loading Data"}
           </h3>
           <p className="text-gray-600 mb-4">
-            {isNoData
-              ? "No data found for this source file. The file may not have been uploaded yet or may have been removed."
-              : errorMessage}
+            No data found for this source file. The file may not have been uploaded yet or may have been removed.
+              
           </p>
-          <div className="space-y-2 text-sm text-gray-500">
-            <p>Project ID: {projectId}</p>
-            <p>Sheet Type: {sheetType}</p>
-          </div>
+
           <div className="mt-6 space-x-3">
             <Button
               onClick={handleRetry}
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
             >
               Retry
             </Button>

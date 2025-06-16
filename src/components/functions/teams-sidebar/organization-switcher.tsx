@@ -22,7 +22,6 @@ import CreateOrganization from "../create-organization";
 import { Button } from "@/components/ui/button";
 import { RiDeleteBinLine, RiEdit2Line } from "react-icons/ri";
 import DeleteOrgModal from "../modals/delete-org-modal";
-import { GoOrganization } from "react-icons/go";
 
 interface OrganizationSwitcherProps {
   activeOrg: Organization | null;
@@ -90,7 +89,7 @@ export function OrganizationSwitcher({
   }
 
   return (
-    <div className="flex-1 px-2">
+    <div className="flex-1 px-2 pb-2">
       <SidebarMenu>
         <SidebarMenuItem>
           <DropdownMenu modal={false}>
@@ -117,7 +116,6 @@ export function OrganizationSwitcher({
                   </>
                 ) : (
                   <div className="flex items-center gap-1 flex-1  text-left text-sm leading-tight">
-                    <GoOrganization size={24} className="text-emerald-900" />
                     <span className="truncate font-semibold">
                       Select Organization
                     </span>

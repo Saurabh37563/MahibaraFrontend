@@ -14,8 +14,8 @@ import {
   type DateRange,
   type Project,
 } from "@/types/project-types";
-import { MdGroupOff } from "react-icons/md";
 import { Loader2 } from "lucide-react";
+import { HiUserGroup } from "react-icons/hi2";
 
 type PaginatedProjectsResponse = {
   data: Project[];
@@ -24,7 +24,7 @@ type PaginatedProjectsResponse = {
 const EmptyTeamState = () => (
   <div className="flex flex-col items-center justify-center h-full text-center px-6 py-32">
     <div className="text-emerald-800 bg-emerald-800/10 p-6 rounded-full mb-6 shadow-sm">
-      <MdGroupOff size={40} />
+      <HiUserGroup size={40} />
     </div>
     <h3 className="text-2xl font-semibold mb-2 text-gray-800">
       No Team Selected

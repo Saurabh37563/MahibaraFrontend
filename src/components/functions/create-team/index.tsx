@@ -32,89 +32,48 @@ interface ApiError {
   status?: number;
   errors?: Record<string, string[]>;
 }
+
 interface CreateTeamProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   mode?: "create" | "update";
-  initialValues?: Partial<CreateTeamFormValues> & { id?: string | number }; // <-- Add id here
-  children?: React.ReactNode; // custom trigger
+  initialValues?: Partial<CreateTeamFormValues> & { id?: string | number };
+  children?: React.ReactNode;
 }
 
-export default function CreateTeam(props: CreateTeamProps) {
+const CreateTeam: React.FC<CreateTeamProps> = ({
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  mode = "create",
+  initialValues,
+  children,
+}) => {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 640px)");
   const { activeOrg } = useTeamContext();
   const createTeamMutation = useCreateTeam();
   const updateTeamMutation = useUpdateTeam();
 
-  const open = props.open !== undefined ? props.open : internalOpen;
-  const onOpenChange = props.onOpenChange || setInternalOpen;
-  const mode = props.mode || "create";
-  const initialValues = props.initialValues;
-  const children = props.children;
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const onOpenChange = controlledOnOpenChange || setInternalOpen;
 
-  // Debug the pending states with more detail
   const isPending =
     mode === "update"
       ? updateTeamMutation.isPending
       : createTeamMutation.isPending;
-
-  console.log("=== CreateTeam Debug ===");
-  console.log("CreateTeam component - mode:", mode);
-  console.log("CreateTeam component - open:", open);
-  console.log(
-    "CreateTeam component - createTeamMutation.isPending:",
-    createTeamMutation.isPending
-  );
-  console.log(
-    "CreateTeam component - updateTeamMutation.isPending:",
-    updateTeamMutation.isPending
-  );
-  console.log("CreateTeam component - final isPending:", isPending);
-  console.log(
-    "CreateTeam component - createTeamMutation.status:",
-    createTeamMutation.status
-  );
-  console.log(
-    "CreateTeam component - updateTeamMutation.status:",
-    updateTeamMutation.status
-  );
-  console.log("=========================");
-
-  // Reset mutation states when dialog opens
-  React.useEffect(() => {
-    if (open) {
-      if (createTeamMutation.isPending || updateTeamMutation.isPending) {
-        console.log(
-          "Dialog opened with pending mutations - this might cause disabled fields"
-        );
-      }
-    }
-  }, [open, createTeamMutation.isPending, updateTeamMutation.isPending]);
 
   const handleSubmit = async (values: CreateTeamFormValues) => {
     if (!activeOrg?.id) {
       toast.error("Please select an organization first.");
       return;
     }
-
-    console.log("Form submission - mode:", mode);
-    console.log("Form submission - initialValues:", initialValues);
-    console.log("Form submission - values:", values);
-    console.log("Form submission - members count:", values.members.length);
-    console.log("Form submission - members data:", values.members);
-
     try {
       if (mode === "update") {
         const teamId = initialValues?.id;
-        console.log("Team ID for update:", teamId);
-
         if (!teamId) {
-          console.error("No team ID found in initialValues:", initialValues);
           toast.error("No team selected for update.");
           return;
         }
-
         const processedMembers = values.members.map((member) => ({
           id: Number(member.id),
           modulePermissions: {
@@ -124,7 +83,6 @@ export default function CreateTeam(props: CreateTeamProps) {
               member.modulePermissions?.file_processing || "no_access",
           },
         }));
-
         const updatePayload = {
           teamId: typeof teamId === "string" ? parseInt(teamId, 10) : teamId,
           teamData: {
@@ -134,24 +92,13 @@ export default function CreateTeam(props: CreateTeamProps) {
             members: processedMembers,
           },
         };
-
-        console.log("Component Layer - Update team payload:", updatePayload);
-        console.log("Component Layer - Processed members:", processedMembers);
-
         const result = await updateTeamMutation.mutateAsync(updatePayload);
-
-        console.log("Component Layer - Update result:", result);
-
-        if (result.success) {
-          toast.success(result.message);
-        } else {
-          toast.success("Team updated successfully.");
-        }
-
+        toast.success(
+          result.success ? result.message : "Team updated successfully."
+        );
         onOpenChange(false);
         return;
       }
-
       // Create mode
       const teamData: TeamCreate = {
         name: values.name,
@@ -167,23 +114,17 @@ export default function CreateTeam(props: CreateTeamProps) {
           },
         })),
       };
-
-      console.log("Component Layer - Create team payload:", teamData);
-
       await createTeamMutation.mutateAsync({
         org_id: activeOrg.id,
         team: teamData,
       });
-
       toast.success("Team created successfully.");
       onOpenChange(false);
     } catch (error: unknown) {
-      console.error("Component Layer - Submit error:", error);
       const errorMessage =
         error instanceof Error
           ? error.message
           : (error as ApiError)?.message || "An unexpected error occurred";
-
       toast.error(
         mode === "update"
           ? `Failed to update team: ${errorMessage}`
@@ -194,50 +135,77 @@ export default function CreateTeam(props: CreateTeamProps) {
 
   const handleCancel = () => onOpenChange(false);
 
-  // Reset form when dialog closes to prevent state issues
+  // Reset form state if needed when dialog closes (future-proof)
   React.useEffect(() => {
     if (!open && mode === "create") {
-      // Reset any form state when closing create mode
+      // Reset form state if needed
     }
   }, [open, mode]);
+
+  const TriggerButton = () =>
+    children ? (
+      isDesktop ? (
+        <DialogTrigger asChild>{children}</DialogTrigger>
+      ) : (
+        <DrawerTrigger asChild>{children}</DrawerTrigger>
+      )
+    ) : !controlledOpen ? (
+      isDesktop ? (
+        <DialogTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            tabIndex={0}
+            aria-label="Create Team"
+          >
+            <Plus className="size-3" />
+            <span className="sr-only">Create Team</span>
+          </Button>
+        </DialogTrigger>
+      ) : (
+        <DrawerTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            tabIndex={0}
+            aria-label="Create Team"
+          >
+            <Plus className="size-3" />
+            <span className="sr-only">Create Team</span>
+          </Button>
+        </DrawerTrigger>
+      )
+    ) : null;
+
+  const TeamForm = () => (
+    <CreateTeamForm
+      onSubmit={handleSubmit}
+      onCancel={handleCancel}
+      isDesktop={isDesktop}
+      isPending={isPending}
+      mode={mode}
+      initialValues={initialValues}
+    />
+  );
 
   if (isDesktop) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {children ? (
-          <DialogTrigger asChild>{children}</DialogTrigger>
-        ) : !props.open ? (
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="icon" className="relative">
-              <Plus className="size-3" />
-              <span className="sr-only">Create Team</span>
-            </Button>
-          </DialogTrigger>
-        ) : null}
+        <TriggerButton />
         <DialogContent className="max-h-screen !rounded-none !max-w-screen h-full w-full flex flex-col overflow-hidden p-0 gap-0">
-          {/* Header */}
           <DialogHeader className="border-b p-4 shrink-0">
             <DialogTitle>
               {mode === "update" ? "Edit Team" : "Create New Team"}
             </DialogTitle>
           </DialogHeader>
-
-          {/* Close button */}
           <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
-
-          {/* Scrollable content */}
           <div className="flex-1 overflow-y-auto px-4 py-6">
-            <CreateTeamForm
-              onSubmit={handleSubmit}
-              onCancel={handleCancel}
-              isDesktop={isDesktop}
-              isPending={isPending}
-              mode={mode}
-              initialValues={initialValues}
-            />
+            <TeamForm />
           </div>
         </DialogContent>
       </Dialog>
@@ -246,16 +214,7 @@ export default function CreateTeam(props: CreateTeamProps) {
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      {children ? (
-        <DrawerTrigger asChild>{children}</DrawerTrigger>
-      ) : !props.open ? (
-        <DrawerTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
-            <Plus className="size-3" />
-            <span className="sr-only">Create Team</span>
-          </Button>
-        </DrawerTrigger>
-      ) : null}
+      <TriggerButton />
       <DrawerContent className="px-4">
         <DrawerHeader>
           <DrawerTitle>
@@ -268,16 +227,11 @@ export default function CreateTeam(props: CreateTeamProps) {
           </DrawerDescription>
         </DrawerHeader>
         <div className="px-4 overflow-y-auto max-h-[65vh] pb-2">
-          <CreateTeamForm
-            onSubmit={handleSubmit}
-            onCancel={handleCancel}
-            isDesktop={isDesktop}
-            isPending={isPending}
-            mode={mode}
-            initialValues={initialValues}
-          />
+          <TeamForm />
         </div>
       </DrawerContent>
     </Drawer>
   );
-}
+};
+
+export default CreateTeam;

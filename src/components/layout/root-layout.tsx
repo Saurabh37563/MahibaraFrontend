@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { Header } from "./header";
 import { QueryProvider } from "@/providers/query-provider";
 const HEADER_VISIBLE_ROUTES = [
-  "/dashboard",
   "/agents",
   "/functions",
   "/help-and-support",

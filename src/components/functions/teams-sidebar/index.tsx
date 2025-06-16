@@ -70,22 +70,14 @@ export default function FunctionsSidebar() {
   };
 
   const [selectedTeam, setSelectedTeam] = React.useState<TeamType | null>(null);
-
-  // State to track which team is being hovered
   const [hoveredTeamId, setHoveredTeamId] = React.useState<string | null>(null);
-  // State to track which dropdown is open
   const [openDropdownTeamId, setOpenDropdownTeamId] = React.useState<
     string | null
   >(null);
-
-  // State for edit modal
   const [editModalOpen, setEditModalOpen] = React.useState(false);
-
-  // State for delete modal
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const deleteTeamMutation = useDeleteTeam();
 
-  // Helper to map team to CreateTeamFormValues
   const mapTeamToFormValues = (team: TeamType) => ({
     id: team.id,
     name: team.name,
@@ -108,33 +100,35 @@ export default function FunctionsSidebar() {
   const handleEditTeam = (team: TeamType) => {
     setSelectedTeam(team);
     setEditModalOpen(true);
-    setOpenDropdownTeamId(null); // Close the dropdown
+    setOpenDropdownTeamId(null);
   };
 
   const handleDeleteTeam = async () => {
     if (!selectedTeam) return;
-
     try {
       const result = await deleteTeamMutation.mutateAsync(
         Number(selectedTeam.id)
       );
-
       if (result.success) {
         toast.success(result.message);
-
-        // If the deleted team was the active team, clear it
         if (activeTeam?.id === selectedTeam.id) {
           setActiveTeam(null);
           setProjectName(null);
         }
       }
-
       setDeleteModalOpen(false);
       setSelectedTeam(null);
     } catch (error: unknown) {
       const teamError = error as DeleteTeamError;
       toast.error(teamError.message || "Failed to delete team");
-      console.error("Delete team error:", teamError);
+    }
+  };
+
+  const handleCreateTeamClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!activeOrg) {
+      e.preventDefault();
+      toast.error("Please select an organization first.");
+      return;
     }
   };
 
@@ -147,29 +141,46 @@ export default function FunctionsSidebar() {
       >
         <SidebarContent className="bg-white border-2 border-emerald-800/10 rounded-sm py-2">
           {isMobile && <SidebarTrigger className="p-4 self-end" />}
-          <div className=" py-2 space-y-4">
-            <OrganizationSwitcher
-              activeOrg={activeOrg}
-              setActiveOrg={handleSetActiveOrg}
-              setActiveTeam={setActiveTeam}
-              setProjectName={setProjectName}
-            />
-
-            <Separator />
-            <div className="px-3">
-              <div className="flex items-center justify-between mb-2 ">
+          <div className=" flex flex-col items-center w-full h-full py-2 space-y-4">
+            <div className="flex flex-col gap-2 sticky z-10 top-0 w-full">
+              <OrganizationSwitcher
+                activeOrg={activeOrg}
+                setActiveOrg={handleSetActiveOrg}
+                setActiveTeam={setActiveTeam}
+                setProjectName={setProjectName}
+              />
+              <Separator />
+              <div className="flex px-4 items-center justify-between mb-2 ">
                 <div className="flex items-center gap-2">
                   <HiUserGroup
                     size={20}
                     className="text-emerald-900 align-left"
                   />
-                  <label className="text-sm font-medium text-gray-500">
+                  <label className="text-sm font-semibold text-gray-500">
                     Functions
                   </label>
                 </div>
-                {activeOrg && <CreateTeam />}
+                <CreateTeam
+                  open={undefined}
+                  onOpenChange={undefined}
+                  mode={undefined}
+                  initialValues={undefined}
+                >
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="relative"
+                    aria-label="Create Team"
+                    tabIndex={0}
+                    onClick={handleCreateTeamClick}
+                  >
+                    <span className="sr-only">Create Team</span>+
+                  </Button>
+                </CreateTeam>
               </div>
+            </div>
 
+            <div className="px-3 h-full w-full flex-1">
               {isLoadingTeams ? (
                 <div className="space-y-2">
                   {[1, 2, 3].map((i) => (
@@ -182,7 +193,7 @@ export default function FunctionsSidebar() {
               ) : teams.length > 0 ? (
                 <SidebarMenu>
                   {teams.map((team: TeamType) => (
-                    <SidebarMenuItem key={team.id} className="w-full p-0">
+                    <SidebarMenuItem key={team.id} className="w-full  p-0">
                       <div
                         className="flex items-center w-full gap-1"
                         onMouseEnter={() => setHoveredTeamId(team.id)}
@@ -265,8 +276,41 @@ export default function FunctionsSidebar() {
                   ))}
                 </SidebarMenu>
               ) : (
-                <div className="text-sm text-gray-500 py-2">
-                  {activeOrg ? "No teams available" : "Select an organization"}
+                <div className="flex h-full  flex-col text-gray-600 items-center justify-center py-8 gap-3 text-center">
+                  {activeOrg ? (
+                    <>
+                      <div className="font-semibold  text-base">
+                        No teams yet
+                      </div>
+                      <div className="text-sm  max-w-xs">
+                        You haven&apos;t created any teams for this
+                        organization. Teams help you organize members and
+                        projects efficiently.
+                      </div>
+                      <CreateTeam>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="relative"
+                          aria-label="Create Team"
+                          tabIndex={0}
+                          onClick={handleCreateTeamClick}
+                        >
+                          <span className="sr-only">Create Team</span>+
+                        </Button>
+                      </CreateTeam>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-semibold  text-base">
+                        No organization selected
+                      </div>
+                      <div className="text-sm  max-w-xs">
+                        Please select an organization to view its teams, or
+                        create a new organization to get started.
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -274,7 +318,6 @@ export default function FunctionsSidebar() {
         </SidebarContent>
       </Sidebar>
 
-      {/* Edit Team Modal */}
       {selectedTeam && (
         <CreateTeam
           open={editModalOpen}
