@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useParams } from "next/navigation";
 import { MdOutlineFileDownload } from "react-icons/md";
 import { Loader2 } from "lucide-react";
@@ -36,16 +35,29 @@ export default function SheetsPanel({
           saveAs(blob, filename);
           toast.success("Download started");
         },
-        onError: (error: any) => {
-          toast.error(
-            error?.response?.data?.detail ||
-              error?.message ||
-              "Failed to download ZIP file."
-          );
+        onError: (error: unknown) => {
+          let message = "Failed to download ZIP file.";
+          if (error && typeof error === "object") {
+            if (
+              "response" in error &&
+              error.response &&
+              typeof error.response === "object" &&
+              "data" in error.response &&
+              error.response.data &&
+              typeof error.response.data === "object" &&
+              "detail" in error.response.data &&
+              typeof error.response.data.detail === "string"
+            ) {
+              message = error.response.data.detail;
+            } else if ("message" in error && typeof error.message === "string") {
+              message = error.message;
+            }
+          }
+          toast.error(message);
         },
       });
     } catch (e) {
-      // Already handled in onError
+      console.error(e);
     }
   };
 
